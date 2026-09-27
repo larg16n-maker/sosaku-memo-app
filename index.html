@@ -259,7 +259,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.2.1';
+const APP_VERSION='0.2.2';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -291,25 +291,6 @@ function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+(
 
 /* ---------- data model ---------- */
 function emptyDb(){ return {meta:{updatedAt:0}, folders:[], memos:[], deletedFolders:[], deletedMemos:[], chars:[], deletedChars:[]}; }
-function sample(){
-  const t=Date.now(), f='sample';
-  return {
-    meta:{updatedAt:t},
-    folders:[{id:f,name:'サンプル（削除OK）',view:'full',createdAt:t,updatedAt:t}],
-    memos:[
-      {id:uid(),folderId:f,text:'「テストテスト」\n「ああああああああ」',createdAt:t-3000,updatedAt:t-3000},
-      {id:uid(),folderId:f,text:'「雨、やまないね」\n「傘ならあるよ。一本だけ」',createdAt:t-2000,updatedAt:t-2000},
-      {id:uid(),folderId:f,text:'長押しで編集・コピー・削除ができます。右上の設定からGitHub同期も設定できます。',createdAt:t-1000,updatedAt:t-1000}
-    ],
-    deletedFolders:[], deletedMemos:[],
-    chars:[
-      {id:uid(),name:'サンプル太郎（削除OK）',alias:'タロ',age:'17',affil:'星見学園',birthday:'4/2',height:'171cm',song:'',memo:'編集ボタンから項目を追加・変更できます。\n未入力の項目は、この画面には出ません。',custom:[{id:uid(),label:'好きな食べ物',value:'焼きそばパン'}],icon:'',color:'#7a9cc6',order:0,createdAt:t,updatedAt:t},
-      {id:uid(),name:'サンプル花子',alias:'',age:'',affil:'星見学園',birthday:'',height:'',song:'',memo:'',custom:[],icon:'',color:'#c68a7a',order:1,createdAt:t,updatedAt:t},
-      {id:uid(),name:'名無しの旅人',alias:'',age:'不明',affil:'',birthday:'',height:'',song:'',memo:'',custom:[],icon:'',color:'#8fb08a',order:2,createdAt:t,updatedAt:t}
-    ],
-    deletedChars:[]
-  };
-}
 function normalize(d){
   const e=emptyDb();
   if(!d||typeof d!=='object') return e;
@@ -325,7 +306,7 @@ function normalize(d){
 }
 function load(){
   try{const raw=localStorage.getItem(KEY); if(raw) return normalize(JSON.parse(raw));}catch(e){}
-  return sample();
+  return emptyDb();
 }
 let db=load();
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){toast('保存できませんでした');} }
