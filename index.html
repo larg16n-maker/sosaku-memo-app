@@ -159,6 +159,7 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .fld label .req{color:var(--danger);margin-left:3px}
 .fld input,.fld textarea,.cf-row input,.cf-row textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;line-height:1.5;padding:7px 10px}
 .fld textarea{min-height:120px;resize:vertical}
+.fld textarea.mid{min-height:80px}
 .fld textarea.song{min-height:36px;resize:none;overflow:hidden}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cf-list{display:flex;flex-direction:column;gap:8px}
@@ -368,6 +369,31 @@ body.kbopen .cedit{padding-bottom:120px}
 .qcchips{padding:8px 2px 0}
 .toast.act-toast{display:flex;align-items:center;gap:14px;white-space:nowrap;max-width:92%}
 .toast.act-toast button{color:var(--bg);font-weight:600;text-decoration:underline;font-size:13px;flex:none}
+
+/* character detail: link-add buttons */
+.clinked .cblock .clabel{display:flex;align-items:center;gap:8px}
+.cladd{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:500;color:var(--sub);padding:2px 4px}
+.cladd svg{width:12px;height:12px}
+.clempty{font-size:12px;color:var(--faint);padding:2px 0 2px}
+.callrow{display:flex;align-items:center;gap:8px}
+.callrow+.callrow{margin-top:6px}
+.callrow span{flex:none;max-width:48%;font-size:11.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.callrow input{flex:1;min-width:0}
+/* world: glossary */
+.tmview{padding-bottom:20px}
+.tmsearch{padding:10px 14px 4px;position:sticky;top:0;background:var(--bg);z-index:2}
+.tmsearch input{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:8px 12px;-webkit-appearance:none;appearance:none}
+.tmhead{font-size:11px;color:var(--faint);padding:14px 14px 4px;letter-spacing:.04em}
+.tmrow{padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.tmrow:active{background:var(--press)}
+.tmw{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tmw b{font-size:14px;font-weight:600}
+.tmy{font-size:11px;color:var(--faint)}
+.tmd{font-size:12.5px;color:var(--sub);line-height:1.6;margin-top:3px;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.tmrow.open .tmd{display:block;color:var(--ink);-webkit-line-clamp:unset}
+.tmrow.open{-webkit-user-select:text;user-select:text}
+.tmact{padding-top:8px;display:flex;justify-content:flex-end}
+#side .tmhead{padding:12px 14px 2px}
 </style>
 </head>
 <body>
@@ -440,7 +466,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.8.0';
+const APP_VERSION='0.9.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -471,7 +497,7 @@ function b64enc(str){ return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2}
 function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
 
 /* ---------- data model ---------- */
-const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions']];
+const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms']];
 function emptyDb(){ const d={meta:{updatedAt:0}}; for(const [a,b] of COLLS){ d[a]=[]; d[b]=[]; } return d; }
 function normalize(d){
   const e=emptyDb();
@@ -642,6 +668,7 @@ async function syncNow(){
 function safeRerender(){
   if(tab==='chara' && (charView==='edit'||charView==='qa')) return;
   if(tab==='world' && (wView==='ev'||wView==='rel')) return;
+  if(tab==='world' && wView==='terms' && document.activeElement && document.activeElement.id==='tmQ'){ const box=$('#tmList'); if(box) box.innerHTML=termListHtml(); renderSide(); return; }
   const st=main.scrollTop;
   render();
   main.scrollTop=st;
@@ -1084,7 +1111,7 @@ function renderChara(){
       <div class="chead">${avatar(c,'lg')}<div><div class="cname">${esc(c.name)}</div>${(c.alias||'').trim()?`<div class="calias">${esc(c.alias.trim())}</div>`:''}</div></div>
       ${affilChipsHtml(c)}
       ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
-      ${(c.memo||'').trim()?`<div class="cblock"><div class="clabel">詳細メモ</div><div class="ctext">${esc(c.memo.trim())}</div></div>`:''}
+      ${[['personality','性格'],['history','来歴'],['memo','詳細メモ']].filter(([k])=>(c[k]||'').trim()).map(([k,l])=>`<div class="cblock"><div class="clabel">${l}</div><div class="ctext">${esc(c[k].trim())}</div></div>`).join('')}
       ${qaBlockHtml(c)}
       ${charLinksHtml(c)}
     </div>`;
@@ -1109,6 +1136,8 @@ function renderChara(){
       <div class="chips">${affilGs.map(g=>`<span class="pchip">${gavatar(g,'sm')}${esc(g.name)}</span>`).join('')}<button type="button" class="chip" data-a="pickgroups">${affilGs.length?'変更':'グループを選ぶ'}</button></div>
     </div>
     <div class="fld"><label for="f_song">イメージ曲</label><textarea id="f_song" data-k="song" rows="1" class="song" placeholder="1行に1曲ずつ">${esc(d.song||'')}</textarea></div>
+    <div class="fld"><label for="f_personality">性格</label><textarea id="f_personality" data-k="personality" class="mid" placeholder="例：面倒見がいいが、自分のことは後回し">${esc(d.personality||'')}</textarea></div>
+    <div class="fld"><label for="f_history">来歴</label><textarea id="f_history" data-k="history" class="mid" placeholder="生い立ち・これまでの経緯など">${esc(d.history||'')}</textarea></div>
     <div class="fld"><label for="f_memo">詳細メモ</label><textarea id="f_memo" data-k="memo">${esc(d.memo||'')}</textarea></div>
     <div class="fld"><span class="lbl">追加項目</span>
       <div class="cf-list">${(d.custom||[]).map(x=>`<div class="cf-row" data-fid="${x.id}"><input type="text" data-cf="label" value="${esc(x.label||'')}" placeholder="項目名"><textarea rows="1" data-cf="value" placeholder="内容">${esc(x.value||'')}</textarea><button type="button" class="del" data-a="rmfld" aria-label="この項目を削除">${CI.x}</button></div>`).join('')}</div>
@@ -1122,7 +1151,7 @@ function autoGrow(t){ t.style.height='auto'; t.style.height=t.scrollHeight+2+'px
 
 function newDraft(){
   const t=Date.now();
-  return {id:uid(),name:'',alias:'',age:'',affilIds:[],birthday:'',height:'',song:'',memo:'',custom:[],icon:'',
+  return {id:uid(),name:'',alias:'',age:'',affilIds:[],birthday:'',height:'',song:'',personality:'',history:'',memo:'',custom:[],icon:'',
     color:AV_COLORS[Math.floor(Math.random()*AV_COLORS.length)],createdAt:t,updatedAt:t};
 }
 function startEdit(c){ charDraft=c?JSON.parse(JSON.stringify(c)):newDraft(); charDirty=false; charView='edit'; render(); main.scrollTop=0; }
@@ -1186,6 +1215,8 @@ main.addEventListener('click',e=>{
     const qf=e.target.closest('[data-qfocus]'); if(qf){ startQa(charById(charId),qf.dataset.qfocus); return; }
     const qb=e.target.closest('[data-a]'); if(!qb) return;
     if(qb.dataset.a==='qa'){ startQa(charById(charId)); return; }
+    if(qb.dataset.a==='addrel'){ startRelFromChar(charId); return; }
+    if(qb.dataset.a==='addev'){ startEvFromChar(charId); return; }
     if(qb.dataset.a==='qatoggle'){ qaOpen=!qaOpen; try{localStorage.setItem(QA_OPEN_KEY,qaOpen?'1':'0');}catch(_){} const st=main.scrollTop; renderChara(); main.scrollTop=st; }
     return;
   }
@@ -1593,7 +1624,8 @@ function openCropper(file){
 const WI={
   tl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="7" r="2" fill="currentColor"/><circle cx="6" cy="17" r="2" fill="currentColor"/><path d="M11 7h9M11 17h9M11 12h6"/></svg>',
   rel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2.5 19c.6-3 2.4-4.5 4.5-4.5s3.9 1.5 4.5 4.5M12.5 19c.6-3 2.4-4.5 4.5-4.5s3.9 1.5 4.5 4.5"/></svg>',
-  line:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="12" r="2" fill="currentColor"/><path d="M11 12h9"/></svg>'
+  line:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="12" r="2" fill="currentColor"/><path d="M11 12h9"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 016.5 3H19v15H6.5A1.5 1.5 0 005 19.5z"/><path d="M5 19.5A1.5 1.5 0 006.5 21H19v-3"/><path d="M9 7.5h6M9 11h4"/></svg>'
 };
 let wView='hub', tlId=null, rcId=null, rgId=null, relKind='char', evDraft=null, relDraft=null, wDirty=false, wReturn=null;
 let grpReorderMode=false;
@@ -1627,7 +1659,7 @@ const RK={
 };
 function relsOfK(k,id){ const K=RK[k]; return db[K.coll].filter(r=>(r.a===id||r.b===id) && K.get(r.a) && K.get(r.b)); }
 function relsOf(cid){ return relsOfK('char',cid); }
-function relView(r,cid){ const me=r.a===cid; return {other:me?r.b:r.a, toOther:me?r.ab:r.ba, toMe:me?r.ba:r.ab}; }
+function relView(r,cid){ const me=r.a===cid; return {other:me?r.b:r.a, toOther:me?r.ab:r.ba, toMe:me?r.ba:r.ab, callOther:me?r.nab:r.nba, callMe:me?r.nba:r.nab}; }
 function dropRelsOf(ids,t){
   db.rels=db.rels.filter(r=>{ if(ids.has(r.a)||ids.has(r.b)){ db.deletedRels.push({id:r.id,deletedAt:t}); return false; } return true; });
 }
@@ -1645,8 +1677,13 @@ function renderWorld(){
     main.innerHTML=`<div>
       <div class="wrow" data-go="tls">${WI.tl}<span class="wn">時系列</span><span class="wc">${db.timelines.length}</span></div>
       <div class="wrow" data-go="rchars">${WI.rel}<span class="wn">関係性</span><span class="wc">${relsOfAllCount()}</span></div>
+      <div class="wrow" data-go="terms">${WI.book}<span class="wn">単語帳</span><span class="wc">${db.terms.length}</span></div>
     </div>`;
     return;
+  }
+  if(wView==='terms'){
+    $('#title').textContent='単語帳'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','単語を追加');
+    renderTerms(); return;
   }
   if(wView==='tls'){
     $('#title').textContent='時系列'; hdrBack();
@@ -1714,7 +1751,9 @@ function renderWorld(){
     if(!rs.length){ main.innerHTML=head+'<div class="empty"><strong>まだ関係がありません</strong>右上の＋から追加できます。</div>'; return; }
     main.innerHTML=head+'<ul class="rlist">'+rs.map(r=>{
       const v=relView(r,me.id), o=K.get(v.other);
+      const co=kind==='char'?(v.callOther||'').trim():'', cm=kind==='char'?(v.callMe||'').trim():'';
       const blocks=[
+        (co||cm)?`<div><div class="rk">呼び方</div><div class="rv">${[co?`${esc(me.name)} → ${esc(o.name)}：「${esc(co)}」`:'',cm?`${esc(o.name)} → ${esc(me.name)}：「${esc(cm)}」`:''].filter(Boolean).join('\n')}</div></div>`:'',
         (v.toOther||'').trim()?`<div><div class="rk">${esc(me.name)} → ${esc(o.name)}</div><div class="rv">${esc(v.toOther.trim())}</div></div>`:'',
         (v.toMe||'').trim()?`<div><div class="rk">${esc(o.name)} → ${esc(me.name)}</div><div class="rv">${esc(v.toMe.trim())}</div></div>`:'',
         (r.detail||'').trim()?`<div><div class="rk">詳細</div><div class="rv">${esc(r.detail.trim())}</div></div>`:''
@@ -1754,6 +1793,9 @@ function renderWorld(){
       <div class="fld"><span class="lbl">相手<span class="req" style="color:var(--danger);margin-left:3px">必須</span></span>
         <button type="button" class="partner" data-wa="pickpartner">${o?`${K.av(o,'md')}${esc(o.name)}`:'<span class="ph">相手を選ぶ</span>'}</button></div>
       <div class="fld"><label for="r_label">関係名</label><input id="r_label" data-w="label" type="text" value="${esc(d.label)}" placeholder="${d.kind==='group'?'例：同盟、敵対、ライバル校':'例：幼なじみ、宿敵'}"></div>
+      ${d.kind==='char'?`<div class="fld"><span class="lbl">呼び方</span>
+        <div class="callrow"><span>${esc(me.name)} → ${esc(oname)}</span><input id="r_nab" data-w="nab" type="text" value="${esc(d.nab||'')}" placeholder="例：ソラ、お前" aria-label="${esc(me.name)}から${esc(oname)}への呼び方"></div>
+        <div class="callrow"><span>${esc(oname)} → ${esc(me.name)}</span><input id="r_nba" data-w="nba" type="text" value="${esc(d.nba||'')}" placeholder="例：ミナト、先輩" aria-label="${esc(oname)}から${esc(me.name)}への呼び方"></div></div>`:''}
       <div class="fld"><label for="r_ab">${esc(me.name)} → ${esc(oname)}</label><textarea id="r_ab" data-w="ab" style="min-height:80px">${esc(d.ab)}</textarea></div>
       <div class="fld"><label for="r_ba">${esc(oname)} → ${esc(me.name)}</label><textarea id="r_ba" data-w="ba" style="min-height:80px">${esc(d.ba)}</textarea></div>
       <div class="fld"><label for="r_detail">詳細</label><textarea id="r_detail" data-w="detail">${esc(d.detail)}</textarea></div>
@@ -1778,13 +1820,14 @@ function toggleTlView(){
 /* header actions */
 $('#wAddBtn').addEventListener('click',()=>{
   if(wView==='tls') return newTimelineSheet();
+  if(wView==='terms') return termSheet(null);
   if(wView==='tl'){ evDraft={id:uid(),timelineId:tlId,sign:tlById(tlId).mode==='ad'?1:-1,yabs:'',month:'',day:'',title:'',detail:'',chars:[],createdAt:Date.now()}; wDirty=false; wView='ev'; render(); main.scrollTop=0; return; }
   if(wView==='rchars' && relKind==='group') return groupSheet(null);
-  if(wView==='rc'||wView==='rg'){ const kind=wView==='rg'?'group':'char'; relDraft={id:uid(),kind,a:kind==='group'?rgId:rcId,b:'',label:'',ab:'',ba:'',detail:'',createdAt:Date.now()}; wDirty=false; wView='rel'; render(); main.scrollTop=0; }
+  if(wView==='rc'||wView==='rg'){ const kind=wView==='rg'?'group':'char'; relDraft={id:uid(),kind,a:kind==='group'?rgId:rcId,b:'',label:'',ab:'',ba:'',nab:'',nba:'',detail:'',createdAt:Date.now()}; wDirty=false; wView='rel'; render(); main.scrollTop=0; }
 });
 $('#wEditBtn').addEventListener('click',()=>{ const g=groupById(rgId); if(g) groupSheet(g);
 });
-function leaveWorldEdit(){ const back = wView==='ev'?'tl' : (relDraft&&relDraft.kind==='group')?'rg':'rc'; evDraft=null; relDraft=null; wDirty=false; wView=back; render(); }
+function leaveWorldEdit(){ const back = wView==='ev'?'tl' : (relDraft&&relDraft.kind==='group')?'rg':'rc'; evDraft=null; relDraft=null; wDirty=false; wView=back; if(backToCharFromWorld()) return; render(); }
 $('#wCancelBtn').addEventListener('click',()=>{
   if(!wDirty) return leaveWorldEdit();
   confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',leaveWorldEdit);
@@ -1799,7 +1842,9 @@ $('#wSaveBtn').addEventListener('click',()=>{
     const rec={id:d.id,timelineId:d.timelineId,year:d.sign*Number(yabs),month,day,title:d.title.trim(),detail:d.detail,chars:d.chars.filter(id=>charById(id)),createdAt:d.createdAt,updatedAt:t};
     const ex=db.events.find(e=>e.id===d.id);
     ex?Object.assign(ex,rec):db.events.push(rec);
-    commit(); evDraft=null; wDirty=false; wView='tl'; render(); flashEl(`[data-eid="${rec.id}"]`); toast('保存しました');
+    commit(); evDraft=null; wDirty=false; wView='tl';
+    if(backToCharFromWorld()){ toast('保存しました'); return; }
+    render(); flashEl(`[data-eid="${rec.id}"]`); toast('保存しました');
     return;
   }
   if(wView==='rel'){
@@ -1808,15 +1853,18 @@ $('#wSaveBtn').addEventListener('click',()=>{
     const dup=coll.find(r=>r.id!==d.id && ((r.a===d.a&&r.b===d.b)||(r.a===d.b&&r.b===d.a)));
     if(dup){ toast(d.kind==='group'?'この2つのグループの関係はすでにあります':'この2人の関係はすでにあります'); return; }
     const rec={id:d.id,a:d.a,b:d.b,label:d.label.trim(),ab:d.ab,ba:d.ba,detail:d.detail,createdAt:d.createdAt,updatedAt:t};
+    if(d.kind==='char'){ rec.nab=(d.nab||'').trim(); rec.nba=(d.nba||'').trim(); }
     const ex=coll.find(r=>r.id===d.id);
     ex?Object.assign(ex,rec):coll.push(rec);
-    commit(); relDraft=null; wDirty=false; wView=K.view; render(); flashEl(`[data-rid="${rec.id}"]`); toast('保存しました');
+    commit(); relDraft=null; wDirty=false; wView=K.view;
+    if(backToCharFromWorld()){ toast('保存しました'); return; }
+    render(); flashEl(`[data-rid="${rec.id}"]`); toast('保存しました');
   }
 });
 function flashEl(sel){ const el=main.querySelector(sel); if(!el) return; try{el.scrollIntoView({block:'center'});}catch(_){ } el.classList.add('flash'); }
 
 /* sheets */
-function newTimelineSheet(){
+function newTimelineSheet(cb){
   let mode='rel';
   openSheet(`<div class="title">新しい時系列</div>
     <input id="tlName" type="text" maxlength="40" placeholder="例：本編、〇〇の生涯">
@@ -1831,7 +1879,9 @@ function newTimelineSheet(){
     s.querySelector('#tlMode').addEventListener('click',e=>{ const b=e.target.closest('[data-mode]'); if(!b) return; mode=b.dataset.mode; s.querySelectorAll('#tlMode [data-mode]').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
     s.querySelector('[data-a=cancel]').onclick=closeSheet;
     ok.onclick=()=>{ const name=inp.value.trim(); if(!name) return; const t=Date.now(), id=uid();
-      db.timelines.push({id,name,mode,view:'line',createdAt:t,updatedAt:t}); commit(); closeSheet(); tlId=id; wView='tl'; render(); };
+      db.timelines.push({id,name,mode,view:'line',createdAt:t,updatedAt:t}); commit(); closeSheet();
+      if(typeof cb==='function'){ cb(id); return; }
+      tlId=id; wView='tl'; render(); };
     inp.focus();
   },'tlnew');
 }
@@ -1869,7 +1919,7 @@ function evMenu(id){
 function deleteEvent(id){ db.events=db.events.filter(e=>e.id!==id); db.deletedEvents.push({id,deletedAt:Date.now()}); commit(); evDraft=null; wDirty=false; wView='tl'; render(); toast('削除しました'); }
 function editRel(r,kind){
   const id=kind==='group'?rgId:rcId, v=relView(r,id);
-  relDraft={id:r.id,kind,a:id,b:v.other,label:r.label||'',ab:v.toOther||'',ba:v.toMe||'',detail:r.detail||'',createdAt:r.createdAt};
+  relDraft={id:r.id,kind,a:id,b:v.other,label:r.label||'',ab:v.toOther||'',ba:v.toMe||'',nab:v.callOther||'',nba:v.callMe||'',detail:r.detail||'',createdAt:r.createdAt};
   wDirty=false; wView='rel'; render(); main.scrollTop=0;
 }
 function relMenu(rid,kind){
@@ -1969,18 +2019,130 @@ function charLinksHtml(c){
   const rs=relsOf(c.id);
   const evs=db.events.filter(e=>(e.chars||[]).includes(c.id) && tlById(e.timelineId))
     .sort((a,b)=>{ const ta=tlById(a.timelineId), tb=tlById(b.timelineId); return (ta.createdAt-tb.createdAt)||evSort(a,b); });
-  let h='';
-  if(rs.length) h+=`<div class="cblock"><div class="clabel">関係性</div><ul class="xlist">${rs.map(r=>{ const o=charById(relView(r,c.id).other);
-    return `<li class="xrow" data-jump="rel" data-rid="${r.id}">${avatar(o,'md')}<span>${esc(o.name)}</span><span class="xl">${esc((r.label||'').trim())}</span></li>`; }).join('')}</ul></div>`;
-  if(evs.length) h+=`<div class="cblock"><div class="clabel">登場イベント</div><ul class="xlist">${evs.map(e=>{ const tl=tlById(e.timelineId), d=dateLabel(e);
-    return `<li class="xrow" data-jump="ev" data-eid="${e.id}"><div class="xev"><span class="xm">${esc(tl.name)} · ${yearLabel(tl,e.year)}${d?' '+d:''}</span><span>${esc(e.title)}</span></div></li>`; }).join('')}</ul></div>`;
-  return h ? `<div class="clinked"><div class="clhead">世界観とのつながり</div>${h}</div>` : '';
+  const add=(a,l)=>`<button type="button" class="cladd" data-a="${a}">${CI.plus}${l}</button>`;
+  const relH = rs.length ? `<ul class="xlist">${rs.map(r=>{
+      const v=relView(r,c.id), o=charById(v.other), co=(v.callOther||'').trim(), cm=(v.callMe||'').trim();
+      const calls=[co?`「${esc(co)}」と呼ぶ`:'', cm?`「${esc(cm)}」と呼ばれる`:''].filter(Boolean).join('・');
+      return `<li class="xrow" data-jump="rel" data-rid="${r.id}">${avatar(o,'md')}<div class="xev"><span>${esc(o.name)}</span>${calls?`<span class="xm">${calls}</span>`:''}</div><span class="xl">${esc((r.label||'').trim())}</span></li>`; }).join('')}</ul>`
+    : '<div class="clempty">まだ関係がありません</div>';
+  const evH = evs.length ? `<ul class="xlist">${evs.map(e=>{ const tl=tlById(e.timelineId), d=dateLabel(e);
+      return `<li class="xrow" data-jump="ev" data-eid="${e.id}"><div class="xev"><span class="xm">${esc(tl.name)} · ${yearLabel(tl,e.year)}${d?' '+d:''}</span><span>${esc(e.title)}</span></div></li>`; }).join('')}</ul>`
+    : '<div class="clempty">まだ登場イベントがありません</div>';
+  return `<div class="clinked"><div class="clhead">世界観とのつながり</div>
+    <div class="cblock"><div class="clabel"><span>関係性</span>${add('addrel','関係を追加')}</div>${relH}</div>
+    <div class="cblock"><div class="clabel"><span>登場イベント</span>${add('addev','イベントを追加')}</div>${evH}</div></div>`;
+}
+/* Start a new relationship / event straight from a character's page. After saving (or
+   cancelling) the form, the person lands back on that character instead of the world tab. */
+let wEditReturn=null;
+function backToCharFromWorld(){
+  const c=wEditReturn; wEditReturn=null;
+  if(!c||!charById(c)) return false;
+  tab='chara'; charId=c; charView='detail'; render(); return true;
+}
+function startRelFromChar(cid){
+  tab='world'; relKind='char'; rcId=cid;
+  relDraft={id:uid(),kind:'char',a:cid,b:'',label:'',ab:'',ba:'',nab:'',nba:'',detail:'',createdAt:Date.now()};
+  wDirty=false; wView='rel'; wEditReturn=cid; render(); main.scrollTop=0;
+}
+function startEvFromChar(cid){
+  const go=id=>{
+    const tl=tlById(id); if(!tl) return;
+    tab='world'; tlId=id;
+    evDraft={id:uid(),timelineId:id,sign:tl.mode==='ad'?1:-1,yabs:'',month:'',day:'',title:'',detail:'',chars:[cid],createdAt:Date.now()};
+    wDirty=false; wView='ev'; wEditReturn=cid; render(); main.scrollTop=0;
+  };
+  const ts=tlsSorted();
+  if(ts.length===1) return go(ts[0].id);
+  openSheet(`<div class="title">どの時系列に追加しますか？</div>
+    ${ts.length?'':'<div class="msg">まだ時系列がありません。先に1つ作ってください。</div>'}
+    ${ts.map(t=>`<button class="act" data-tl="${t.id}">${WI.line}${esc(t.name)}</button>`).join('')}
+    <button class="act" data-a="new">${SV.plus}新しい時系列を作る</button>`, s=>{
+    s.querySelectorAll('[data-tl]').forEach(b=>b.onclick=()=>{ closeSheet(); go(b.dataset.tl); });
+    s.querySelector('[data-a=new]').onclick=()=>newTimelineSheet(go);
+  },'picktl');
 }
 function jumpFromChar(j){
   const cid=charId;
   if(j.dataset.jump==='rel'){ wReturn=cid; tab='world'; rcId=cid; wView='rc'; openRel.add(j.dataset.rid); render(); flashEl(`[data-rid="${j.dataset.rid}"]`); }
   else if(j.dataset.jump==='grp'){ const g=groupById(j.dataset.gid); if(!g) return; wReturn=cid; tab='world'; relKind='group'; rgId=g.id; wView='rg'; render(); }
   else{ const ev=db.events.find(e=>e.id===j.dataset.eid); if(!ev) return; wReturn=cid; tab='world'; tlId=ev.timelineId; wView='tl'; openEv.add(ev.id); render(); flashEl(`[data-eid="${ev.id}"]`); }
+}
+
+/* ---------- world: glossary (単語帳) ---------- */
+// Terms are sorted in gojūon order by their reading (or the word itself when no reading is
+// given) and grouped under あ/か/さ… headings; anything that doesn't start with kana goes last.
+const KANA_ROWS=[['あ','あいうえおぁぃぅぇぉゔ'],['か','かきくけこゕゖ'],['さ','さしすせそ'],['た','たちつてとっ'],['な','なにぬねの'],['は','はひふへほ'],['ま','まみむめも'],['や','やゆよゃゅょ'],['ら','らりるれろ'],['わ','わをんゎゐゑ']];
+let termQ='';
+const openTm=new Set();
+function toHira(s){ return (s||'').replace(/[ァ-ヶ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0x60)); }
+function termKey(t){ return toHira(((t.yomi||'').trim()||(t.word||'').trim())).toLowerCase(); }
+function kanaRow(t){
+  const c=toHira(termKey(t).charAt(0)).normalize('NFD').charAt(0);
+  for(const [h,cs] of KANA_ROWS) if(cs.includes(c)) return h;
+  return '他';
+}
+function termsSorted(){ return [...db.terms].sort((a,b)=>termKey(a).localeCompare(termKey(b),'ja')||a.createdAt-b.createdAt); }
+function termById(id){ return db.terms.find(t=>t.id===id); }
+function termsGrouped(list){
+  const rows=[...KANA_ROWS.map(r=>r[0]),'他'], by=new Map(rows.map(r=>[r,[]]));
+  for(const t of list) by.get(kanaRow(t)).push(t);
+  return rows.filter(r=>by.get(r).length).map(r=>[r,by.get(r)]);
+}
+function termMatches(t,q){
+  if(!q) return true;
+  const h=toHira(q.trim().toLowerCase());
+  return [t.word,t.yomi,t.desc].some(x=>toHira((x||'').toLowerCase()).includes(h));
+}
+function termListHtml(){
+  const all=termsSorted(), list=all.filter(t=>termMatches(t,termQ));
+  if(!all.length) return '<div class="empty"><strong>単語がありません</strong>右上の＋から、作品の中だけの用語・地名・組織名などを登録できます。</div>';
+  if(!list.length) return '<div class="empty">見つかりませんでした</div>';
+  return termsGrouped(list).map(([h,ts])=>`<div class="tmhead">${h==='他'?'英数・その他':h}</div>`+ts.map(t=>{
+    const open=openTm.has(t.id), desc=(t.desc||'').trim();
+    return `<div class="tmrow wlp${open?' open':''}" data-tmid="${t.id}" tabindex="0"><div class="tmw"><b>${esc(t.word)}</b>${(t.yomi||'').trim()?`<span class="tmy">${esc(t.yomi.trim())}</span>`:''}</div>${desc?`<div class="tmd">${esc(desc)}</div>`:''}${open?`<div class="tmact"><button type="button" class="chip" data-wa="tmedit">編集</button></div>`:''}</div>`;
+  }).join('')).join('')+'<div class="hint">タップで全文、長押しで編集・削除</div>';
+}
+function renderTerms(){
+  main.innerHTML=`<div class="tmview"><div class="tmsearch"><input type="search" id="tmQ" placeholder="単語・読み・説明から検索" value="${esc(termQ)}" autocomplete="off" enterkeyhint="search"></div><div id="tmList">${termListHtml()}</div></div>`;
+}
+main.addEventListener('input',e=>{
+  if(e.target.id!=='tmQ') return;
+  termQ=e.target.value; const box=$('#tmList'); if(box) box.innerHTML=termListHtml();
+});
+function termSheet(t){
+  openSheet(`<div class="title">${t?'単語を編集':'単語を追加'}</div>
+    <input id="tmWord" type="text" class="plain" maxlength="60" placeholder="単語（例：星詠み）" value="${esc(t?t.word:'')}" autocomplete="off">
+    <input id="tmYomi" type="text" class="plain" maxlength="60" placeholder="読み（任意・入れると五十音順に並びます）" value="${esc(t?(t.yomi||''):'')}" autocomplete="off" style="margin-top:6px">
+    <textarea id="tmDesc" placeholder="説明" style="min-height:28vh;margin-top:6px">${esc(t?(t.desc||''):'')}</textarea>
+    <div class="row">${t?'<button type="button" class="dangerbtn" data-a="del">削除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">${t?'保存':'追加'}</button></div>`, s=>{
+    const w=s.querySelector('#tmWord'), y=s.querySelector('#tmYomi'), d=s.querySelector('#tmDesc'), ok=s.querySelector('[data-a=ok]');
+    const upd=()=>ok.disabled=!w.value.trim(); upd(); w.addEventListener('input',upd);
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    ok.onclick=()=>{
+      const word=w.value.trim(); if(!word) return;
+      if(db.terms.some(x=>x.id!==(t&&t.id) && (x.word||'').trim()===word)){ toast('同じ単語がすでにあります'); w.focus(); return; }
+      const now=Date.now(); let id;
+      if(t){ const ex=termById(t.id); if(ex){ ex.word=word; ex.yomi=y.value.trim(); ex.desc=d.value; ex.updatedAt=now; } id=t.id; }
+      else{ id=uid(); db.terms.push({id,word,yomi:y.value.trim(),desc:d.value,createdAt:now,updatedAt:now}); }
+      if(t) openTm.add(id);
+      if(!termMatches(termById(id),termQ)) termQ='';
+      closeSheet(); commit(); render(); flashEl(`.tmrow[data-tmid="${id}"]`);
+    };
+    const del=s.querySelector('[data-a=del]');
+    if(del) del.onclick=()=>{ closeSheet(); deleteTerm(t.id); };
+    if(!t) w.focus();
+  },'term');
+}
+function deleteTerm(id){
+  const t=termById(id); if(!t) return;
+  db.terms=db.terms.filter(x=>x.id!==id); db.deletedTerms.push({id,deletedAt:Date.now()});
+  commit(); render();
+  toastAction('単語を削除しました','元に戻す',()=>{
+    if(termById(id)) return;
+    db.deletedTerms=db.deletedTerms.filter(d=>d.id!==id);
+    db.terms.push({...t,updatedAt:Date.now()}); commit(); render(); toast('元に戻しました');
+  });
 }
 
 /* world: taps, long-press, form input */
@@ -2000,7 +2162,7 @@ for(const root of [main,$('#side')]){
   root.addEventListener('pointercancel',wlpCancel);
   root.addEventListener('contextmenu',wlpCtx);
 }
-function wLong(el){ if(el.dataset.tl) tlMenu(el.dataset.tl); else if(el.dataset.eid) evMenu(el.dataset.eid); else if(el.dataset.rid) relMenu(el.dataset.rid,el.dataset.rk); else if(el.dataset.gid) groupMenu(el.dataset.gid); }
+function wLong(el){ if(el.dataset.tl) tlMenu(el.dataset.tl); else if(el.dataset.eid) evMenu(el.dataset.eid); else if(el.dataset.rid) relMenu(el.dataset.rid,el.dataset.rk); else if(el.dataset.gid) groupMenu(el.dataset.gid); else if(el.dataset.tmid){ const t=termById(el.dataset.tmid); if(t) termSheet(t); } }
 
 main.addEventListener('click',e=>{
   if(tab!=='world') return;
@@ -2013,6 +2175,10 @@ main.addEventListener('click',e=>{
   const rks=t.closest('[data-rkset]'); if(rks){ relKind=rks.dataset.rkset; if(relKind!=='group') grpReorderMode=false; render(); return; }
   const jc=t.closest('[data-jumpchar]'); if(jc){ tab='chara'; charId=jc.dataset.jumpchar; charView='detail'; render(); return; }
   const ev=t.closest('.ev'); if(ev && wView==='tl'){ if(tlById(tlId).view!=='full'){ ev.classList.toggle('open'); ev.classList.contains('open')?openEv.add(ev.dataset.eid):openEv.delete(ev.dataset.eid); } return; }
+  if(wView==='terms'){
+    if(t.closest('[data-wa="tmedit"]')){ const r=t.closest('.tmrow'), tm=r&&termById(r.dataset.tmid); if(tm) termSheet(tm); return; }
+    const tr2=t.closest('.tmrow'); if(tr2){ tr2.classList.toggle('open'); const id=tr2.dataset.tmid; tr2.classList.contains('open')?openTm.add(id):openTm.delete(id); const box=$('#tmList'), st=main.scrollTop; if(box){ box.innerHTML=termListHtml(); main.scrollTop=st; } return; }
+  }
   const rr=t.closest('.rrow'); if(rr && (wView==='rc'||wView==='rg')){ rr.classList.toggle('open'); rr.classList.contains('open')?openRel.add(rr.dataset.rid):openRel.delete(rr.dataset.rid); return; }
   const sg=t.closest('[data-sign]'); if(sg && evDraft){ evDraft.sign=Number(sg.dataset.sign); wDirty=true; sg.parentElement.querySelectorAll('[data-sign]').forEach(b=>b.setAttribute('aria-pressed',b===sg)); return; }
   const a=t.closest('[data-wa]'); if(!a) return;
@@ -2025,7 +2191,7 @@ main.addEventListener('click',e=>{
 });
 main.addEventListener('keydown',e=>{
   if(tab!=='world'||e.key!=='Enter') return;
-  const el=e.target.closest('[data-go],[data-tl],[data-rcid],[data-gid],.ev,.rrow'); if(el && !e.target.matches('input,textarea,select')) el.click();
+  const el=e.target.closest('[data-go],[data-tl],[data-rcid],[data-gid],.ev,.rrow,.tmrow'); if(el && !e.target.matches('input,textarea,select,button')) el.click();
 });
 main.addEventListener('input',e=>{
   if(tab!=='world') return;
@@ -2047,7 +2213,7 @@ const SV={
   addp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.8-3.6 3.5-5.5 7-5.5 1.4 0 2.6.3 3.7.8M18 14v6M15 17h6"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
 };
-function worldSec(){ return ['rchars','rc','rg'].includes(wView)||(wView==='rel') ? 'rel' : 'tl'; }
+function worldSec(){ return wView==='terms' ? 'term' : ['rchars','rc','rg'].includes(wView)||(wView==='rel') ? 'rel' : 'tl'; }
 function renderSide(){
   const on=isWide() && (tab==='chara'||tab==='world'||tab==='talk');
   side.hidden=!on; $('#app').toggleAttribute('data-split',on);
@@ -2077,9 +2243,13 @@ function renderSide(){
       : `<ul class="clist">${list.map(row).join('')}</ul>`;
   }else{
     const sec=worldSec();
-    head=`<div class="seg" role="group"><button type="button" data-ssec="tl" aria-pressed="${sec==='tl'}">時系列</button><button type="button" data-ssec="rel" aria-pressed="${sec==='rel'}">関係性</button></div>
-      <span class="sbtns">${(sec==='rel'&&relKind==='group'&&groupsSorted().length>1)?`<button class="hbtn${grpReorderMode?' on':''}" data-sa="grpreorder" aria-label="並べ替え">${SV.reorder}</button>`:''}${(sec==='tl'||relKind==='group')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':'グループを作る'}">${SV.plus}</button>`:''}</span>`;
-    if(sec==='tl'){
+    head=`<div class="seg" role="group"><button type="button" data-ssec="tl" aria-pressed="${sec==='tl'}">時系列</button><button type="button" data-ssec="rel" aria-pressed="${sec==='rel'}">関係性</button><button type="button" data-ssec="term" aria-pressed="${sec==='term'}">単語帳</button></div>
+      <span class="sbtns">${(sec==='rel'&&relKind==='group'&&groupsSorted().length>1)?`<button class="hbtn${grpReorderMode?' on':''}" data-sa="grpreorder" aria-label="並べ替え">${SV.reorder}</button>`:''}${(sec==='tl'||sec==='term'||relKind==='group')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':sec==='term'?'単語を追加':'グループを作る'}">${SV.plus}</button>`:''}</span>`;
+    if(sec==='term'){
+      const ts=termsSorted();
+      body = ts.length ? termsGrouped(ts).map(([h,list])=>`<div class="tmhead">${h==='他'?'英数・その他':h}</div>`+list.map(t=>`<div class="wrow wlp${openTm.has(t.id)?' active':''}" data-tmid="${t.id}" tabindex="0"><span class="wn">${esc(t.word)}${(t.yomi||'').trim()?`<span class="ws">${esc(t.yomi.trim())}</span>`:''}</span></div>`).join('')).join('')
+        : '<div class="pick-ph">まだ単語がありません</div>';
+    }else if(sec==='tl'){
       const ts=tlsSorted();
       body = ts.length ? ts.map(t=>`<div class="wrow wlp${(tlId===t.id&&(wView==='tl'||wView==='ev'))?' active':''}" data-tl="${t.id}" tabindex="0">${WI.line}<span class="wn">${esc(t.name)}<span class="ws">${t.mode==='ad'?'西暦':'基準からの年数'}</span></span><span class="wc">${eventsOf(t.id).length}</span></div>`).join('')
         : '<div class="pick-ph">まだ時系列がありません</div>';
@@ -2101,7 +2271,7 @@ function renderSide(){
 }
 function editing(){ return (tab==='chara'&&(charView==='edit'||charView==='qa')&&charDirty) || (tab==='world'&&(wView==='ev'||wView==='rel')&&wDirty); }
 function guardLeave(fn){
-  const go=()=>{ charDraft=null; charDirty=false; evDraft=null; relDraft=null; wDirty=false; fn(); };
+  const go=()=>{ charDraft=null; charDirty=false; evDraft=null; relDraft=null; wDirty=false; wEditReturn=null; fn(); };
   editing() ? confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',go) : go();
 }
 side.addEventListener('click',e=>{
@@ -2114,7 +2284,7 @@ side.addEventListener('click',e=>{
     if(a==='reorder') return guardLeave(()=>{ reorderMode=true; selectMode=false; charView='list'; render(); });
     if(a==='select') return guardLeave(()=>{ selectMode=true; reorderMode=false; selected.clear(); charView='list'; render(); });
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
-    if(a==='wadd') return worldSec()==='tl' ? newTimelineSheet() : groupSheet(null);
+    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : groupSheet(null); }
     if(a==='addfolder') return newFolderSheet();
     if(a==='grpreorder'){
       if(grpReorderMode){ grpReorderMode=false; render(); return; }
@@ -2123,13 +2293,15 @@ side.addEventListener('click',e=>{
   }
   if((el=q('.ghead[data-gkey]'))){ toggleGroupCollapse(el.dataset.gkey); render(); return; }
   if((el=q('[data-scid]'))) return guardLeave(()=>{ reorderMode=false; selectMode=false; charId=el.dataset.scid; charView='detail'; render(); main.scrollTop=0; });
-  if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
+  if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='term' ? 'terms' : el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; if(relKind!=='group') grpReorderMode=false; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-tl]'))) return guardLeave(()=>{ tlId=el.dataset.tl; wView='tl'; wReturn=null; render(); main.scrollTop=0; });
   if((el=q('[data-src]'))) return guardLeave(()=>{ rcId=el.dataset.src; wView='rc'; wReturn=null; render(); main.scrollTop=0; });
   if((el=q('[data-gid]'))) return guardLeave(()=>{ rgId=el.dataset.gid; wView='rg'; render(); main.scrollTop=0; });
+  if((el=q('[data-tmid]'))) return guardLeave(()=>{ const id=el.dataset.tmid; wView='terms'; openTm.add(id);
+    if(!termMatches(termById(id)||{},termQ)) termQ=''; render(); flashEl(`.tmrow[data-tmid="${id}"]`); });
 });
-side.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const el=e.target.closest('[data-scid],[data-tl],[data-src],[data-gid],.ghead[data-gkey]'); if(el) el.click(); });
+side.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const el=e.target.closest('[data-scid],[data-tl],[data-src],[data-gid],[data-tmid],.ghead[data-gkey]'); if(el) el.click(); });
 const onWideChange=()=>render();
 if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change',onWideChange); else if(WIDE_MQ.addListener) WIDE_MQ.addListener(onWideChange);
 
