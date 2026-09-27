@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>創作メモ帳</title>
-<meta name="description" content="会話・キャラクター・世界観をまとめる個人用の創作メモ">
+<title>BOXOX</title>
+<meta name="description" content="BOXOX">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="創作メモ">
+<meta name="apple-mobile-web-app-title" content="BOXOX">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)">
@@ -384,7 +384,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.6.0';
+const APP_VERSION='0.6.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -842,7 +842,7 @@ $('#settingsBtn').addEventListener('click',()=>{
     <button class="act" data-a="export">${ICON.down}書き出し（JSONファイル）</button>
     <button class="act" data-a="import">${ICON.up}読み込み（JSONファイル）</button>
     <input type="file" id="importFile" accept="application/json" hidden>
-    <div class="small" style="text-align:center;padding-top:14px">創作メモ帳 バージョン ${APP_VERSION}（${APP_DATE}）</div>
+    <div class="small" style="text-align:center;padding-top:14px">BOXOX バージョン ${APP_VERSION}（${APP_DATE}）</div>
   `, s=>{
     renderSettingsStatus();
     s.querySelector('#kbOpts').addEventListener('click',e=>{
@@ -871,7 +871,7 @@ function doExport(){
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     const d=new Date(); const stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
-    a.href=url; a.download=`sosaku-memo-${stamp}.json`;
+    a.href=url; a.download=`boxox-${stamp}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
     toast('書き出しました');
