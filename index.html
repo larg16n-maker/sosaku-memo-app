@@ -504,7 +504,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.11.2';
+const APP_VERSION='0.11.3';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -752,7 +752,11 @@ function buildStoryBible(){
     L.push('## メモ');
     for(const f of foldersWithMemos){
       L.push(`### ${f.name}`);
-      for(const m of memosOf(f.id)){ L.push(m.text.trim()); L.push(''); }
+      for(const m of memosOf(f.id)){
+        const tagNames=(m.tags||[]).map(charById).filter(Boolean).map(c=>c.name);
+        if(tagNames.length) L.push(`[登場: ${tagNames.join('、')}]`);
+        L.push(m.text.trim()); L.push('');
+      }
     }
   }
   return L.join('\n');
