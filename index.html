@@ -88,7 +88,7 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .memo.open .l1,.memo.open .more{display:none}
 .memo.open .all{display:block}
 .memo.pressing{background:var(--press)}
-.memo.flash{animation:flash 1.2s ease-out}
+.memo.flash,.flash{animation:flash 1.2s ease-out}
 @keyframes flash{from{background:var(--press)}to{background:transparent}}
 
 .empty{padding:48px 24px;text-align:center;color:var(--sub);font-size:12px;line-height:1.8}
@@ -149,6 +149,76 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .addfld{align-self:flex-start;display:flex;align-items:center;gap:4px;height:32px;padding-inline:10px;border-radius:8px;border:1px dashed var(--line);font-size:12px;color:var(--sub)}
 .addfld svg{width:14px;height:14px}
 .delchar{margin-top:10px;align-self:center;font-size:13px;color:var(--danger);padding:8px 14px}
+
+/* world */
+.wrow{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:pointer}
+.wrow:active,.wrow.pressing,.ev.pressing,.rrow.pressing{background:var(--press)}
+.wrow svg{flex:none;width:18px;height:18px;color:var(--sub)}
+.wrow .wn{flex:1;min-width:0;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow .ws{font-size:10px;color:var(--faint);margin-left:6px;font-weight:400}
+.wrow .wc{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.crow .rc{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.evs{list-style:none;margin:0;padding:0}
+.ev{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:10px;padding:7px 14px;border-bottom:1px solid var(--line);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ev.ystart{border-top:1px solid var(--line);margin-top:-1px}
+.ey{display:flex;flex-direction:column;font-size:11px;line-height:1.5;color:var(--sub);font-variant-numeric:tabular-nums}
+.ey b{font-size:12px;font-weight:600;color:var(--ink)}
+.et{font-size:13px;font-weight:500;line-height:1.5;word-break:break-word}
+.edt{margin-top:3px;font-size:12.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.ec{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px}
+.ecc{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--sub)}
+.av.sm{width:16px;height:16px}
+.av.md{width:22px;height:22px}
+.evs.line .ev .eb{display:flex;align-items:center;gap:8px;min-width:0}
+.evs.line .ev .et{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evs.line .ev .ec{flex:none;margin:0;gap:2px}
+.evs.line .ev .ecc span{display:none}
+.evs.line .ev .edt{display:none}
+.evs.line .ev.open{background:var(--press)}
+.evs.line .ev.open .eb{display:block}
+.evs.line .ev.open .et{white-space:normal}
+.evs.line .ev.open .ec{margin-top:4px;gap:4px 10px}
+.evs.line .ev.open .ecc span{display:inline}
+.evs.line .ev.open .edt{display:block}
+.rlist{list-style:none;margin:0;padding:0}
+.rrow{border-bottom:1px solid var(--line);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:pointer}
+.rrow .rh{display:flex;align-items:center;gap:10px;padding:6px 14px}
+.rrow .cn{flex:none;max-width:45%;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .rl{flex:1;min-width:0;font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .rb{display:none;padding:0 14px 10px 52px;flex-direction:column;gap:8px}
+.rrow.open{background:var(--press)}
+.rrow.open .rb{display:flex}
+.rb .rk{font-size:10.5px;color:var(--faint);margin-bottom:1px}
+.rb .rv{font-size:12.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.xlist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.xrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+.xrow:active{background:var(--press)}
+.xrow .xl{flex:1;min-width:0;color:var(--sub);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xrow .xev{display:flex;flex-direction:column;gap:1px;min-width:0}
+.xrow .xm{font-size:10.5px;color:var(--faint)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.seg button{height:34px;padding-inline:12px;font-size:12px;color:var(--sub);background:var(--surface)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.yrow{display:flex;gap:8px;align-items:center}
+.yrow input{flex:1;min-width:0}
+.yrow .yu{font-size:12px;color:var(--sub)}
+.fld select{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:7px 10px;height:36px}
+.pickrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 8px;border-radius:10px;cursor:pointer;font-size:13px}
+.pickrow:active{background:var(--press)}
+.pickrow .ck{margin-left:auto;flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--faint);display:grid;place-items:center;color:transparent}
+.pickrow .ck svg{width:12px;height:12px}
+.pickrow[aria-checked="true"] .ck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.picklist{display:flex;flex-direction:column;max-height:52vh;overflow-y:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.pchip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px 0 4px;border-radius:14px;background:var(--press);font-size:12px}
+.partner{display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px;text-align:left;width:100%}
+.partner .ph{color:var(--faint)}
+.mchoice{display:flex;flex-direction:column;gap:6px;padding:0 6px 4px}
+.mchoice button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;text-align:left}
+.mchoice button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mchoice b{font-size:13px}
+.mchoice span{font-size:11px;color:var(--sub)}
+.sheet .fl{font-size:11px;color:var(--sub);padding:6px 6px 3px}
 
 /* cropper */
 .crop{position:relative;width:min(78vw,300px);aspect-ratio:1;max-width:100%;margin:4px auto 6px;overflow:hidden;border-radius:12px;background:#000;touch-action:none;cursor:grab}
@@ -220,6 +290,7 @@ body.kbopen .cedit{padding-bottom:120px}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
       <button class="hbtn txt" id="charCancelBtn" hidden>キャンセル</button>
+      <button class="hbtn txt" id="wCancelBtn" hidden>キャンセル</button>
       <button class="hbtn" id="settingsBtn" aria-label="同期設定">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 000-3l1.9-1.4-2-3.4-2.2.8a7.6 7.6 0 00-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 00-2.6 1.5l-2.2-.8-2 3.4L4.6 10.5a7.6 7.6 0 000 3L2.7 15l2 3.4 2.2-.8c.8.7 1.6 1.2 2.6 1.5l.5 2.5h4l.5-2.5a7.6 7.6 0 002.6-1.5l2.2.8 2-3.4z"/></svg>
       </button>
@@ -239,6 +310,10 @@ body.kbopen .cedit{padding-bottom:120px}
       <button class="hbtn txt strong" id="charDoneBtn" hidden>完了</button>
       <button class="hbtn txt strong" id="charSaveBtn" hidden>保存</button>
       <button class="hbtn txt danger" id="charDelSelBtn" hidden disabled>削除</button>
+      <button class="hbtn" id="wAddBtn" hidden aria-label="追加">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="hbtn txt strong" id="wSaveBtn" hidden>保存</button>
       <button class="hbtn" id="addFolderBtn" aria-label="フォルダを作る">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M12 10.5v5M9.5 13h5"/></svg>
       </button>
@@ -267,7 +342,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.2.3';
+const APP_VERSION='0.3.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -298,19 +373,14 @@ function b64enc(str){ return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2}
 function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
 
 /* ---------- data model ---------- */
-function emptyDb(){ return {meta:{updatedAt:0}, folders:[], memos:[], deletedFolders:[], deletedMemos:[], chars:[], deletedChars:[]}; }
+const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels']];
+function emptyDb(){ const d={meta:{updatedAt:0}}; for(const [a,b] of COLLS){ d[a]=[]; d[b]=[]; } return d; }
 function normalize(d){
   const e=emptyDb();
   if(!d||typeof d!=='object') return e;
-  return {
-    meta:{updatedAt:(d.meta&&d.meta.updatedAt)||0},
-    folders:Array.isArray(d.folders)?d.folders:[],
-    memos:Array.isArray(d.memos)?d.memos:[],
-    deletedFolders:Array.isArray(d.deletedFolders)?d.deletedFolders:[],
-    deletedMemos:Array.isArray(d.deletedMemos)?d.deletedMemos:[],
-    chars:Array.isArray(d.chars)?d.chars:[],
-    deletedChars:Array.isArray(d.deletedChars)?d.deletedChars:[]
-  };
+  e.meta.updatedAt=(d.meta&&d.meta.updatedAt)||0;
+  for(const [a,b] of COLLS){ e[a]=Array.isArray(d[a])?d[a]:[]; e[b]=Array.isArray(d[b])?d[b]:[]; }
+  return e;
 }
 function load(){
   try{const raw=localStorage.getItem(KEY); if(raw) return normalize(JSON.parse(raw));}catch(e){}
@@ -339,29 +409,19 @@ function mergeCollections(localItems, remoteItems, localDeleted, remoteDeleted){
   }
   return {items:[...byId.values()], deleted:[...delMap].map(([id,deletedAt])=>({id,deletedAt}))};
 }
-function sortedJson(o){ return JSON.stringify(o, Object.keys(o).sort ? undefined : undefined); }
 function canon(d){
-  return JSON.stringify({
-    folders:[...d.folders].sort((a,b)=>a.id<b.id?-1:1),
-    memos:[...d.memos].sort((a,b)=>a.id<b.id?-1:1),
-    deletedFolders:[...d.deletedFolders].sort((a,b)=>a.id<b.id?-1:1),
-    deletedMemos:[...d.deletedMemos].sort((a,b)=>a.id<b.id?-1:1),
-    chars:[...(d.chars||[])].sort((a,b)=>a.id<b.id?-1:1),
-    deletedChars:[...(d.deletedChars||[])].sort((a,b)=>a.id<b.id?-1:1)
-  });
+  const o={}, byId=(a,b)=>a.id<b.id?-1:1;
+  for(const [a,b] of COLLS){ o[a]=[...(d[a]||[])].sort(byId); o[b]=[...(d[b]||[])].sort(byId); }
+  return JSON.stringify(o);
 }
 function mergeDb(local, remote){
   if(!remote) return {merged:local, changedFromLocal:false, changedFromRemote:true};
-  remote=normalize(remote);
-  const f=mergeCollections(local.folders, remote.folders||[], local.deletedFolders||[], remote.deletedFolders||[]);
-  const m=mergeCollections(local.memos, remote.memos||[], local.deletedMemos||[], remote.deletedMemos||[]);
-  const c=mergeCollections(local.chars||[], remote.chars||[], local.deletedChars||[], remote.deletedChars||[]);
-  const merged={
-    meta:{updatedAt:Math.max((local.meta&&local.meta.updatedAt)||0,(remote.meta&&remote.meta.updatedAt)||0)},
-    folders:f.items, deletedFolders:f.deleted,
-    memos:m.items, deletedMemos:m.deleted,
-    chars:c.items, deletedChars:c.deleted
-  };
+  remote=normalize(remote); local=normalize(local);
+  const merged={meta:{updatedAt:Math.max(local.meta.updatedAt||0,remote.meta.updatedAt||0)}};
+  for(const [a,b] of COLLS){
+    const r=mergeCollections(local[a], remote[a], local[b], remote[b]);
+    merged[a]=r.items; merged[b]=r.deleted;
+  }
   const changedFromLocal = canon(merged)!==canon(local);
   const changedFromRemote = canon(merged)!==canon(remote);
   return {merged, changedFromLocal, changedFromRemote};
@@ -448,6 +508,7 @@ async function syncNow(){
 
 function safeRerender(){
   if(tab==='chara' && charView==='edit') return;
+  if(tab==='world' && (wView==='ev'||wView==='rel')) return;
   const st=main.scrollTop;
   render();
   main.scrollTop=st;
@@ -483,19 +544,14 @@ const main=$('#main');
 function render(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const inFolder = tab==='talk' && folderId;
-  ['charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn','charSelectBtn','charDelSelBtn'].forEach(id=>$('#'+id).hidden=true);
+  ['charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn','charSelectBtn','charDelSelBtn','wAddBtn','wCancelBtn','wSaveBtn'].forEach(id=>$('#'+id).hidden=true);
   $('#settingsBtn').hidden=false;
   $('#backBtn').hidden=!inFolder;
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId);
   $('#composer').hidden=!inFolder;
 
   if(tab==='chara'){ $('#viewBtn').hidden=true; renderChara(); return; }
-  if(tab==='world'){
-    $('#title').textContent = '世界観';
-    $('#viewBtn').hidden=true;
-    main.innerHTML='<div class="empty"><strong>準備中</strong>会話メモを使ってみてから、<br>ここに入れる機能を決めましょう。</div>';
-    return;
-  }
+  if(tab==='world'){ $('#viewBtn').hidden=true; renderWorld(); return; }
   if(!folderId){
     $('#title').textContent='会話';
     $('#viewBtn').hidden=true;
@@ -529,10 +585,13 @@ function toBottom(){ main.scrollTop=main.scrollHeight; }
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
   if(tab===b.dataset.tab && tab==='talk'){folderId=null;}
   if(tab===b.dataset.tab && tab==='chara' && charView!=='edit'){charView='list'; reorderMode=false; selectMode=false; selected.clear();}
+  if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub';}
+  if(b.dataset.tab==='world') wReturn=null;
   tab=b.dataset.tab; render(); if(folderId) toBottom();
 }));
 $('#backBtn').addEventListener('click',()=>{
   if(tab==='chara'){ charView='list'; render(); return; }
+  if(tab==='world'){ worldBack(); return; }
   folderId=null;render();
 });
 
@@ -657,6 +716,7 @@ $('#addFolderBtn').addEventListener('click',()=>nameSheet('新しいフォルダ
   db.folders.push({id:uid(),name,view:'full',createdAt:t,updatedAt:t}); commit(); render(); toBottom();
 }));
 $('#viewBtn').addEventListener('click',()=>{
+  if(tab==='world'){ toggleTlView(); return; }
   const f=folderById(folderId); if(!f) return;
   const st=main.scrollTop, atBottom=main.scrollTop+main.clientHeight>=main.scrollHeight-4;
   f.view = f.view==='line' ? 'full' : 'line'; f.updatedAt=Date.now(); commit(); render();
@@ -824,6 +884,7 @@ function renderChara(){
       <div class="chead">${avatar(c,'lg')}<div><div class="cname">${esc(c.name)}</div>${(c.alias||'').trim()?`<div class="calias">${esc(c.alias.trim())}</div>`:''}</div></div>
       ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
       ${(c.memo||'').trim()?`<div class="cblock"><div class="clabel">詳細メモ</div><div class="ctext">${esc(c.memo.trim())}</div></div>`:''}
+      ${charLinksHtml(c)}
     </div>`;
     main.scrollTop=0;
     return;
@@ -880,6 +941,7 @@ $('#charDelSelBtn').addEventListener('click',()=>{
   confirmSheet(`${n}人のキャラクターを削除しますか？`,'元に戻せません。','削除',()=>{
     const t=Date.now();
     db.chars=db.chars.filter(c=>{ if(selected.has(c.id)){ db.deletedChars.push({id:c.id,deletedAt:t}); return false; } return true; });
+    dropRelsOf(new Set(selected),t);
     selected.clear(); selectMode=false; commit(); render(); toast(n+'人を削除しました');
   });
 });
@@ -913,6 +975,7 @@ main.addEventListener('input',e=>{
 });
 main.addEventListener('click',e=>{
   if(tab!=='chara') return;
+  if(charView==='detail'){ const j=e.target.closest('[data-jump]'); if(j) jumpFromChar(j); return; }
   const a=e.target.closest('[data-a]');
   if(charView==='edit' && a){
     const act=a.dataset.a;
@@ -928,7 +991,7 @@ main.addEventListener('click',e=>{
     else if(act==='delchar'){
       const c=charById(charDraft.id); if(!c) return;
       confirmSheet(`「${c.name}」を削除しますか？`,'元に戻せません。','削除',()=>{
-        db.chars=db.chars.filter(x=>x.id!==c.id); db.deletedChars.push({id:c.id,deletedAt:Date.now()});
+        const t=Date.now(); db.chars=db.chars.filter(x=>x.id!==c.id); db.deletedChars.push({id:c.id,deletedAt:t}); dropRelsOf(new Set([c.id]),t);
         commit(); charDraft=null; charDirty=false; charView='list'; render(); toast('削除しました');
       });
     }
@@ -1063,6 +1126,337 @@ function openCropper(file){
   img.onerror=()=>{ URL.revokeObjectURL(url); toast('この画像は読み込めませんでした'); };
   img.src=url;
 }
+
+
+/* ---------- world: timelines & relationships ---------- */
+const WI={
+  tl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="7" r="2" fill="currentColor"/><circle cx="6" cy="17" r="2" fill="currentColor"/><path d="M11 7h9M11 17h9M11 12h6"/></svg>',
+  rel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2.5 19c.6-3 2.4-4.5 4.5-4.5s3.9 1.5 4.5 4.5M12.5 19c.6-3 2.4-4.5 4.5-4.5s3.9 1.5 4.5 4.5"/></svg>',
+  line:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="12" r="2" fill="currentColor"/><path d="M11 12h9"/></svg>'
+};
+let wView='hub', tlId=null, rcId=null, evDraft=null, relDraft=null, wDirty=false, wReturn=null;
+const openEv=new Set(), openRel=new Set();
+
+function tlById(id){ return db.timelines.find(t=>t.id===id); }
+function tlsSorted(){ return [...db.timelines].sort((a,b)=>a.createdAt-b.createdAt); }
+function evSort(a,b){ return a.year-b.year || (a.month||0)-(b.month||0) || (a.day||0)-(b.day||0) || a.createdAt-b.createdAt; }
+function eventsOf(tid){ return db.events.filter(e=>e.timelineId===tid).sort(evSort); }
+function yearLabel(tl,y){
+  if(tl.mode==='ad') return y<0 ? '紀元前'+(-y)+'年' : y+'年';
+  return y===0 ? '基準年' : y<0 ? (-y)+'年前' : y+'年後';
+}
+function dateLabel(e){ return e.month ? (e.day ? `${e.month}/${e.day}` : `${e.month}月`) : ''; }
+function relsOf(cid){ return db.rels.filter(r=>(r.a===cid||r.b===cid) && charById(r.a) && charById(r.b)); }
+function relView(r,cid){ const me=r.a===cid; return {other:me?r.b:r.a, toOther:me?r.ab:r.ba, toMe:me?r.ba:r.ab}; }
+function dropRelsOf(ids,t){
+  db.rels=db.rels.filter(r=>{ if(ids.has(r.a)||ids.has(r.b)){ db.deletedRels.push({id:r.id,deletedAt:t}); return false; } return true; });
+}
+
+function renderWorld(){
+  const hdrBack=()=>{ $('#settingsBtn').hidden=true; $('#backBtn').hidden=false; };
+  if(wView==='tl' && !tlById(tlId)) wView='tls';
+  if(wView==='rc' && !charById(rcId)) wView='rchars';
+
+  if(wView==='hub'){
+    $('#title').textContent='世界観';
+    main.innerHTML=`<div>
+      <div class="wrow" data-go="tls">${WI.tl}<span class="wn">時系列</span><span class="wc">${db.timelines.length}</span></div>
+      <div class="wrow" data-go="rchars">${WI.rel}<span class="wn">関係性</span><span class="wc">${relsOfAllCount()}</span></div>
+    </div>`;
+    return;
+  }
+  if(wView==='tls'){
+    $('#title').textContent='時系列'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','時系列を作る');
+    const ts=tlsSorted();
+    main.innerHTML = ts.length
+      ? ts.map(t=>`<div class="wrow wlp" data-tl="${t.id}" tabindex="0">${WI.line}<span class="wn">${esc(t.name)}<span class="ws">${t.mode==='ad'?'西暦':'基準からの年数'}</span></span><span class="wc">${eventsOf(t.id).length}</span></div>`).join('')+'<div class="hint">長押しで名前変更・削除</div>'
+      : '<div class="empty"><strong>時系列がありません</strong>右上の＋から「本編」「キャラごと」などの時系列を作れます。</div>';
+    return;
+  }
+  if(wView==='tl'){
+    const tl=tlById(tlId), one=tl.view!=='full';
+    $('#title').textContent=tl.name; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','イベントを追加');
+    $('#viewBtn').hidden=false;
+    $('#viewBtn').innerHTML=(one?ICON.lines+'1行':ICON.full+'全文');
+    const evs=eventsOf(tl.id);
+    if(!evs.length){ main.innerHTML='<div class="empty"><strong>イベントがありません</strong>右上の＋から追加できます。</div>'; return; }
+    let prev=null;
+    main.innerHTML='<ul class="evs '+(one?'line':'full')+'">'+evs.map(e=>{
+      const first=e.year!==prev; prev=e.year;
+      const cs=(e.chars||[]).map(charById).filter(Boolean);
+      const d=dateLabel(e);
+      return `<li class="ev wlp${first?' ystart':''}${openEv.has(e.id)?' open':''}" data-eid="${e.id}" tabindex="0">
+        <div class="ey">${first?`<b>${yearLabel(tl,e.year)}</b>`:''}${d?`<span>${d}</span>`:''}</div>
+        <div class="eb"><div class="et">${esc(e.title)}</div>${cs.length?`<div class="ec">${cs.map(c=>`<span class="ecc">${avatar(c,'sm')}<span>${esc(c.name)}</span></span>`).join('')}</div>`:''}${(e.detail||'').trim()?`<div class="edt">${esc(e.detail.trim())}</div>`:''}</div>
+      </li>`;
+    }).join('')+'</ul><div class="hint">'+(one?'タップで詳細、':'')+'長押しで編集・削除</div>';
+    return;
+  }
+  if(wView==='rchars'){
+    $('#title').textContent='関係性'; hdrBack();
+    const list=charsSorted();
+    main.innerHTML = list.length
+      ? '<ul class="clist">'+list.map(c=>{ const n=relsOf(c.id).length; return `<li class="crow" data-rcid="${c.id}" tabindex="0">${avatar(c)}<span class="cn">${esc(c.name)}</span><span class="rc">${n||''}</span></li>`; }).join('')+'</ul>'
+      : '<div class="empty"><strong>キャラクターがいません</strong>先にキャラクタータブでキャラを登録してください。</div>';
+    return;
+  }
+  if(wView==='rc'){
+    const me=charById(rcId);
+    $('#title').textContent=me.name+'の関係'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','関係を追加');
+    const rs=relsOf(me.id);
+    if(!rs.length){ main.innerHTML='<div class="empty"><strong>まだ関係がありません</strong>右上の＋から追加できます。</div>'; return; }
+    main.innerHTML='<ul class="rlist">'+rs.map(r=>{
+      const v=relView(r,me.id), o=charById(v.other);
+      const blocks=[
+        (v.toOther||'').trim()?`<div><div class="rk">${esc(me.name)} → ${esc(o.name)}</div><div class="rv">${esc(v.toOther.trim())}</div></div>`:'',
+        (v.toMe||'').trim()?`<div><div class="rk">${esc(o.name)} → ${esc(me.name)}</div><div class="rv">${esc(v.toMe.trim())}</div></div>`:'',
+        (r.detail||'').trim()?`<div><div class="rk">詳細</div><div class="rv">${esc(r.detail.trim())}</div></div>`:''
+      ].join('');
+      return `<li class="rrow wlp${openRel.has(r.id)?' open':''}" data-rid="${r.id}" tabindex="0"><div class="rh">${avatar(o)}<span class="cn">${esc(o.name)}</span><span class="rl">${esc((r.label||'').trim())}</span></div>${blocks?`<div class="rb">${blocks}</div>`:''}</li>`;
+    }).join('')+'</ul><div class="hint">タップで詳細、長押しで編集・削除</div>';
+    return;
+  }
+  // edit forms
+  $('#settingsBtn').hidden=true; $('#wCancelBtn').hidden=false; $('#wSaveBtn').hidden=false;
+  if(wView==='ev'){
+    const d=evDraft, tl=tlById(d.timelineId), isNew=!db.events.some(e=>e.id===d.id);
+    $('#title').textContent=isNew?'イベントを追加':'イベントを編集';
+    const signs = tl.mode==='ad' ? [[1,'西暦'],[-1,'紀元前']] : [[-1,'前'],[1,'後']];
+    const cs=d.chars.map(charById).filter(Boolean);
+    main.innerHTML=`<form class="cedit" id="wForm" autocomplete="off">
+      <div class="fld"><span class="lbl">年<span class="req" style="color:var(--danger);margin-left:3px">必須</span></span>
+        <div class="yrow"><div class="seg" role="group">${signs.map(([v,l])=>`<button type="button" data-sign="${v}" aria-pressed="${d.sign===v}">${l}</button>`).join('')}</div>
+        <input id="w_year" data-w="yabs" type="text" inputmode="numeric" pattern="[0-9]*" value="${esc(d.yabs)}" placeholder="${tl.mode==='ad'?'例：1985':'0で基準年'}"><span class="yu">年</span></div></div>
+      <div class="grid2">
+        <div class="fld"><label for="w_month">月（任意）</label><select id="w_month" data-w="month"><option value="">—</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${String(d.month)===String(i+1)?' selected':''}>${i+1}月</option>`).join('')}</select></div>
+        <div class="fld"><label for="w_day">日（任意）</label><select id="w_day" data-w="day"><option value="">—</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${String(d.day)===String(i+1)?' selected':''}>${i+1}日</option>`).join('')}</select></div>
+      </div>
+      <div class="fld"><label for="w_title">タイトル<span class="req">必須</span></label><input id="w_title" data-w="title" type="text" value="${esc(d.title)}"></div>
+      <div class="fld"><label for="w_detail">詳細</label><textarea id="w_detail" data-w="detail">${esc(d.detail)}</textarea></div>
+      <div class="fld"><span class="lbl">関わったキャラ</span>
+        <div class="chips">${cs.map(c=>`<span class="pchip">${avatar(c,'md')}${esc(c.name)}</span>`).join('')}<button type="button" class="chip" data-wa="pickchars">${cs.length?'変更':'キャラを選ぶ'}</button></div></div>
+      ${isNew?'':'<button type="button" class="delchar" data-wa="delev">このイベントを削除</button>'}
+    </form>`;
+    return;
+  }
+  if(wView==='rel'){
+    const d=relDraft, me=charById(d.a), o=d.b?charById(d.b):null, isNew=!db.rels.some(r=>r.id===d.id);
+    $('#title').textContent=isNew?'関係を追加':'関係を編集';
+    const oname=o?o.name:'相手';
+    main.innerHTML=`<form class="cedit" id="wForm" autocomplete="off">
+      <div class="fld"><span class="lbl">相手<span class="req" style="color:var(--danger);margin-left:3px">必須</span></span>
+        <button type="button" class="partner" data-wa="pickpartner">${o?`${avatar(o,'md')}${esc(o.name)}`:'<span class="ph">相手を選ぶ</span>'}</button></div>
+      <div class="fld"><label for="r_label">関係名</label><input id="r_label" data-w="label" type="text" value="${esc(d.label)}" placeholder="例：幼なじみ、宿敵"></div>
+      <div class="fld"><label for="r_ab">${esc(me.name)} → ${esc(oname)}</label><textarea id="r_ab" data-w="ab" style="min-height:80px">${esc(d.ab)}</textarea></div>
+      <div class="fld"><label for="r_ba">${esc(oname)} → ${esc(me.name)}</label><textarea id="r_ba" data-w="ba" style="min-height:80px">${esc(d.ba)}</textarea></div>
+      <div class="fld"><label for="r_detail">詳細</label><textarea id="r_detail" data-w="detail">${esc(d.detail)}</textarea></div>
+      ${isNew?'':'<button type="button" class="delchar" data-wa="delrel">この関係を削除</button>'}
+    </form>`;
+  }
+}
+function relsOfAllCount(){ return db.rels.filter(r=>charById(r.a)&&charById(r.b)).length; }
+
+function worldBack(){
+  if(wReturn && (wView==='tl'||wView==='rc')){ const cid=wReturn; wReturn=null; tab='chara'; charView='detail'; charId=cid; render(); return; }
+  wView = wView==='tl'?'tls' : wView==='rc'?'rchars' : 'hub';
+  render();
+}
+function toggleTlView(){
+  const tl=tlById(tlId); if(!tl) return;
+  tl.view = tl.view==='full' ? 'line' : 'full'; tl.updatedAt=Date.now(); commit();
+  const st=main.scrollTop; render(); main.scrollTop=st;
+  toast(tl.view==='full'?'全文表示':'1行表示（タップで詳細）');
+}
+
+/* header actions */
+$('#wAddBtn').addEventListener('click',()=>{
+  if(wView==='tls') return newTimelineSheet();
+  if(wView==='tl'){ evDraft={id:uid(),timelineId:tlId,sign:tlById(tlId).mode==='ad'?1:-1,yabs:'',month:'',day:'',title:'',detail:'',chars:[],createdAt:Date.now()}; wDirty=false; wView='ev'; render(); main.scrollTop=0; return; }
+  if(wView==='rc'){ relDraft={id:uid(),a:rcId,b:'',label:'',ab:'',ba:'',detail:'',createdAt:Date.now()}; wDirty=false; wView='rel'; render(); main.scrollTop=0; }
+});
+function leaveWorldEdit(){ const back = wView==='ev'?'tl':'rc'; evDraft=null; relDraft=null; wDirty=false; wView=back; render(); }
+$('#wCancelBtn').addEventListener('click',()=>{
+  if(!wDirty) return leaveWorldEdit();
+  confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',leaveWorldEdit);
+});
+$('#wSaveBtn').addEventListener('click',()=>{
+  const t=Date.now();
+  if(wView==='ev'){
+    const d=evDraft, yabs=String(d.yabs).trim();
+    if(!/^\d+$/.test(yabs)){ toast('年を数字で入力してください'); const y=$('#w_year'); if(y) y.focus(); return; }
+    if(!d.title.trim()){ toast('タイトルを入力してください'); const x=$('#w_title'); if(x) x.focus(); return; }
+    const month=d.month?Number(d.month):null, day=month&&d.day?Number(d.day):null;
+    const rec={id:d.id,timelineId:d.timelineId,year:d.sign*Number(yabs),month,day,title:d.title.trim(),detail:d.detail,chars:d.chars.filter(id=>charById(id)),createdAt:d.createdAt,updatedAt:t};
+    const ex=db.events.find(e=>e.id===d.id);
+    ex?Object.assign(ex,rec):db.events.push(rec);
+    commit(); evDraft=null; wDirty=false; wView='tl'; render(); flashEl(`[data-eid="${rec.id}"]`); toast('保存しました');
+    return;
+  }
+  if(wView==='rel'){
+    const d=relDraft;
+    if(!d.b){ toast('相手を選んでください'); return; }
+    const dup=db.rels.find(r=>r.id!==d.id && ((r.a===d.a&&r.b===d.b)||(r.a===d.b&&r.b===d.a)));
+    if(dup){ toast('この2人の関係はすでにあります'); return; }
+    const rec={id:d.id,a:d.a,b:d.b,label:d.label.trim(),ab:d.ab,ba:d.ba,detail:d.detail,createdAt:d.createdAt,updatedAt:t};
+    const ex=db.rels.find(r=>r.id===d.id);
+    ex?Object.assign(ex,rec):db.rels.push(rec);
+    commit(); relDraft=null; wDirty=false; wView='rc'; render(); flashEl(`[data-rid="${rec.id}"]`); toast('保存しました');
+  }
+});
+function flashEl(sel){ const el=main.querySelector(sel); if(!el) return; try{el.scrollIntoView({block:'center'});}catch(_){ } el.classList.add('flash'); }
+
+/* sheets */
+function newTimelineSheet(){
+  let mode='rel';
+  openSheet(`<div class="title">新しい時系列</div>
+    <input id="tlName" type="text" maxlength="40" placeholder="例：本編、〇〇の生涯">
+    <div class="fl">年の数え方（あとから変えられません）</div>
+    <div class="mchoice" id="tlMode">
+      <button type="button" data-mode="rel" aria-pressed="true"><b>基準からの年数</b><span>本編の年を0として「100年前」「3年後」と数える</span></button>
+      <button type="button" data-mode="ad" aria-pressed="false"><b>西暦</b><span>「1985年」のように実際の年で数える</span></button>
+    </div>
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok" disabled>作成</button></div>`, s=>{
+    const inp=s.querySelector('#tlName'), ok=s.querySelector('[data-a=ok]');
+    inp.addEventListener('input',()=>ok.disabled=!inp.value.trim());
+    s.querySelector('#tlMode').addEventListener('click',e=>{ const b=e.target.closest('[data-mode]'); if(!b) return; mode=b.dataset.mode; s.querySelectorAll('#tlMode [data-mode]').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    ok.onclick=()=>{ const name=inp.value.trim(); if(!name) return; const t=Date.now(), id=uid();
+      db.timelines.push({id,name,mode,view:'line',createdAt:t,updatedAt:t}); commit(); closeSheet(); tlId=id; wView='tl'; render(); };
+    inp.focus();
+  },'tlnew');
+}
+function tlMenu(id){
+  const tl=tlById(id); if(!tl) return;
+  openSheet(`<div class="title">${esc(tl.name)}</div>
+    <button class="act" data-a="ren">${ICON.edit}名前を変更</button>
+    <button class="act danger" data-a="del">${ICON.trash}時系列を削除</button>`, s=>{
+    s.querySelector('[data-a=ren]').onclick=()=>nameSheet('名前を変更',tl.name,'変更',name=>{ tl.name=name; tl.updatedAt=Date.now(); commit(); render(); });
+    s.querySelector('[data-a=del]').onclick=()=>{
+      const n=eventsOf(id).length;
+      confirmSheet(`「${tl.name}」を削除しますか？`, n?`中のイベント${n}件もすべて削除されます。元に戻せません。`:'元に戻せません。','削除',()=>{
+        const t=Date.now();
+        db.timelines=db.timelines.filter(x=>x.id!==id); db.deletedTimelines.push({id,deletedAt:t});
+        db.events=db.events.filter(e=>{ if(e.timelineId===id){ db.deletedEvents.push({id:e.id,deletedAt:t}); return false; } return true; });
+        commit(); render(); toast('削除しました');
+      });
+    };
+  },'tlmenu');
+}
+function editEvent(ev){
+  const tl=tlById(ev.timelineId);
+  evDraft={id:ev.id,timelineId:ev.timelineId,sign:ev.year<0?-1:(tl.mode==='ad'?1:(ev.year===0?-1:1)),yabs:String(Math.abs(ev.year)),month:ev.month||'',day:ev.day||'',title:ev.title,detail:ev.detail||'',chars:[...(ev.chars||[])],createdAt:ev.createdAt};
+  wDirty=false; wView='ev'; render(); main.scrollTop=0;
+}
+function evMenu(id){
+  const ev=db.events.find(e=>e.id===id); if(!ev) return;
+  openSheet(`<div class="preview">${esc(ev.title)}</div>
+    <button class="act" data-a="edit">${ICON.edit}編集</button>
+    <button class="act danger" data-a="del">${ICON.trash}削除</button>`, s=>{
+    s.querySelector('[data-a=edit]').onclick=()=>{ closeSheet(); editEvent(ev); };
+    s.querySelector('[data-a=del]').onclick=()=>confirmSheet('このイベントを削除しますか？','元に戻せません。','削除',()=>deleteEvent(id));
+  },'evmenu');
+}
+function deleteEvent(id){ db.events=db.events.filter(e=>e.id!==id); db.deletedEvents.push({id,deletedAt:Date.now()}); commit(); evDraft=null; wDirty=false; wView='tl'; render(); toast('削除しました'); }
+function editRel(r){
+  const v=relView(r,rcId);
+  relDraft={id:r.id,a:rcId,b:v.other,label:r.label||'',ab:v.toOther||'',ba:v.toMe||'',detail:r.detail||'',createdAt:r.createdAt};
+  wDirty=false; wView='rel'; render(); main.scrollTop=0;
+}
+function relMenu(id){
+  const r=db.rels.find(x=>x.id===id); if(!r) return;
+  const o=charById(relView(r,rcId).other);
+  openSheet(`<div class="title">${esc(o?o.name:'')}${(r.label||'').trim()?'（'+esc(r.label.trim())+'）':''}</div>
+    <button class="act" data-a="edit">${ICON.edit}編集</button>
+    <button class="act danger" data-a="del">${ICON.trash}削除</button>`, s=>{
+    s.querySelector('[data-a=edit]').onclick=()=>{ closeSheet(); editRel(r); };
+    s.querySelector('[data-a=del]').onclick=()=>confirmSheet('この関係を削除しますか？','相手側からも見えなくなります。元に戻せません。','削除',()=>deleteRel(id));
+  },'relmenu');
+}
+function deleteRel(id){ db.rels=db.rels.filter(r=>r.id!==id); db.deletedRels.push({id,deletedAt:Date.now()}); commit(); relDraft=null; wDirty=false; wView='rc'; render(); toast('削除しました'); }
+
+function pickCharsSheet(ids,cb){
+  const sel=new Set(ids), list=charsSorted();
+  if(!list.length){ toast('先にキャラクターを登録してください'); return; }
+  openSheet(`<div class="title">関わったキャラ</div>
+    <div class="picklist" role="group">${list.map(c=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${c.id}" aria-checked="${sel.has(c.id)}">${avatar(c)}<span>${esc(c.name)}</span><span class="ck">${CI.check}</span></div>`).join('')}</div>
+    <div class="row"><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
+    s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; const id=r.dataset.pid;
+      sel.has(id)?sel.delete(id):sel.add(id); r.setAttribute('aria-checked',sel.has(id)); });
+    s.querySelector('[data-a=ok]').onclick=()=>{ closeSheet(); cb(list.map(c=>c.id).filter(id=>sel.has(id))); };
+  },'pickchars');
+}
+function pickPartnerSheet(exclude,cb){
+  const list=charsSorted().filter(c=>c.id!==exclude);
+  if(!list.length){ toast('ほかのキャラクターがいません'); return; }
+  openSheet(`<div class="title">相手を選ぶ</div>
+    <div class="picklist">${list.map(c=>`<div class="pickrow" tabindex="0" data-pid="${c.id}">${avatar(c)}<span>${esc(c.name)}</span></div>`).join('')}</div>`, s=>{
+    s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; closeSheet(); cb(r.dataset.pid); });
+  },'pickpartner');
+}
+
+/* character detail: linked relationships & events */
+function charLinksHtml(c){
+  const rs=relsOf(c.id);
+  const evs=db.events.filter(e=>(e.chars||[]).includes(c.id) && tlById(e.timelineId))
+    .sort((a,b)=>{ const ta=tlById(a.timelineId), tb=tlById(b.timelineId); return (ta.createdAt-tb.createdAt)||evSort(a,b); });
+  let h='';
+  if(rs.length) h+=`<div class="cblock"><div class="clabel">関係性</div><ul class="xlist">${rs.map(r=>{ const o=charById(relView(r,c.id).other);
+    return `<li class="xrow" data-jump="rel" data-rid="${r.id}">${avatar(o,'md')}<span>${esc(o.name)}</span><span class="xl">${esc((r.label||'').trim())}</span></li>`; }).join('')}</ul></div>`;
+  if(evs.length) h+=`<div class="cblock"><div class="clabel">登場イベント</div><ul class="xlist">${evs.map(e=>{ const tl=tlById(e.timelineId), d=dateLabel(e);
+    return `<li class="xrow" data-jump="ev" data-eid="${e.id}"><div class="xev"><span class="xm">${esc(tl.name)} · ${yearLabel(tl,e.year)}${d?' '+d:''}</span><span>${esc(e.title)}</span></div></li>`; }).join('')}</ul></div>`;
+  return h;
+}
+function jumpFromChar(j){
+  const cid=charId;
+  if(j.dataset.jump==='rel'){ wReturn=cid; tab='world'; rcId=cid; wView='rc'; openRel.add(j.dataset.rid); render(); flashEl(`[data-rid="${j.dataset.rid}"]`); }
+  else{ const ev=db.events.find(e=>e.id===j.dataset.eid); if(!ev) return; wReturn=cid; tab='world'; tlId=ev.timelineId; wView='tl'; openEv.add(ev.id); render(); flashEl(`[data-eid="${ev.id}"]`); }
+}
+
+/* world: taps, long-press, form input */
+let wlp=null, suppressClick=false;
+main.addEventListener('pointerdown',e=>{
+  if(tab!=='world') return;
+  const el=e.target.closest('.wlp'); if(!el) return;
+  el.classList.add('pressing');
+  wlp={el,x:e.clientX,y:e.clientY,timer:setTimeout(()=>{ el.classList.remove('pressing'); suppressClick=true; setTimeout(()=>suppressClick=false,600); wLong(el); wlp=null; },450)};
+});
+function wlpCancel(){ if(wlp){ clearTimeout(wlp.timer); wlp.el.classList.remove('pressing'); wlp=null; } }
+main.addEventListener('pointermove',e=>{ if(wlp && Math.hypot(e.clientX-wlp.x,e.clientY-wlp.y)>10) wlpCancel(); });
+main.addEventListener('pointerup',wlpCancel);
+main.addEventListener('pointercancel',wlpCancel);
+main.addEventListener('contextmenu',e=>{ if(tab!=='world') return; const el=e.target.closest('.wlp'); if(!el) return; e.preventDefault(); wlpCancel(); suppressClick=true; setTimeout(()=>suppressClick=false,600); wLong(el); });
+function wLong(el){ if(el.dataset.tl) tlMenu(el.dataset.tl); else if(el.dataset.eid) evMenu(el.dataset.eid); else if(el.dataset.rid) relMenu(el.dataset.rid); }
+
+main.addEventListener('click',e=>{
+  if(tab!=='world') return;
+  if(suppressClick){ suppressClick=false; return; }
+  const t=e.target;
+  const go=t.closest('[data-go]'); if(go){ wView=go.dataset.go; render(); return; }
+  const tr=t.closest('[data-tl]'); if(tr && wView==='tls'){ tlId=tr.dataset.tl; wView='tl'; render(); return; }
+  const rc=t.closest('[data-rcid]'); if(rc){ rcId=rc.dataset.rcid; wView='rc'; render(); return; }
+  const ev=t.closest('.ev'); if(ev && wView==='tl'){ if(tlById(tlId).view!=='full'){ ev.classList.toggle('open'); ev.classList.contains('open')?openEv.add(ev.dataset.eid):openEv.delete(ev.dataset.eid); } return; }
+  const rr=t.closest('.rrow'); if(rr && wView==='rc'){ rr.classList.toggle('open'); rr.classList.contains('open')?openRel.add(rr.dataset.rid):openRel.delete(rr.dataset.rid); return; }
+  const sg=t.closest('[data-sign]'); if(sg && evDraft){ evDraft.sign=Number(sg.dataset.sign); wDirty=true; sg.parentElement.querySelectorAll('[data-sign]').forEach(b=>b.setAttribute('aria-pressed',b===sg)); return; }
+  const a=t.closest('[data-wa]'); if(!a) return;
+  const act=a.dataset.wa;
+  if(act==='pickchars') pickCharsSheet(evDraft.chars,ids=>{ evDraft.chars=ids; wDirty=true; const st=main.scrollTop; renderWorld(); main.scrollTop=st; });
+  else if(act==='pickpartner') pickPartnerSheet(relDraft.a,id=>{ relDraft.b=id; wDirty=true; const st=main.scrollTop; renderWorld(); main.scrollTop=st; });
+  else if(act==='delev') confirmSheet('このイベントを削除しますか？','元に戻せません。','削除',()=>deleteEvent(evDraft.id));
+  else if(act==='delrel') confirmSheet('この関係を削除しますか？','相手側からも見えなくなります。元に戻せません。','削除',()=>deleteRel(relDraft.id));
+});
+main.addEventListener('keydown',e=>{
+  if(tab!=='world'||e.key!=='Enter') return;
+  const el=e.target.closest('[data-go],[data-tl],[data-rcid],.ev,.rrow'); if(el && !e.target.matches('input,textarea,select')) el.click();
+});
+main.addEventListener('input',e=>{
+  if(tab!=='world') return;
+  const t=e.target, k=t.dataset.w; if(!k) return;
+  const d = wView==='ev'?evDraft : wView==='rel'?relDraft : null; if(!d) return;
+  if(k==='yabs'){ const v=t.value.replace(/[^0-9]/g,''); if(v!==t.value) t.value=v; d.yabs=v; }
+  else d[k]=t.value;
+  wDirty=true;
+});
+main.addEventListener('submit',e=>{ if(e.target.id==='wForm') e.preventDefault(); });
 
 /* ---------- composer ---------- */
 const input=$('#input'), sendBtn=$('#sendBtn');
