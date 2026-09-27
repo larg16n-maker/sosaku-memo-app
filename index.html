@@ -137,6 +137,7 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .fld label .req{color:var(--danger);margin-left:3px}
 .fld input,.fld textarea,.cf-row input,.cf-row textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;line-height:1.5;padding:7px 10px}
 .fld textarea{min-height:120px;resize:vertical}
+.fld textarea.song{min-height:36px;resize:none;overflow:hidden}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cf-list{display:flex;flex-direction:column;gap:8px}
 .cf-row{display:grid;grid-template-columns:minmax(0,1fr) 28px;gap:5px 4px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px}
@@ -349,7 +350,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.3.0';
+const APP_VERSION='0.3.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -910,7 +911,7 @@ function renderChara(){
     <div class="grid2">${inp('age','年齢')}${inp('birthday','誕生日')}</div>
     <div class="grid2">${inp('height','身長')}${inp('affil','所属')}</div>
     <datalist id="affilList">${affils.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
-    ${inp('song','イメージ曲')}
+    <div class="fld"><label for="f_song">イメージ曲</label><textarea id="f_song" data-k="song" rows="1" class="song" placeholder="1行に1曲ずつ">${esc(d.song||'')}</textarea></div>
     <div class="fld"><label for="f_memo">詳細メモ</label><textarea id="f_memo" data-k="memo">${esc(d.memo||'')}</textarea></div>
     <div class="fld"><span class="lbl">追加項目</span>
       <div class="cf-list">${(d.custom||[]).map(x=>`<div class="cf-row" data-fid="${x.id}"><input type="text" data-cf="label" value="${esc(x.label||'')}" placeholder="項目名"><textarea rows="1" data-cf="value" placeholder="内容">${esc(x.value||'')}</textarea><button type="button" class="del" data-a="rmfld" aria-label="この項目を削除">${CI.x}</button></div>`).join('')}</div>
@@ -918,7 +919,7 @@ function renderChara(){
     <button type="button" class="addfld" data-a="addfld">${CI.plus}項目を追加</button>
     ${isNew?'':'<button type="button" class="delchar" data-a="delchar">このキャラクターを削除</button>'}
   </form>`;
-  main.querySelectorAll('.cf-row textarea').forEach(autoGrow);
+  main.querySelectorAll('.cf-row textarea, textarea.song').forEach(autoGrow);
 }
 function autoGrow(t){ t.style.height='auto'; t.style.height=t.scrollHeight+2+'px'; }
 
@@ -973,7 +974,7 @@ $('#charSaveBtn').addEventListener('click',()=>{
 main.addEventListener('input',e=>{
   if(!(tab==='chara'&&charView==='edit'&&charDraft)) return;
   const t=e.target;
-  if(t.dataset.k){ charDraft[t.dataset.k]=t.value; charDirty=true; }
+  if(t.dataset.k){ charDraft[t.dataset.k]=t.value; charDirty=true; if(t.classList.contains('song')) autoGrow(t); }
   else if(t.dataset.cf){
     const row=t.closest('.cf-row'); const f=charDraft.custom.find(x=>x.id===row.dataset.fid);
     if(f){ f[t.dataset.cf]=t.value; charDirty=true; }
