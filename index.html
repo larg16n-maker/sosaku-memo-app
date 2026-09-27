@@ -382,7 +382,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.5.0';
+const APP_VERSION='0.5.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -908,6 +908,23 @@ const FIELDS=[
 ];
 const GROUP_PREF='sosaku-chara-group';
 let charView='list', charId=null, charDraft=null, charDirty=false, reorderMode=false, selectMode=false;
+let charAutosaveTimer=null;
+/* Autosave: while editing, changes are written to storage a moment after each edit,
+   so nothing is lost if the person leaves without pressing 保存. A character needs a
+   name before it's written at all (same rule as the explicit save). */
+function commitCharDraft(){
+  const d=charDraft; if(!d) return false;
+  const name=(d.name||'').trim();
+  if(!name) return false;
+  const custom=(d.custom||[]).filter(x=>(x.label||'').trim()||(x.value||'').trim());
+  const payload=Object.assign({},d,{name,custom,updatedAt:Date.now()});
+  const ex=charById(d.id);
+  if(ex){ Object.assign(ex,payload); }
+  else{ payload.order=db.chars.reduce((m,c)=>Math.max(m,c.order??0),-1)+1; db.chars.push(payload); }
+  charId=d.id; charDirty=false; commit();
+  return true;
+}
+function scheduleCharAutosave(){ clearTimeout(charAutosaveTimer); charAutosaveTimer=setTimeout(commitCharDraft,800); }
 const selected=new Set();
 let charGroup=(()=>{try{return localStorage.getItem(GROUP_PREF)==='1';}catch(e){return false;}})();
 
@@ -934,7 +951,7 @@ function renderChara(){
   if(charView==='list'){
     $('#title').textContent = reorderMode ? '並べ替え' : selectMode ? (selected.size?selected.size+'人を選択中':'キャラを選択') : 'キャラクター';
     if(reorderMode){ $('#settingsBtn').hidden=true; $('#charDoneBtn').hidden=false; }
-    else if(selectMode){ $('#settingsBtn').hidden=true; $('#charCancelBtn').hidden=false; $('#charDelSelBtn').hidden=false; $('#charDelSelBtn').disabled=!selected.size; }
+    else if(selectMode){ $('#settingsBtn').hidden=true; $('#charCancelBtn').hidden=false; $('#charCancelBtn').textContent='キャンセル'; $('#charDelSelBtn').hidden=false; $('#charDelSelBtn').disabled=!selected.size; }
     else if(isWide()){
       main.innerHTML='<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>';
       return;
@@ -976,10 +993,11 @@ function renderChara(){
   // edit
   const d=charDraft, isNew=!charById(d.id);
   $('#title').textContent=isNew?'新しいキャラ':'編集';
-  $('#settingsBtn').hidden=true; $('#charCancelBtn').hidden=false; $('#charSaveBtn').hidden=false;
+  $('#settingsBtn').hidden=true; $('#charCancelBtn').hidden=false; $('#charCancelBtn').textContent='閉じる'; $('#charSaveBtn').hidden=false;
   const inp=(k,label,ph,req)=>`<div class="fld"><label for="f_${k}">${label}${req?'<span class="req">必須</span>':''}</label><input id="f_${k}" data-k="${k}" type="text" value="${esc(d[k]||'')}" placeholder="${ph||''}" autocomplete="off"></div>`;
   const affilGs=(d.affilIds||[]).map(id=>groupById(id)).filter(Boolean);
   main.innerHTML=`<form class="cedit" id="charForm" autocomplete="off">
+    <div class="small" style="padding:0 2px">入力すると自動的に保存されます（キャラ名は必須です）</div>
     <div class="avrow">${avatar(d,'lg')}<div class="avbtns"><button type="button" class="chip" data-a="pick">画像を選ぶ</button>${d.icon?'<button type="button" class="chip danger" data-a="rmicon">画像を外す</button>':''}</div>
       <input type="file" id="iconFile" accept="image/*" hidden></div>
     ${inp('name','キャラ名','',true)}
@@ -1033,29 +1051,23 @@ $('#charDelSelBtn').addEventListener('click',()=>{
 });
 $('#charCancelBtn').addEventListener('click',()=>{
   if(selectMode){ selectMode=false; selected.clear(); render(); return; }
-  if(!charDirty) return leaveEdit();
-  confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',leaveEdit);
+  clearTimeout(charAutosaveTimer); commitCharDraft(); leaveEdit();
 });
 $('#charSaveBtn').addEventListener('click',()=>{
-  const d=charDraft; if(!d) return;
-  d.name=(d.name||'').trim();
-  if(!d.name){ toast('キャラ名を入力してください'); const n=$('#f_name'); if(n) n.focus(); return; }
-  d.custom=(d.custom||[]).filter(x=>(x.label||'').trim()||(x.value||'').trim());
-  d.updatedAt=Date.now();
-  const ex=charById(d.id);
-  if(ex){ Object.assign(ex,d); }
-  else{ d.order=db.chars.reduce((m,c)=>Math.max(m,c.order??0),-1)+1; db.chars.push(d); }
-  commit(); charId=d.id; charDraft=null; charDirty=false; charView='detail'; render(); toast('保存しました');
+  clearTimeout(charAutosaveTimer);
+  if(!charDraft) return;
+  if(!commitCharDraft()){ toast('キャラ名を入力してください'); const n=$('#f_name'); if(n) n.focus(); return; }
+  charDraft=null; charView='detail'; render(); toast('保存しました');
 });
 
 /* edit form events */
 main.addEventListener('input',e=>{
   if(!(tab==='chara'&&charView==='edit'&&charDraft)) return;
   const t=e.target;
-  if(t.dataset.k){ charDraft[t.dataset.k]=t.value; charDirty=true; if(t.classList.contains('song')) autoGrow(t); }
+  if(t.dataset.k){ charDraft[t.dataset.k]=t.value; charDirty=true; if(t.classList.contains('song')) autoGrow(t); scheduleCharAutosave(); }
   else if(t.dataset.cf){
     const row=t.closest('.cf-row'); const f=charDraft.custom.find(x=>x.id===row.dataset.fid);
-    if(f){ f[t.dataset.cf]=t.value; charDirty=true; }
+    if(f){ f[t.dataset.cf]=t.value; charDirty=true; scheduleCharAutosave(); }
     if(t.tagName==='TEXTAREA') autoGrow(t);
   }
 });
@@ -1070,11 +1082,11 @@ main.addEventListener('click',e=>{
       const st=main.scrollTop; renderChara(); main.scrollTop=st;
       const el=main.querySelector(`[data-fid="${f.id}"] input`); if(el) el.focus();
     }else if(act==='rmfld'){
-      const id=a.closest('.cf-row').dataset.fid; charDraft.custom=charDraft.custom.filter(x=>x.id!==id); charDirty=true;
+      const id=a.closest('.cf-row').dataset.fid; charDraft.custom=charDraft.custom.filter(x=>x.id!==id); charDirty=true; scheduleCharAutosave();
       const st=main.scrollTop; renderChara(); main.scrollTop=st;
     }else if(act==='pick'){ $('#iconFile').click(); }
-    else if(act==='pickgroups'){ pickGroupsSheet(charDraft.affilIds||[], ids=>{ charDraft.affilIds=ids; charDirty=true; const st=main.scrollTop; renderChara(); main.scrollTop=st; }); }
-    else if(act==='rmicon'){ charDraft.icon=''; charDirty=true; const st=main.scrollTop; renderChara(); main.scrollTop=st; }
+    else if(act==='pickgroups'){ pickGroupsSheet(charDraft.affilIds||[], ids=>{ charDraft.affilIds=ids; charDirty=true; scheduleCharAutosave(); const st=main.scrollTop; renderChara(); main.scrollTop=st; }); }
+    else if(act==='rmicon'){ charDraft.icon=''; charDirty=true; scheduleCharAutosave(); const st=main.scrollTop; renderChara(); main.scrollTop=st; }
     else if(act==='delchar'){
       const c=charById(charDraft.id); if(!c) return;
       confirmSheet(`「${c.name}」を削除しますか？`,'元に戻せません。','削除',()=>{
@@ -1108,7 +1120,11 @@ main.addEventListener('submit',e=>{ if(e.target.id==='charForm') e.preventDefaul
 
 /* hide tab bar while typing anywhere */
 document.addEventListener('focusin',e=>{ if(e.target.matches('main input, main textarea')) document.body.classList.add('typing'); });
-document.addEventListener('focusout',e=>{ if(e.target.matches('main input, main textarea')) document.body.classList.remove('typing'); });
+document.addEventListener('focusout',e=>{
+  if(!e.target.matches('main input, main textarea')) return;
+  document.body.classList.remove('typing');
+  if(tab==='chara'&&charView==='edit'&&charDraft){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
+});
 
 /* ---------- drag to reorder ---------- */
 let drag=null;
@@ -1206,7 +1222,7 @@ function openCropper(file){
         let data=''; try{ data=cv.toDataURL('image/jpeg',0.85); }catch(err){}
         URL.revokeObjectURL(url); closeSheet();
         if(!data){ toast('画像を読み込めませんでした'); return; }
-        if(charDraft){ charDraft.icon=data; charDirty=true; const st=main.scrollTop; renderChara(); main.scrollTop=st; }
+        if(charDraft){ charDraft.icon=data; charDirty=true; scheduleCharAutosave(); const st=main.scrollTop; renderChara(); main.scrollTop=st; }
       };
     },'crop');
   };
@@ -1744,6 +1760,9 @@ $('#composer').addEventListener('submit',e=>{
   render(); toBottom(); input.focus();
 });
 sendBtn.addEventListener('pointerdown',e=>e.preventDefault());
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden' && tab==='chara' && charView==='edit' && charDraft){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
+});
 try{ const d=localStorage.getItem(DRAFT); if(d){input.value=d;} }catch(e){}
 
 /* ---------- iOS keyboard: fit app and sheets to visible area ---------- */
