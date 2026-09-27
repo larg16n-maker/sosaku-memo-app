@@ -384,7 +384,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.6.3';
+const APP_VERSION='0.6.4';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -721,6 +721,7 @@ function openSheet(html,onMount,kind){
 function closeSheet(){
   if(scrim){scrim.remove();scrim=null;}
   sheetOpen=false; currentSheetKind=null;
+  fitSheet();
   if(pendingRerender){ pendingRerender=false; safeRerender(); }
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
@@ -1833,11 +1834,19 @@ document.addEventListener('focusin',e=>{
 if(window.visualViewport){
   const fit=()=>{ const vv=window.visualViewport, vh=vv.height;
     const kb = vh < window.innerHeight-80;
-    const h = Math.max(160, vh - (kb?kbExtra():0));
     document.body.classList.toggle('kbopen',kb);
+    if(sheetOpen){
+      // A sheet (e.g. settings) is open — leave it alone. Manually repositioning #app/.scrim
+      // here was fighting with the browser's own keyboard-avoidance scrolling for inputs
+      // inside the sheet and could shove the whole sheet off-screen with no way back. The
+      // sheet already scrolls itself (.sheet{overflow-y:auto}) and the focusin handler above
+      // nudges the focused field into view within it, so nothing else needs to happen.
+      if(app.style.top||app.style.bottom==='auto'||app.style.height){ app.style.top=''; app.style.bottom=''; app.style.height=''; }
+      return;
+    }
+    const h = Math.max(160, vh - (kb?kbExtra():0));
     if(kb){ app.style.top=vv.offsetTop+'px'; app.style.bottom='auto'; app.style.height=h+'px'; window.scrollTo(0,0); }
     else { app.style.top=''; app.style.bottom=''; app.style.height=''; }
-    if(scrim){ scrim.style.top=(kb?vv.offsetTop:0)+'px'; scrim.style.height=kb?h+'px':''; scrim.style.bottom=kb?'auto':''; }
   };
   fitSheet=fit;
   visualViewport.addEventListener('resize',fit);
