@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>創作メモ帳</title>
+<meta name="description" content="会話・キャラクター・世界観をまとめる個人用の創作メモ">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="創作メモ">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#fbfbfa; --surface:#ffffff; --ink:#1b1c1e; --sub:#6c6e73; --faint:#a4a6ab;
+  --line:#e6e6e3; --press:#f0f0ed; --accent:#1b1c1e; --on-accent:#ffffff;
+  --brass:#a88c5c; --danger:#c8352b; --ok:#3f7d4f; --scrim:rgba(20,20,22,.35);
+  --font:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#121314; --surface:#1b1c1e; --ink:#ececea; --sub:#9a9ca1; --faint:#686a70;
+    --line:#2a2b2e; --press:#232427; --accent:#ececea; --on-accent:#121314;
+    --brass:#c7a876; --danger:#ff6b5e; --ok:#63c17d; --scrim:rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121314; --surface:#1b1c1e; --ink:#ececea; --sub:#9a9ca1; --faint:#686a70;
+  --line:#2a2b2e; --press:#232427; --accent:#ececea; --on-accent:#121314;
+  --brass:#c7a876; --danger:#ff6b5e; --ok:#63c17d; --scrim:rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;overflow:hidden;
+  -webkit-text-size-adjust:100%;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+[hidden]{display:none!important}
+img{max-width:100%}
+
+#app{height:100%;display:flex;flex-direction:column;max-width:640px;margin:0 auto;background:var(--bg)}
+header{flex:none;display:grid;grid-template-columns:72px 1fr 72px;align-items:center;height:40px;padding-inline:4px;border-bottom:1px solid var(--line);background:var(--bg)}
+header h1{margin:0;font-size:14px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbtn{height:36px;display:flex;align-items:center;gap:2px;padding-inline:8px;color:var(--ink);font-size:13px}
+.hbtn svg{width:19px;height:19px}
+.hgroup{display:flex;align-items:center}
+.hgroup.right{justify-self:end}
+.hgroup.left{justify-self:start}
+.dot{position:relative}
+.dot::after{content:"";position:absolute;top:6px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--danger)}
+
+main{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+
+/* folders */
+.folders{list-style:none;margin:0;padding:0}
+.folder{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.folder:active,.folder.pressing{background:var(--press)}
+.folder svg{flex:none;width:18px;height:18px;color:var(--sub)}
+.folder .fmeta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.folder .fname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.folder .fcount{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+/* memos */
+.memos{list-style:none;margin:0;padding:0}
+.memo{padding:7px 14px;border-bottom:1px solid var(--line);white-space:pre-wrap;word-break:break-word;line-height:1.55;font-size:13px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.memos.oneline .memo{padding-block:6px;display:flex;align-items:baseline;gap:8px}
+.memo .l1{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.memo .more{flex:none;font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}
+.memo .all{display:none;flex:1;min-width:0}
+.memo.open{background:var(--press)}
+.memo.open .l1,.memo.open .more{display:none}
+.memo.open .all{display:block}
+.memo.pressing{background:var(--press)}
+.memo.flash{animation:flash 1.2s ease-out}
+@keyframes flash{from{background:var(--press)}to{background:transparent}}
+
+.empty{padding:48px 24px;text-align:center;color:var(--sub);font-size:12px;line-height:1.8}
+.empty strong{display:block;color:var(--ink);font-size:13px;font-weight:600;margin-bottom:4px}
+.hint{padding:10px 14px 16px;color:var(--faint);font-size:10px;text-align:center}
+
+/* composer */
+.composer{flex:none;display:flex;align-items:flex-end;gap:6px;padding:6px 8px 6px 10px;border-top:1px solid var(--line);background:var(--bg)}
+.composer textarea{flex:1;min-height:30px;max-height:38vh;resize:none;border:1px solid var(--line);border-radius:17px;background:var(--surface);color:var(--ink);padding:5px 12px;font:inherit;font-size:16px;line-height:1.3}
+.composer textarea::placeholder{color:var(--faint)}
+.send{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;transition:opacity .15s}
+.send:disabled{opacity:.25;cursor:default}
+.send svg{width:16px;height:16px}
+
+/* tabbar */
+nav.tabs{flex:none;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);background:var(--bg);padding-bottom:2px}
+nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 0 2px;color:var(--faint);font-size:10px;letter-spacing:.04em}
+nav.tabs button svg{width:20px;height:20px}
+nav.tabs button[aria-selected="true"]{color:var(--ink)}
+body.typing nav.tabs{display:none}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;z-index:10;animation:fade .15s ease-out}
+.sheet{width:100%;max-width:640px;background:var(--surface);border-radius:16px 16px 0 0;padding:8px 12px calc(12px + env(safe-area-inset-bottom,0px));animation:up .2s ease-out;display:flex;flex-direction:column;gap:4px;max-height:88vh;overflow-y:auto}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 8px}
+.sheet .preview{font-size:12px;color:var(--sub);line-height:1.6;padding:0 6px 8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;border-bottom:1px solid var(--line);margin-bottom:4px}
+.sheet .title{font-size:14px;font-weight:600;padding:2px 6px 8px}
+.sheet .msg{font-size:13px;color:var(--sub);padding:0 6px 10px;line-height:1.6}
+.act{display:flex;align-items:center;gap:12px;width:100%;padding:11px 8px;border-radius:10px;font-size:14px;text-align:left}
+.act:active{background:var(--press)}
+.act svg{width:20px;height:20px;color:var(--sub)}
+.act.danger,.act.danger svg{color:var(--danger)}
+.sheet textarea,.sheet input{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;line-height:1.6;padding:10px 12px}
+.sheet textarea{min-height:40vh;resize:none}
+.row{display:flex;gap:8px;margin-top:8px}
+.row button{flex:1;height:42px;border-radius:12px;font-size:14px;font-weight:500;background:var(--press)}
+.row button.primary{background:var(--accent);color:var(--on-accent)}
+.row button.dangerbtn{background:var(--danger);color:#fff}
+.row button:disabled{opacity:.35}
+
+/* settings sheet specifics */
+.sec{padding:10px 6px 4px;font-size:11px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase}
+.sync-status{display:flex;align-items:center;gap:8px;padding:4px 6px 10px;font-size:12px;color:var(--sub)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;border-radius:100px;background:var(--press);color:var(--sub)}
+.pill.ok{color:var(--ok)}
+.pill.err{color:var(--danger)}
+.pill .dotstate{width:6px;height:6px;border-radius:50%;background:currentColor}
+.sheet a{color:var(--brass)}
+.sheet input[type=password], .sheet input[type=text]{font-family:var(--mono);font-size:14px}
+.small{font-size:11px;color:var(--faint);line-height:1.6;padding:0 6px}
+
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13px;padding:8px 14px;border-radius:18px;z-index:20;animation:fade .15s;max-width:80%;text-align:center}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(24px);opacity:.5}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <span class="hgroup left">
+      <button class="hbtn" id="backBtn" hidden aria-label="戻る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button class="hbtn" id="settingsBtn" aria-label="同期設定">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 000-3l1.9-1.4-2-3.4-2.2.8a7.6 7.6 0 00-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 00-2.6 1.5l-2.2-.8-2 3.4L4.6 10.5a7.6 7.6 0 000 3L2.7 15l2 3.4 2.2-.8c.8.7 1.6 1.2 2.6 1.5l.5 2.5h4l.5-2.5a7.6 7.6 0 002.6-1.5l2.2.8 2-3.4z"/></svg>
+      </button>
+    </span>
+    <h1 id="title">会話</h1>
+    <span class="hgroup right">
+      <button class="hbtn" id="viewBtn" hidden aria-label="表示を切り替え"></button>
+      <button class="hbtn" id="addFolderBtn" aria-label="フォルダを作る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M12 10.5v5M9.5 13h5"/></svg>
+      </button>
+    </span>
+  </header>
+  <main id="main"></main>
+  <form class="composer" id="composer" hidden>
+    <textarea id="input" rows="1" placeholder="メモを書く" aria-label="メモを書く"></textarea>
+    <button class="send" id="sendBtn" type="submit" disabled aria-label="送信">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+    </button>
+  </form>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="talk" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>会話
+    </button>
+    <button role="tab" data-tab="chara" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>キャラクター
+    </button>
+    <button role="tab" data-tab="world" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.6 3.5 5.4 3.5 8.5s-1.1 5.9-3.5 8.5c-2.4-2.6-3.5-5.4-3.5-8.5s1.1-5.9 3.5-8.5z"/></svg>世界観
+    </button>
+  </nav>
+</div>
+
+<script>
+(function(){
+"use strict";
+const KEY='sosaku-memo-db-v1';
+const TOKEN_KEY='sosaku-gh-token';
+const LASTSYNC_KEY='sosaku-last-sync';
+const GH={owner:'larg16n-maker',repo:'sosaku-memo-data',path:'data.json',branch:'main'};
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const ICON={
+  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>',
+  full:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5h14M5 9h14M5 13h14M5 17h9"/></svg>',
+  lines:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 6h14M5 12h14M5 18h14"/></svg>',
+  sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0114-5.3M20 12a8 8 0 01-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>',
+  key:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2 2M13 10l2 2"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 12l6 6 6-6M5 21h14"/></svg>',
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V8M6 12l6-6 6 6M5 3h14"/></svg>'
+};
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ---------- unicode-safe base64 ---------- */
+function b64enc(str){ return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,(m,p)=>String.fromCharCode(parseInt(p,16)))); }
+function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
+
+/* ---------- data model ---------- */
+function emptyDb(){ return {meta:{updatedAt:0}, folders:[], memos:[], deletedFolders:[], deletedMemos:[]}; }
+function sample(){
+  const t=Date.now(), f='sample';
+  return {
+    meta:{updatedAt:t},
+    folders:[{id:f,name:'サンプル（削除OK）',view:'full',createdAt:t,updatedAt:t}],
+    memos:[
+      {id:uid(),folderId:f,text:'「テストテスト」\n「ああああああああ」',createdAt:t-3000,updatedAt:t-3000},
+      {id:uid(),folderId:f,text:'「雨、やまないね」\n「傘ならあるよ。一本だけ」',createdAt:t-2000,updatedAt:t-2000},
+      {id:uid(),folderId:f,text:'長押しで編集・コピー・削除ができます。右上の設定からGitHub同期も設定できます。',createdAt:t-1000,updatedAt:t-1000}
+    ],
+    deletedFolders:[], deletedMemos:[]
+  };
+}
+function normalize(d){
+  const e=emptyDb();
+  if(!d||typeof d!=='object') return e;
+  return {
+    meta:{updatedAt:(d.meta&&d.meta.updatedAt)||0},
+    folders:Array.isArray(d.folders)?d.folders:[],
+    memos:Array.isArray(d.memos)?d.memos:[],
+    deletedFolders:Array.isArray(d.deletedFolders)?d.deletedFolders:[],
+    deletedMemos:Array.isArray(d.deletedMemos)?d.deletedMemos:[]
+  };
+}
+function load(){
+  try{const raw=localStorage.getItem(KEY); if(raw) return normalize(JSON.parse(raw));}catch(e){}
+  return sample();
+}
+let db=load();
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){toast('保存できませんでした');} }
+function touch(){ db.meta.updatedAt=Date.now(); }
+function commit(){ touch(); save(); scheduleSync(); }
+
+/* ---------- merge (for GitHub sync) ---------- */
+function mergeCollections(localItems, remoteItems, localDeleted, remoteDeleted){
+  const byId=new Map();
+  for(const it of remoteItems) byId.set(it.id,{...it});
+  for(const it of localItems){
+    const ex=byId.get(it.id);
+    if(!ex || (it.updatedAt||0) >= (ex.updatedAt||0)) byId.set(it.id,{...it});
+  }
+  const delMap=new Map();
+  for(const d of remoteDeleted) delMap.set(d.id, d.deletedAt||0);
+  for(const d of localDeleted) delMap.set(d.id, Math.max(d.deletedAt||0, delMap.get(d.id)||0));
+  for(const [id,delAt] of [...delMap]){
+    const it=byId.get(id);
+    if(it && delAt >= (it.updatedAt||0)) byId.delete(id);
+    else if(it) delMap.delete(id);
+  }
+  return {items:[...byId.values()], deleted:[...delMap].map(([id,deletedAt])=>({id,deletedAt}))};
+}
+function sortedJson(o){ return JSON.stringify(o, Object.keys(o).sort ? undefined : undefined); }
+function canon(d){
+  return JSON.stringify({
+    folders:[...d.folders].sort((a,b)=>a.id<b.id?-1:1),
+    memos:[...d.memos].sort((a,b)=>a.id<b.id?-1:1),
+    deletedFolders:[...d.deletedFolders].sort((a,b)=>a.id<b.id?-1:1),
+    deletedMemos:[...d.deletedMemos].sort((a,b)=>a.id<b.id?-1:1)
+  });
+}
+function mergeDb(local, remote){
+  if(!remote) return {merged:local, changedFromLocal:false, changedFromRemote:true};
+  const f=mergeCollections(local.folders, remote.folders||[], local.deletedFolders||[], remote.deletedFolders||[]);
+  const m=mergeCollections(local.memos, remote.memos||[], local.deletedMemos||[], remote.deletedMemos||[]);
+  const merged={
+    meta:{updatedAt:Math.max((local.meta&&local.meta.updatedAt)||0,(remote.meta&&remote.meta.updatedAt)||0)},
+    folders:f.items, deletedFolders:f.deleted,
+    memos:m.items, deletedMemos:m.deleted
+  };
+  const changedFromLocal = canon(merged)!==canon(local);
+  const changedFromRemote = canon(merged)!==canon(remote);
+  return {merged, changedFromLocal, changedFromRemote};
+}
+
+/* ---------- GitHub sync ---------- */
+function getToken(){ try{return localStorage.getItem(TOKEN_KEY)||'';}catch(e){return '';} }
+function setToken(t){ try{ t?localStorage.setItem(TOKEN_KEY,t):localStorage.removeItem(TOKEN_KEY);}catch(e){} }
+function apiUrl(){ return `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}`; }
+
+async function ghGet(){
+  const token=getToken();
+  const res=await fetch(apiUrl()+`?ref=${GH.branch}&t=${Date.now()}`,{
+    headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}
+  });
+  if(res.status===404) return {json:null, sha:null};
+  if(res.status===401) throw new Error('トークンが無効です');
+  if(res.status===403) throw new Error('権限がありません（リポジトリとContentsの権限を確認してください）');
+  if(!res.ok) throw new Error('取得に失敗しました ('+res.status+')');
+  const data=await res.json();
+  let json=null;
+  try{ json=JSON.parse(b64dec(data.content.replace(/\n/g,''))); }catch(e){ json=null; }
+  return {json, sha:data.sha};
+}
+async function ghPut(json, sha){
+  const token=getToken();
+  const body={
+    message:'sync: '+new Date().toISOString(),
+    content:b64enc(JSON.stringify(json)),
+    branch:GH.branch
+  };
+  if(sha) body.sha=sha;
+  const res=await fetch(apiUrl(),{
+    method:'PUT',
+    headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  if(res.status===401) throw new Error('トークンが無効です');
+  if(res.status===403) throw new Error('権限がありません（リポジトリとContentsの権限を確認してください）');
+  if(res.status===409) throw new Error('CONFLICT');
+  if(!res.ok) throw new Error('保存に失敗しました ('+res.status+')');
+  return res.json();
+}
+
+let syncing=false, syncTimer=null, sheetOpen=false, pendingRerender=false;
+function lastSyncAt(){ try{const v=localStorage.getItem(LASTSYNC_KEY); return v?Number(v):null;}catch(e){return null;} }
+function setLastSyncAt(t){ try{localStorage.setItem(LASTSYNC_KEY,String(t));}catch(e){} }
+
+function scheduleSync(){ if(!getToken()) return; clearTimeout(syncTimer); syncTimer=setTimeout(()=>syncNow(),1500); }
+
+async function syncNow(){
+  const token=getToken();
+  if(!token){ updateSyncBadge('off'); return; }
+  if(syncing) return;
+  syncing=true; updateSyncBadge('syncing');
+  try{
+    let {json:remote, sha}=await ghGet();
+    const {merged, changedFromLocal, changedFromRemote}=mergeDb(db, remote);
+    if(changedFromLocal){
+      db=merged; save();
+      if(sheetOpen) pendingRerender=true; else safeRerender();
+    }
+    if(changedFromRemote){
+      try{
+        await ghPut(merged, sha);
+      }catch(err){
+        if(err.message==='CONFLICT'){
+          // someone wrote in between; pull again and retry merge+push once
+          const again=await ghGet();
+          const r2=mergeDb(db, again.json);
+          if(r2.changedFromLocal){ db=r2.merged; save(); if(sheetOpen) pendingRerender=true; else safeRerender(); }
+          if(r2.changedFromRemote) await ghPut(r2.merged, again.sha);
+        } else throw err;
+      }
+    }
+    setLastSyncAt(Date.now());
+    updateSyncBadge('ok');
+  }catch(err){
+    updateSyncBadge('error', err && err.message);
+  }finally{
+    syncing=false;
+  }
+}
+
+function safeRerender(){
+  const st=main.scrollTop;
+  render();
+  main.scrollTop=st;
+}
+
+function fmtTime(ts){
+  if(!ts) return '未同期';
+  const d=new Date(ts);
+  const now=new Date();
+  const sameDay=d.toDateString()===now.toDateString();
+  const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
+  if(sameDay) return `今日 ${hh}:${mm}`;
+  return `${d.getMonth()+1}/${d.getDate()} ${hh}:${mm}`;
+}
+
+let badgeState='off', badgeErr='';
+function updateSyncBadge(state, err){
+  badgeState=state; badgeErr=err||'';
+  const gearDot=$('#settingsBtn');
+  gearDot.classList.toggle('dot', state==='error');
+  if(currentSheetKind==='settings') renderSettingsStatus();
+}
+
+/* ---------- state ---------- */
+let tab='talk', folderId=null;
+let currentSheetKind=null;
+
+function memosOf(id){return db.memos.filter(m=>m.folderId===id).sort((a,b)=>a.createdAt-b.createdAt);}
+function folderById(id){return db.folders.find(f=>f.id===id);}
+
+/* ---------- render ---------- */
+const main=$('#main');
+function render(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
+  const inFolder = tab==='talk' && folderId;
+  $('#backBtn').hidden=!inFolder;
+  $('#addFolderBtn').hidden=!(tab==='talk' && !folderId);
+  $('#composer').hidden=!inFolder;
+
+  if(tab==='chara'||tab==='world'){
+    $('#title').textContent = tab==='chara'?'キャラクター':'世界観';
+    $('#viewBtn').hidden=true;
+    main.innerHTML='<div class="empty"><strong>準備中</strong>会話メモを使ってみてから、<br>ここに入れる機能を決めましょう。</div>';
+    return;
+  }
+  if(!folderId){
+    $('#title').textContent='会話';
+    $('#viewBtn').hidden=true;
+    const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
+    if(!fs.length){main.innerHTML='<div class="empty"><strong>フォルダがありません</strong>右上のボタンで作品ごとのフォルダを作れます。</div>';return;}
+    main.innerHTML='<ul class="folders">'+fs.map(f=>{
+      const n=memosOf(f.id).length;
+      return `<li class="folder" data-id="${f.id}" tabindex="0">${ICON.folder}<div class="fmeta"><span class="fname">${esc(f.name)}</span></div><span class="fcount">${n}</span></li>`;
+    }).join('')+'</ul><div class="hint">長押しで名前変更・削除</div>';
+    return;
+  }
+  const f=folderById(folderId);
+  if(!f){folderId=null;return render();}
+  $('#title').textContent=f.name;
+  const one=f.view==='line';
+  $('#viewBtn').hidden=false;
+  $('#viewBtn').innerHTML = (one?ICON.lines:ICON.full) + (one?'1行':'全文');
+  $('#viewBtn').setAttribute('aria-label', one?'1行表示中。全文表示に切り替え':'全文表示中。1行表示に切り替え');
+  const ms=memosOf(folderId);
+  main.innerHTML = ms.length
+    ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
+        if(!one) return `<li class="memo" data-id="${m.id}" tabindex="0">${esc(m.text)}</li>`;
+        const lines=m.text.split('\n'), n=lines.length-1;
+        return `<li class="memo" data-id="${m.id}" tabindex="0"><span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}</span></li>`;
+      }).join('')+'</ul>'
+    : '<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>';
+}
+function toBottom(){ main.scrollTop=main.scrollHeight; }
+
+/* ---------- navigation ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  if(tab===b.dataset.tab && tab==='talk'){folderId=null;}
+  tab=b.dataset.tab; render(); if(folderId) toBottom();
+}));
+$('#backBtn').addEventListener('click',()=>{folderId=null;render();});
+
+/* ---------- long press ---------- */
+let lp=null;
+main.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.memo,.folder'); if(!el) return;
+  const x=e.clientX,y=e.clientY;
+  el.classList.add('pressing');
+  lp={el,x,y,fired:false,timer:setTimeout(()=>{
+    lp.fired=true; el.classList.remove('pressing');
+    if(navigator.vibrate) try{navigator.vibrate(10)}catch(_){}
+    el.classList.contains('memo')?memoMenu(el.dataset.id):folderMenu(el.dataset.id);
+  },450)};
+});
+function cancelLp(){ if(lp){clearTimeout(lp.timer); lp.el.classList.remove('pressing');} }
+main.addEventListener('pointermove',e=>{ if(lp && Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>10){cancelLp(); lp=null;} });
+main.addEventListener('pointerup',e=>{
+  if(!lp) return; const {el,fired}=lp; cancelLp(); lp=null;
+  if(fired) return;
+  if(el.classList.contains('folder')){ folderId=el.dataset.id; render(); toBottom(); }
+  else if(el.closest('.oneline')){ el.classList.toggle('open'); }
+});
+main.addEventListener('pointercancel',()=>{cancelLp(); lp=null;});
+main.addEventListener('contextmenu',e=>{
+  const el=e.target.closest('.memo,.folder'); if(!el) return; e.preventDefault();
+  if(lp&&lp.fired) return;
+  cancelLp(); lp=null;
+  el.classList.contains('memo')?memoMenu(el.dataset.id):folderMenu(el.dataset.id);
+});
+main.addEventListener('keydown',e=>{
+  const el=e.target.closest('.memo,.folder'); if(!el||e.key!=='Enter') return;
+  if(el.classList.contains('folder')){folderId=el.dataset.id;render();toBottom();} else memoMenu(el.dataset.id);
+});
+
+/* ---------- sheet ---------- */
+let scrim=null;
+function openSheet(html,onMount,kind){
+  closeSheet();
+  currentSheetKind=kind||null;
+  sheetOpen=true;
+  scrim=document.createElement('div'); scrim.className='scrim';
+  scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
+  scrim.addEventListener('click',e=>{ if(e.target===scrim) closeSheet(); });
+  document.body.appendChild(scrim);
+  onMount&&onMount(scrim.querySelector('.sheet'));
+}
+function closeSheet(){
+  if(scrim){scrim.remove();scrim=null;}
+  sheetOpen=false; currentSheetKind=null;
+  if(pendingRerender){ pendingRerender=false; safeRerender(); }
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
+
+function memoMenu(id){
+  const m=db.memos.find(x=>x.id===id); if(!m) return;
+  openSheet(`<div class="preview">${esc(m.text)}</div>
+    <button class="act" data-a="edit">${ICON.edit}編集</button>
+    <button class="act" data-a="copy">${ICON.copy}コピー</button>
+    <button class="act danger" data-a="del">${ICON.trash}削除</button>`, s=>{
+    s.querySelector('[data-a=edit]').onclick=()=>editMemo(m);
+    s.querySelector('[data-a=copy]').onclick=()=>copyText(m.text);
+    s.querySelector('[data-a=del]').onclick=()=>confirmSheet('このメモを削除しますか？','元に戻せません。','削除',()=>{
+      db.memos=db.memos.filter(x=>x.id!==id);
+      db.deletedMemos.push({id, deletedAt:Date.now()});
+      commit(); render(); toast('削除しました');
+    });
+  },'memo');
+}
+function editMemo(m){
+  openSheet(`<div class="title">メモを編集</div><textarea id="editArea">${esc(m.text)}</textarea>
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
+    const ta=s.querySelector('#editArea'), ok=s.querySelector('[data-a=ok]');
+    ta.addEventListener('input',()=>ok.disabled=!ta.value.trim());
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    ok.onclick=()=>{ m.text=ta.value.replace(/\s+$/,''); m.updatedAt=Date.now(); commit(); closeSheet();
+      const st=main.scrollTop; render(); main.scrollTop=st;
+      const el=main.querySelector(`[data-id="${m.id}"]`); if(el) el.classList.add('flash'); };
+    ta.focus();
+  },'edit');
+}
+function folderMenu(id){
+  const f=folderById(id); if(!f) return;
+  openSheet(`<div class="title">${esc(f.name)}</div>
+    <button class="act" data-a="ren">${ICON.edit}名前を変更</button>
+    <button class="act danger" data-a="del">${ICON.trash}フォルダを削除</button>`, s=>{
+    s.querySelector('[data-a=ren]').onclick=()=>nameSheet('名前を変更',f.name,'変更',name=>{f.name=name;f.updatedAt=Date.now();commit();render();});
+    s.querySelector('[data-a=del]').onclick=()=>{
+      const n=memosOf(id).length;
+      confirmSheet(`「${f.name}」を削除しますか？`, n?`中のメモ${n}件もすべて削除されます。元に戻せません。`:'元に戻せません。','削除',()=>{
+        const now=Date.now();
+        db.folders=db.folders.filter(x=>x.id!==id);
+        db.deletedFolders.push({id, deletedAt:now});
+        memosOf(id).forEach(m=>db.deletedMemos.push({id:m.id, deletedAt:now}));
+        db.memos=db.memos.filter(x=>x.folderId!==id);
+        commit(); render(); toast('削除しました');
+      });
+    };
+  },'folder');
+}
+function nameSheet(title,val,okLabel,cb){
+  openSheet(`<div class="title">${title}</div><input id="nameInput" type="text" maxlength="40" placeholder="例：作品A、掛け合い案" value="${esc(val)}">
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">${okLabel}</button></div>`, s=>{
+    const inp=s.querySelector('#nameInput'), ok=s.querySelector('[data-a=ok]');
+    const upd=()=>ok.disabled=!inp.value.trim(); upd(); inp.addEventListener('input',upd);
+    const go=()=>{ if(!inp.value.trim()) return; closeSheet(); cb(inp.value.trim()); };
+    ok.onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){e.preventDefault();go();} });
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    inp.focus();
+  },'name');
+}
+function confirmSheet(title,msg,okLabel,cb){
+  openSheet(`<div class="title">${esc(title)}</div><div class="msg">${esc(msg)}</div>
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="dangerbtn" data-a="ok">${okLabel}</button></div>`, s=>{
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    s.querySelector('[data-a=ok]').onclick=()=>{closeSheet();cb();};
+  },'confirm');
+}
+$('#addFolderBtn').addEventListener('click',()=>nameSheet('新しいフォルダ','','作成',name=>{
+  const t=Date.now();
+  db.folders.push({id:uid(),name,view:'full',createdAt:t,updatedAt:t}); commit(); render(); toBottom();
+}));
+$('#viewBtn').addEventListener('click',()=>{
+  const f=folderById(folderId); if(!f) return;
+  const st=main.scrollTop, atBottom=main.scrollTop+main.clientHeight>=main.scrollHeight-4;
+  f.view = f.view==='line' ? 'full' : 'line'; f.updatedAt=Date.now(); commit(); render();
+  atBottom ? toBottom() : (main.scrollTop=st);
+  toast(f.view==='line'?'1行表示（タップで全文）':'全文表示');
+});
+
+function copyText(t){
+  closeSheet();
+  const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); let ok=false; try{ok=document.execCommand('copy')}catch(e){} ta.remove(); toast(ok?'コピーしました':'コピーできませんでした'); };
+  try{ navigator.clipboard.writeText(t).then(()=>toast('コピーしました'),fallback); }catch(e){ fallback(); }
+}
+let tt;
+function toast(msg){ document.querySelectorAll('.toast').forEach(x=>x.remove()); const d=document.createElement('div'); d.className='toast'; d.textContent=msg; document.body.appendChild(d); clearTimeout(tt); tt=setTimeout(()=>d.remove(),1800); }
+
+/* ---------- settings sheet ---------- */
+function renderSettingsStatus(){
+  const box=document.getElementById('syncStatusBox'); if(!box) return;
+  const has=!!getToken();
+  let pillClass='pill', label='未設定', extra='';
+  if(has){
+    if(badgeState==='syncing'){ pillClass='pill'; label='同期中…'; }
+    else if(badgeState==='ok'){ pillClass='pill ok'; label='同期済み'; }
+    else if(badgeState==='error'){ pillClass='pill err'; label='エラー'; extra=`<div class="small" style="color:var(--danger)">${esc(badgeErr||'')}</div>`; }
+    else { pillClass='pill'; label='待機中'; }
+  }
+  box.innerHTML=`<span class="${pillClass}"><span class="dotstate"></span>${label}</span><span>最終同期：${fmtTime(lastSyncAt())}</span>` + extra;
+}
+$('#settingsBtn').addEventListener('click',()=>{
+  const has=!!getToken();
+  openSheet(`
+    <div class="title">同期設定</div>
+    <div class="small">この端末だけのメモを、非公開リポジトリ <b>${GH.owner}/${GH.repo}</b> に自動で保存します。トークンはこの端末にだけ保存され、送信先はGitHubだけです。</div>
+    <div class="sec">アクセストークン</div>
+    <input id="tokenInput" type="password" placeholder="github_pat_..." value="${has?'••••••••••••••••••••':''}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="small">未作成の場合：<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHubでトークンを作る</a>（Repository access を <b>Only select repositories → ${GH.repo}</b> に、Permissions の <b>Contents</b> を <b>Read and write</b> に設定）</div>
+    <div class="row"><button type="button" data-a="save" class="primary">保存</button>${has?'<button type="button" data-a="clear" class="dangerbtn">削除</button>':''}</div>
+    <div class="sec">状態</div>
+    <div class="sync-status" id="syncStatusBox"></div>
+    <button class="act" data-a="syncnow">${ICON.sync}今すぐ同期</button>
+    <div class="sec">手動バックアップ</div>
+    <button class="act" data-a="export">${ICON.down}書き出し（JSONファイル）</button>
+    <button class="act" data-a="import">${ICON.up}読み込み（JSONファイル）</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  `, s=>{
+    renderSettingsStatus();
+    s.querySelector('[data-a=save]').onclick=()=>{
+      const v=s.querySelector('#tokenInput').value.trim();
+      if(v && !v.startsWith('•')){ setToken(v); toast('保存しました'); syncNow(); }
+      renderSettingsStatus();
+    };
+    const clearBtn=s.querySelector('[data-a=clear]');
+    if(clearBtn) clearBtn.onclick=()=>{ setToken(''); toast('トークンを削除しました'); closeSheet(); };
+    s.querySelector('[data-a=syncnow]').onclick=()=>{ if(!getToken()){toast('先にトークンを保存してください');return;} syncNow(); };
+    s.querySelector('[data-a=export]').onclick=doExport;
+    const fileInput=s.querySelector('#importFile');
+    s.querySelector('[data-a=import]').onclick=()=>fileInput.click();
+    fileInput.addEventListener('change',doImport);
+  },'settings');
+});
+function doExport(){
+  try{
+    const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const d=new Date(); const stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+    a.href=url; a.download=`sosaku-memo-${stamp}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    toast('書き出しました');
+  }catch(e){ toast('書き出しに失敗しました'); }
+}
+function doImport(e){
+  const file=e.target.files && e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const incoming=normalize(JSON.parse(reader.result));
+      const {merged}=mergeDb(db, incoming);
+      db=merged; commit();
+      closeSheet(); render();
+      toast('読み込みました');
+    }catch(err){ toast('読み込みに失敗しました'); }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- composer ---------- */
+const input=$('#input'), sendBtn=$('#sendBtn');
+const DRAFT='sosaku-draft';
+function grow(){ input.style.height='auto'; input.style.height=Math.min(input.scrollHeight, window.innerHeight*.38)+'px'; sendBtn.disabled=!input.value.trim(); }
+input.addEventListener('input',()=>{ grow(); try{localStorage.setItem(DRAFT,input.value)}catch(e){} });
+input.addEventListener('focus',()=>{ document.body.classList.add('typing'); setTimeout(toBottom,300); });
+input.addEventListener('blur',()=>document.body.classList.remove('typing'));
+$('#composer').addEventListener('submit',e=>{
+  e.preventDefault();
+  const text=input.value.replace(/\s+$/,''); if(!text.trim()||!folderId) return;
+  const t=Date.now();
+  db.memos.push({id:uid(),folderId,text,createdAt:t,updatedAt:t}); commit();
+  input.value=''; try{localStorage.removeItem(DRAFT)}catch(e){} grow();
+  render(); toBottom(); input.focus();
+});
+sendBtn.addEventListener('pointerdown',e=>e.preventDefault());
+try{ const d=localStorage.getItem(DRAFT); if(d){input.value=d;} }catch(e){}
+
+/* ---------- iOS keyboard: fit app to visible area ---------- */
+const app=$('#app');
+if(window.visualViewport){
+  const fit=()=>{ const vh=window.visualViewport.height;
+    if(vh < window.innerHeight-80){ app.style.height=vh+'px'; window.scrollTo(0,0); } else app.style.height=''; };
+  visualViewport.addEventListener('resize',fit); fit();
+}
+
+/* ---------- service worker ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+
+render(); grow();
+if(getToken()) syncNow();
+})();
+</script>
+</body>
+</html>
