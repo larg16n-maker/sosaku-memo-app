@@ -143,6 +143,10 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .cfields dd{white-space:pre-wrap;word-break:break-word}
 .cblock .clabel{font-size:11px;color:var(--faint);margin-bottom:4px}
 .cblock .ctext{font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.clinked{margin-top:4px;padding-top:16px;border-top:2px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.clinked .clhead{font-size:11px;font-weight:600;color:var(--sub);letter-spacing:.02em}
+.clinked .cblock{background:var(--press);border-radius:10px;padding:10px 12px;border-left:3px solid var(--accent)}
+.clinked .cblock .clabel{color:var(--accent);font-weight:600;font-size:11.5px}
 
 /* characters: edit */
 .cedit{padding:14px 14px 32px;display:flex;flex-direction:column;gap:12px}
@@ -335,7 +339,7 @@ body.kbopen .cedit{padding-bottom:120px}
       </button>
       <button class="hbtn txt" id="charSelectBtn" hidden>選択</button>
     </span>
-    <h1 id="title">会話</h1>
+    <h1 id="title">メモ</h1>
     <span class="hgroup right">
       <button class="hbtn" id="viewBtn" hidden aria-label="表示を切り替え"></button>
       <button class="hbtn" id="charGroupBtn" hidden aria-label="所属別に表示"></button>
@@ -370,7 +374,7 @@ body.kbopen .cedit{padding-bottom:120px}
 </div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="talk" aria-selected="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>会話
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>メモ
     </button>
     <button role="tab" data-tab="chara" aria-selected="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>キャラクター
@@ -384,7 +388,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.6.4';
+const APP_VERSION='0.7.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -622,17 +626,19 @@ function render(){ renderMain(); renderSide(); }
 function renderMain(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const inFolder = tab==='talk' && folderId;
+  const wideTalk = tab==='talk' && isWide();
   ['charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn','charSelectBtn','charDelSelBtn','wAddBtn','wCancelBtn','wSaveBtn','wEditBtn'].forEach(id=>$('#'+id).hidden=true);
   $('#settingsBtn').hidden=false;
-  $('#backBtn').hidden=!inFolder;
-  $('#addFolderBtn').hidden=!(tab==='talk' && !folderId);
+  $('#backBtn').hidden=!inFolder || wideTalk;
+  $('#addFolderBtn').hidden=!(tab==='talk' && !folderId) || wideTalk;
   $('#composer').hidden=!inFolder;
 
   if(tab==='chara'){ $('#viewBtn').hidden=true; renderChara(); return; }
   if(tab==='world'){ $('#viewBtn').hidden=true; renderWorld(); return; }
   if(!folderId){
-    $('#title').textContent='会話';
+    $('#title').textContent='メモ';
     $('#viewBtn').hidden=true;
+    if(wideTalk){ main.innerHTML='<div class="pick-ph">左のリストからフォルダを選んでください</div>'; return; }
     const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
     if(!fs.length){main.innerHTML='<div class="empty"><strong>フォルダがありません</strong>右上のボタンで作品ごとのフォルダを作れます。</div>';return;}
     main.innerHTML='<ul class="folders">'+fs.map(f=>{
@@ -674,36 +680,44 @@ $('#backBtn').addEventListener('click',()=>{
 });
 
 /* ---------- long press ---------- */
+// Bound to both main content and the wide-screen side panel, so a folder row can be
+// renamed/deleted (long-press) whichever list it's showing in. A side-panel folder row is
+// marked with [data-id] on a .wrow (the same attribute name the main .folder rows use);
+// world-tab .wrow rows never use data-id, so there's no overlap.
+const FOLDER_SEL='.memo,.folder,.wrow[data-id]';
 let lp=null;
-main.addEventListener('pointerdown',e=>{
-  const el=e.target.closest('.memo,.folder'); if(!el) return;
-  const x=e.clientX,y=e.clientY;
-  el.classList.add('pressing');
-  lp={el,x,y,fired:false,timer:setTimeout(()=>{
-    lp.fired=true; el.classList.remove('pressing');
-    if(navigator.vibrate) try{navigator.vibrate(10)}catch(_){}
+for(const root of [main, $('#side')]){
+  root.addEventListener('pointerdown',e=>{
+    const el=e.target.closest(FOLDER_SEL); if(!el) return;
+    const x=e.clientX,y=e.clientY;
+    el.classList.add('pressing');
+    lp={el,x,y,fired:false,timer:setTimeout(()=>{
+      lp.fired=true; el.classList.remove('pressing');
+      if(navigator.vibrate) try{navigator.vibrate(10)}catch(_){}
+      el.classList.contains('memo')?memoMenu(el.dataset.id):folderMenu(el.dataset.id);
+    },450)};
+  });
+  root.addEventListener('pointermove',e=>{ if(lp && Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>10){cancelLp(); lp=null;} });
+  root.addEventListener('pointerup',e=>{
+    if(!lp) return; const {el,fired}=lp; cancelLp(); lp=null;
+    if(fired) return;
+    if(el.classList.contains('memo')){ if(el.closest('.oneline')) el.classList.toggle('open'); return; }
+    folderId=el.dataset.id; render(); toBottom();
+  });
+  root.addEventListener('pointercancel',()=>{cancelLp(); lp=null;});
+  root.addEventListener('contextmenu',e=>{
+    const el=e.target.closest(FOLDER_SEL); if(!el) return; e.preventDefault();
+    if(lp&&lp.fired) return;
+    cancelLp(); lp=null;
     el.classList.contains('memo')?memoMenu(el.dataset.id):folderMenu(el.dataset.id);
-  },450)};
-});
+  });
+  root.addEventListener('keydown',e=>{
+    const el=e.target.closest(FOLDER_SEL); if(!el||e.key!=='Enter') return;
+    if(el.classList.contains('memo')){ memoMenu(el.dataset.id); return; }
+    folderId=el.dataset.id; render(); toBottom();
+  });
+}
 function cancelLp(){ if(lp){clearTimeout(lp.timer); lp.el.classList.remove('pressing');} }
-main.addEventListener('pointermove',e=>{ if(lp && Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>10){cancelLp(); lp=null;} });
-main.addEventListener('pointerup',e=>{
-  if(!lp) return; const {el,fired}=lp; cancelLp(); lp=null;
-  if(fired) return;
-  if(el.classList.contains('folder')){ folderId=el.dataset.id; render(); toBottom(); }
-  else if(el.closest('.oneline')){ el.classList.toggle('open'); }
-});
-main.addEventListener('pointercancel',()=>{cancelLp(); lp=null;});
-main.addEventListener('contextmenu',e=>{
-  const el=e.target.closest('.memo,.folder'); if(!el) return; e.preventDefault();
-  if(lp&&lp.fired) return;
-  cancelLp(); lp=null;
-  el.classList.contains('memo')?memoMenu(el.dataset.id):folderMenu(el.dataset.id);
-});
-main.addEventListener('keydown',e=>{
-  const el=e.target.closest('.memo,.folder'); if(!el||e.key!=='Enter') return;
-  if(el.classList.contains('folder')){folderId=el.dataset.id;render();toBottom();} else memoMenu(el.dataset.id);
-});
 
 /* ---------- sheet ---------- */
 let scrim=null, fitSheet=()=>{};
@@ -790,10 +804,13 @@ function confirmSheet(title,msg,okLabel,cb){
     s.querySelector('[data-a=ok]').onclick=()=>{closeSheet();cb();};
   },'confirm');
 }
-$('#addFolderBtn').addEventListener('click',()=>nameSheet('新しいフォルダ','','作成',name=>{
-  const t=Date.now();
-  db.folders.push({id:uid(),name,view:'full',createdAt:t,updatedAt:t}); commit(); render(); toBottom();
-}));
+function newFolderSheet(){
+  nameSheet('新しいフォルダ','','作成',name=>{
+    const t=Date.now();
+    db.folders.push({id:uid(),name,view:'full',createdAt:t,updatedAt:t}); commit(); render(); toBottom();
+  });
+}
+$('#addFolderBtn').addEventListener('click',newFolderSheet);
 $('#viewBtn').addEventListener('click',()=>{
   if(tab==='world'){ toggleTlView(); return; }
   const f=folderById(folderId); if(!f) return;
@@ -1642,7 +1659,7 @@ function charLinksHtml(c){
     return `<li class="xrow" data-jump="rel" data-rid="${r.id}">${avatar(o,'md')}<span>${esc(o.name)}</span><span class="xl">${esc((r.label||'').trim())}</span></li>`; }).join('')}</ul></div>`;
   if(evs.length) h+=`<div class="cblock"><div class="clabel">登場イベント</div><ul class="xlist">${evs.map(e=>{ const tl=tlById(e.timelineId), d=dateLabel(e);
     return `<li class="xrow" data-jump="ev" data-eid="${e.id}"><div class="xev"><span class="xm">${esc(tl.name)} · ${yearLabel(tl,e.year)}${d?' '+d:''}</span><span>${esc(e.title)}</span></div></li>`; }).join('')}</ul></div>`;
-  return h;
+  return h ? `<div class="clinked"><div class="clhead">世界観とのつながり</div>${h}</div>` : '';
 }
 function jumpFromChar(j){
   const cid=charId;
@@ -1717,12 +1734,19 @@ const SV={
 };
 function worldSec(){ return ['rchars','rc','rg'].includes(wView)||(wView==='rel') ? 'rel' : 'tl'; }
 function renderSide(){
-  const on=isWide() && (tab==='chara'||tab==='world');
+  const on=isWide() && (tab==='chara'||tab==='world'||tab==='talk');
   side.hidden=!on; $('#app').toggleAttribute('data-split',on);
   if(!on){ side.innerHTML=''; return; }
   const prev=side.querySelector('.slist'), st=prev?prev.scrollTop:0;
   let head='', sub='', body='';
-  if(tab==='chara'){
+  if(tab==='talk'){
+    head=`<span class="stitle">メモ</span><span class="sbtns"><button class="hbtn" data-sa="addfolder" aria-label="フォルダを追加">${SV.plus}</button></span>`;
+    const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
+    body = fs.length ? fs.map(f=>{
+      const n=memosOf(f.id).length;
+      return `<div class="wrow${folderId===f.id?' active':''}" data-id="${f.id}" tabindex="0">${ICON.folder}<span class="wn">${esc(f.name)}</span><span class="wc">${n||''}</span></div>`;
+    }).join('') : '<div class="pick-ph">まだフォルダがありません</div>';
+  }else if(tab==='chara'){
     head=`<span class="stitle">キャラクター</span><span class="sbtns">
       <button class="hbtn${charGroup?' on':''}" data-sa="group" aria-label="所属別表示の切り替え">${charGroup?CI.group:CI.flat}</button>
       <button class="hbtn" data-sa="reorder" aria-label="並べ替え">${SV.reorder}</button>
@@ -1776,6 +1800,7 @@ side.addEventListener('click',e=>{
     if(a==='select') return guardLeave(()=>{ selectMode=true; reorderMode=false; selected.clear(); charView='list'; render(); });
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
     if(a==='wadd') return worldSec()==='tl' ? newTimelineSheet() : groupSheet(null);
+    if(a==='addfolder') return newFolderSheet();
     if(a==='grpreorder'){
       if(grpReorderMode){ grpReorderMode=false; render(); return; }
       return guardLeave(()=>{ grpReorderMode=true; relKind='group'; wView='rchars'; render(); });
@@ -1800,6 +1825,10 @@ function grow(){ input.style.height='auto'; input.style.height=Math.min(input.sc
 input.addEventListener('input',()=>{ grow(); try{localStorage.setItem(DRAFT,input.value)}catch(e){} });
 input.addEventListener('focus',()=>{ document.body.classList.add('typing'); setTimeout(toBottom,300); });
 input.addEventListener('blur',()=>document.body.classList.remove('typing'));
+input.addEventListener('keydown',e=>{
+  // PC/wide screens: Shift+Enter posts the memo (plain Enter still inserts a newline).
+  if(e.key==='Enter' && e.shiftKey && isWide()){ e.preventDefault(); $('#composer').requestSubmit ? $('#composer').requestSubmit() : $('#sendBtn').click(); }
+});
 $('#composer').addEventListener('submit',e=>{
   e.preventDefault();
   const text=input.value.replace(/\s+$/,''); if(!text.trim()||!folderId) return;
