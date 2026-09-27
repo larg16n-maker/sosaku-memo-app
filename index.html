@@ -382,7 +382,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.4.0';
+const APP_VERSION='0.4.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -482,8 +482,22 @@ async function ghGet(){
   if(res.status===403) throw new Error('権限がありません（リポジトリとContentsの権限を確認してください）');
   if(!res.ok) throw new Error('取得に失敗しました ('+res.status+')');
   const data=await res.json();
+  let text=null;
+  if(data.encoding==='base64' && data.content){
+    try{ text=b64dec(data.content.replace(/\n/g,'')); }catch(e){ text=null; }
+  }
+  if(text===null){
+    // files over 1MB come back without inline content; fetch the raw file instead
+    const raw=await fetch(apiUrl()+`?ref=${GH.branch}&t=${Date.now()}`,{
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.raw+json'}
+    });
+    if(!raw.ok) throw new Error('取得に失敗しました ('+raw.status+')');
+    text=await raw.text();
+  }
   let json=null;
-  try{ json=JSON.parse(b64dec(data.content.replace(/\n/g,''))); }catch(e){ json=null; }
+  try{ json=JSON.parse(text); }catch(e){ json=null; }
+  // never treat an unreadable remote file as "empty" — that would overwrite it
+  if(!json) throw new Error('GitHub上のデータを読み込めませんでした。同期を止めています');
   return {json, sha:data.sha};
 }
 async function ghPut(json, sha){
