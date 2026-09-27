@@ -369,6 +369,23 @@ body.kbopen .cedit{padding-bottom:120px}
 .qcchips{padding:8px 2px 0}
 .toast.act-toast{display:flex;align-items:center;gap:14px;white-space:nowrap;max-width:92%}
 .toast.act-toast button{color:var(--bg);font-weight:600;text-decoration:underline;font-size:13px;flex:none}
+/* memo tags */
+.composer{flex-direction:column;align-items:stretch;padding:6px 8px 6px 8px}
+.composer .crow{display:flex;align-items:flex-end;gap:6px}
+.ctagbar{display:flex;flex-wrap:wrap;gap:5px;padding:0 2px 6px}
+.tagbtn{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--faint);background:transparent}
+.tagbtn.on{color:var(--accent);background:var(--press)}
+.tagbtn svg{width:18px;height:18px}
+.mtagchip{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 8px;border-radius:11px;background:var(--press);font-size:11px;color:var(--sub);-webkit-user-select:none;user-select:none}
+.mtagx{display:flex;color:var(--faint);margin-left:1px}
+.mtagx svg{width:11px;height:11px}
+.mtags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.memos.oneline .memo .mtags{display:none}
+.memos.oneline .memo.open .mtags{display:flex}
+.mfilterbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--sub)}
+.mfilterclear{margin-left:auto;font-size:11.5px;color:var(--sub);text-decoration:underline;flex:none}
+#tagFilterBtn.on{color:var(--accent)}
+
 
 /* character detail: link-add buttons */
 .clinked .cblock .clabel{display:flex;align-items:center;gap:8px}
@@ -425,6 +442,9 @@ body.kbopen .cedit{padding-bottom:120px}
     <h1 id="title">メモ</h1>
     <span class="hgroup right">
       <button class="hbtn" id="viewBtn" hidden aria-label="表示を切り替え"></button>
+      <button class="hbtn" id="tagFilterBtn" hidden aria-label="キャラで絞り込み">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8l8 8-8 8-8-8z"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/></svg>
+      </button>
       <button class="hbtn" id="charGroupBtn" hidden aria-label="所属別に表示"></button>
       <button class="hbtn" id="charReorderBtn" hidden aria-label="並べ替え">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/></svg>
@@ -451,10 +471,16 @@ body.kbopen .cedit{padding-bottom:120px}
   </header>
   <main id="main"></main>
   <form class="composer" id="composer" hidden>
-    <textarea id="input" rows="1" placeholder="メモを書く" aria-label="メモを書く"></textarea>
-    <button class="send" id="sendBtn" type="submit" disabled aria-label="送信">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
-    </button>
+    <div class="ctagbar" id="composerTagBar" hidden></div>
+    <div class="crow">
+      <button class="tagbtn" id="composerTagBtn" type="button" aria-label="キャラでタグ付け">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8l8 8-8 8-8-8z"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <textarea id="input" rows="1" placeholder="メモを書く" aria-label="メモを書く"></textarea>
+      <button class="send" id="sendBtn" type="submit" disabled aria-label="送信">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+      </button>
+    </div>
   </form>
 </div>
 </div>
@@ -474,7 +500,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.10.0';
+const APP_VERSION='0.11.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -826,6 +852,35 @@ let currentSheetKind=null;
 
 function memosOf(id){return db.memos.filter(m=>m.folderId===id).sort((a,b)=>a.createdAt-b.createdAt);}
 function folderById(id){return db.folders.find(f=>f.id===id);}
+/* ---------- memo tags ---------- */
+// A memo can be tagged with characters who are "in" it. Tags live only on the memo
+// (m.tags = [charId, ...]) and are never surfaced on the character's own page — this is a
+// memo-tab-only label, not a world-building link like relationships/events.
+let composerTags=[], tagFilter=[];
+function openFolder(id){ folderId=id; composerTags=[]; tagFilter=[]; render(); toBottom(); }
+function closeFolder(){ folderId=null; composerTags=[]; tagFilter=[]; }
+function tagChip(c,removable,ds){ return `<span class="mtagchip"${ds?` data-cid="${c.id}"`:''}>${esc(c.name)}${removable?`<button type="button" class="mtagx" data-untag="${c.id}" aria-label="${esc(c.name)}のタグを外す">${CI.x}</button>`:''}</span>`; }
+function renderComposerTags(){
+  const bar=$('#composerTagBar'); if(!bar) return;
+  const cs=composerTags.map(charById).filter(Boolean);
+  bar.hidden=!cs.length;
+  bar.innerHTML=cs.map(c=>tagChip(c,true)).join('');
+  $('#composerTagBtn').classList.toggle('on',!!cs.length);
+}
+function memoTagsHtml(m){
+  const cs=(m.tags||[]).map(charById).filter(Boolean);
+  return cs.length?`<div class="mtags">${cs.map(c=>tagChip(c,false)).join('')}</div>`:'';
+}
+function visibleMemos(fid){
+  const ms=memosOf(fid);
+  return tagFilter.length ? ms.filter(m=>tagFilter.every(id=>(m.tags||[]).includes(id))) : ms;
+}
+function tagFilterBarHtml(){
+  if(!tagFilter.length) return '';
+  const cs=tagFilter.map(charById).filter(Boolean);
+  return `<div class="mfilterbar">絞り込み中：${cs.map(c=>tagChip(c,false)).join('')}<button type="button" class="mfilterclear" data-a="clearfilter">すべて解除</button></div>`;
+}
+
 
 /* ---------- render ---------- */
 const main=$('#main');
@@ -840,11 +895,12 @@ function renderMain(){
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId) || wideTalk;
   $('#composer').hidden=!inFolder;
 
-  if(tab==='chara'){ $('#viewBtn').hidden=true; renderChara(); return; }
-  if(tab==='world'){ $('#viewBtn').hidden=true; renderWorld(); return; }
+  if(tab==='chara'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; renderChara(); return; }
+  if(tab==='world'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; renderWorld(); return; }
   if(!folderId){
     $('#title').textContent='メモ';
     $('#viewBtn').hidden=true;
+    $('#tagFilterBtn').hidden=true;
     if(wideTalk){ main.innerHTML='<div class="pick-ph">左のリストからフォルダを選んでください</div>'; return; }
     const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
     if(!fs.length){main.innerHTML='<div class="empty"><strong>フォルダがありません</strong>右上のボタンで作品ごとのフォルダを作れます。</div>';return;}
@@ -855,26 +911,31 @@ function renderMain(){
     return;
   }
   const f=folderById(folderId);
-  if(!f){folderId=null;return render();}
+  if(!f){closeFolder(); return render();}
   $('#title').textContent=f.name;
   const one=f.view==='line';
   $('#viewBtn').hidden=false;
   $('#viewBtn').innerHTML = (one?ICON.lines:ICON.full) + (one?'1行':'全文');
   $('#viewBtn').setAttribute('aria-label', one?'1行表示中。全文表示に切り替え':'全文表示中。1行表示に切り替え');
-  const ms=memosOf(folderId);
-  main.innerHTML = ms.length
+  $('#tagFilterBtn').hidden=false;
+  $('#tagFilterBtn').classList.toggle('on',!!tagFilter.length);
+  const all=memosOf(folderId), ms=visibleMemos(folderId);
+  const fbar=tagFilterBarHtml();
+  if(!all.length){ main.innerHTML=fbar+'<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>'; return; }
+  main.innerHTML = fbar + (ms.length
     ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
-        if(!one) return `<li class="memo" data-id="${m.id}" tabindex="0">${esc(m.text)}</li>`;
+        if(!one) return `<li class="memo" data-id="${m.id}" tabindex="0">${esc(m.text)}${memoTagsHtml(m)}</li>`;
         const lines=m.text.split('\n'), n=lines.length-1;
-        return `<li class="memo" data-id="${m.id}" tabindex="0"><span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}</span></li>`;
+        return `<li class="memo" data-id="${m.id}" tabindex="0"><span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
       }).join('')+'</ul>'
-    : '<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>';
+    : '<div class="empty"><strong>あてはまるメモがありません</strong></div>');
+  renderComposerTags();
 }
 function toBottom(){ main.scrollTop=main.scrollHeight; }
 
 /* ---------- navigation ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
-  if(tab===b.dataset.tab && tab==='talk'){folderId=null;}
+  if(tab===b.dataset.tab && tab==='talk'){closeFolder();}
   if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa'){charView='list'; reorderMode=false; selectMode=false; selected.clear();}
   if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub'; grpReorderMode=false;}
   if(b.dataset.tab==='world') wReturn=null;
@@ -888,7 +949,7 @@ $('#backBtn').addEventListener('click',()=>{
     charView='list'; render(); return;
   }
   if(tab==='world'){ worldBack(); return; }
-  folderId=null;render();
+  closeFolder(); render();
 });
 
 /* ---------- long press ---------- */
@@ -914,7 +975,7 @@ for(const root of [main, $('#side')]){
     if(!lp) return; const {el,fired}=lp; cancelLp(); lp=null;
     if(fired) return;
     if(el.classList.contains('memo')){ if(el.closest('.oneline')) el.classList.toggle('open'); return; }
-    folderId=el.dataset.id; render(); toBottom();
+    openFolder(el.dataset.id);
   });
   root.addEventListener('pointercancel',()=>{cancelLp(); lp=null;});
   root.addEventListener('contextmenu',e=>{
@@ -926,7 +987,7 @@ for(const root of [main, $('#side')]){
   root.addEventListener('keydown',e=>{
     const el=e.target.closest(FOLDER_SEL); if(!el||e.key!=='Enter') return;
     if(el.classList.contains('memo')){ memoMenu(el.dataset.id); return; }
-    folderId=el.dataset.id; render(); toBottom();
+    openFolder(el.dataset.id);
   });
 }
 function cancelLp(){ if(lp){clearTimeout(lp.timer); lp.el.classList.remove('pressing');} }
@@ -954,11 +1015,15 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 
 function memoMenu(id){
   const m=db.memos.find(x=>x.id===id); if(!m) return;
+  const cs=(m.tags||[]).map(charById).filter(Boolean);
   openSheet(`<div class="preview">${esc(m.text)}</div>
+    ${cs.length?`<div class="mtags" style="padding:0 6px 8px">${cs.map(c=>tagChip(c,false)).join('')}</div>`:''}
     <button class="act" data-a="edit">${ICON.edit}編集</button>
+    <button class="act" data-a="tag">${SV.plus}タグを編集</button>
     <button class="act" data-a="copy">${ICON.copy}コピー</button>
     <button class="act danger" data-a="del">${ICON.trash}削除</button>`, s=>{
     s.querySelector('[data-a=edit]').onclick=()=>editMemo(m);
+    s.querySelector('[data-a=tag]').onclick=()=>{ closeSheet(); pickCharsSheet(m.tags||[], ids=>{ m.tags=ids; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; render(); main.scrollTop=st; }, 'このメモのキャラをタグ付け'); };
     s.querySelector('[data-a=copy]').onclick=()=>copyText(m.text);
     s.querySelector('[data-a=del]').onclick=()=>confirmSheet('このメモを削除しますか？','元に戻せません。','削除',()=>{
       db.memos=db.memos.filter(x=>x.id!==id);
@@ -2111,10 +2176,10 @@ function deleteGroupConfirm(id){
   });
 }
 
-function pickCharsSheet(ids,cb){
+function pickCharsSheet(ids,cb,title){
   const sel=new Set(ids), list=charsSorted();
   if(!list.length){ toast('先にキャラクターを登録してください'); return; }
-  openSheet(`<div class="title">関わったキャラ</div>
+  openSheet(`<div class="title">${esc(title||'関わったキャラ')}</div>
     <div class="picklist" role="group">${list.map(c=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${c.id}" aria-checked="${sel.has(c.id)}">${avatar(c)}<span>${esc(c.name)}</span><span class="ck">${CI.check}</span></div>`).join('')}</div>
     <div class="row"><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
     s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; const id=r.dataset.pid;
@@ -2514,11 +2579,24 @@ $('#composer').addEventListener('submit',e=>{
   e.preventDefault();
   const text=input.value.replace(/\s+$/,''); if(!text.trim()||!folderId) return;
   const t=Date.now();
-  db.memos.push({id:uid(),folderId,text,createdAt:t,updatedAt:t}); commit();
-  input.value=''; try{localStorage.removeItem(DRAFT)}catch(e){} grow();
+  db.memos.push({id:uid(),folderId,text,tags:composerTags.slice(),createdAt:t,updatedAt:t}); commit();
+  input.value=''; try{localStorage.removeItem(DRAFT)}catch(e){} grow(); composerTags=[];
   render(); toBottom(); input.focus();
 });
 sendBtn.addEventListener('pointerdown',e=>e.preventDefault());
+// Same as sendBtn above: prevent the composer textarea from blurring when this button is
+// tapped. Blur removes the 'typing' class, which brings the tab bar back and shifts the
+// composer's position mid-tap, so a real tap (mousedown at one spot, mouseup after the
+// shift) can miss the button entirely.
+$('#composerTagBtn').addEventListener('pointerdown',e=>e.preventDefault());
+$('#composerTagBar').addEventListener('pointerdown',e=>{ if(e.target.closest('[data-untag]')) e.preventDefault(); });
+$('#composerTagBtn').addEventListener('click',()=>{ pickCharsSheet(composerTags, ids=>{ composerTags=ids; renderComposerTags(); }, 'このメモのキャラをタグ付け'); });
+$('#composerTagBar').addEventListener('click',e=>{ const b=e.target.closest('[data-untag]'); if(!b) return; composerTags=composerTags.filter(id=>id!==b.dataset.untag); renderComposerTags(); });
+$('#tagFilterBtn').addEventListener('click',()=>{ pickCharsSheet(tagFilter, ids=>{ tagFilter=ids; const st=main.scrollTop; renderMain(); main.scrollTop=st; }, 'キャラで絞り込み'); });
+main.addEventListener('click',e=>{
+  if(tab!=='talk') return;
+  const cl=e.target.closest('[data-a="clearfilter"]'); if(cl){ tagFilter=[]; const st=main.scrollTop; renderMain(); main.scrollTop=st; }
+});
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'){
     if(inCharDraft()){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
