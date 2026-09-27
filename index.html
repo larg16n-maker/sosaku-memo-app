@@ -384,7 +384,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.6.1';
+const APP_VERSION='0.6.2';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1822,8 +1822,13 @@ try{ const d=localStorage.getItem(DRAFT); if(d){input.value=d;} }catch(e){}
 /* ---------- iOS keyboard: fit app and sheets to visible area ---------- */
 const app=$('#app');
 document.addEventListener('focusin',e=>{
-  if(!e.target.matches('main input, main textarea')) return;
-  setTimeout(()=>{ try{ e.target.scrollIntoView({block:'nearest'}); }catch(_){} },350);
+  if(!e.target.matches('main input, main textarea, .sheet input, .sheet textarea')) return;
+  const el=e.target;
+  const nudge=()=>{ try{ el.scrollIntoView({block:'center'}); }catch(_){} };
+  // Third-party keyboards (e.g. Simeji) can resize the visual viewport more slowly than
+  // Safari's own keyboard, so a single scroll attempt sometimes fires before the keyboard
+  // has finished animating in. Retry a couple of times to cover both cases.
+  setTimeout(nudge,350); setTimeout(nudge,650);
 });
 if(window.visualViewport){
   const fit=()=>{ const vv=window.visualViewport, vh=vv.height;
