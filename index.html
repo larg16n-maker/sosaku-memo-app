@@ -394,6 +394,10 @@ body.kbopen .cedit{padding-bottom:120px}
 .tmrow.open{-webkit-user-select:text;user-select:text}
 .tmact{padding-top:8px;display:flex;justify-content:flex-end}
 #side .tmhead{padding:12px 14px 2px}
+.shtop{position:sticky;top:-8px;z-index:2;display:flex;align-items:center;gap:8px;margin:0 -12px;padding:6px 8px 0 12px;background:var(--surface)}
+.shtop .title{flex:1;padding-bottom:6px}
+.shx{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--sub);background:var(--press)}
+.shx svg{width:18px;height:18px}
 </style>
 </head>
 <body>
@@ -466,7 +470,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.9.0';
+const APP_VERSION='0.9.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -928,7 +932,7 @@ function renderSettingsStatus(){
 $('#settingsBtn').addEventListener('click',()=>{
   const has=!!getToken();
   openSheet(`
-    <div class="title">同期設定</div>
+    <div class="shtop"><div class="title">同期設定</div><button type="button" class="shx" data-a="close" aria-label="閉じる">${CI.x}</button></div>
     <div class="small">この端末だけのメモを、非公開リポジトリ <b>${GH.owner}/${GH.repo}</b> に自動で保存します。トークンはこの端末にだけ保存され、送信先はGitHubだけです。</div>
     <div class="sec">アクセストークン</div>
     <input id="tokenInput" type="text" inputmode="text" placeholder="github_pat_..." value="${has?'••••••••••••••••••••':''}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -949,6 +953,7 @@ $('#settingsBtn').addEventListener('click',()=>{
     <div class="small" style="text-align:center;padding-top:14px">BOXOX バージョン ${APP_VERSION}（${APP_DATE}）</div>
   `, s=>{
     renderSettingsStatus();
+    s.querySelector('[data-a=close]').onclick=closeSheet;
     s.querySelector('#kbOpts').addEventListener('click',e=>{
       const b=e.target.closest('[data-kb]'); if(!b) return;
       setKbExtra(Number(b.dataset.kb));
