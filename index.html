@@ -504,7 +504,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.11.3';
+const APP_VERSION='0.12.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -692,7 +692,10 @@ function buildStoryBible(){
       const meta=[];
       if((c.age||'').trim()) meta.push(`年齢: ${c.age.trim()}`);
       if((c.birthday||'').trim()) meta.push(`誕生日: ${c.birthday.trim()}`);
+      if((c.gender||'').trim()) meta.push(`性別: ${c.gender.trim()}`);
+      if((c.bloodType||'').trim()) meta.push(`血液型: ${c.bloodType.trim()}`);
       if((c.height||'').trim()) meta.push(`身長: ${c.height.trim()}`);
+      if((c.firstPerson||'').trim()) meta.push(`一人称: ${c.firstPerson.trim()}`);
       const gs=(c.affilIds||[]).map(groupById).filter(Boolean); if(gs.length) meta.push('所属: '+gs.map(g=>g.name).join('、'));
       if(meta.length) L.push(meta.join(' / '));
       if((c.song||'').trim()) L.push(`イメージ曲: ${c.song.trim()}`);
@@ -1218,7 +1221,8 @@ const CI={
   chevRight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'
 };
 const FIELDS=[
-  {k:'age',label:'年齢'},{k:'birthday',label:'誕生日'},{k:'height',label:'身長'},
+  {k:'age',label:'年齢'},{k:'birthday',label:'誕生日'},{k:'gender',label:'性別'},{k:'bloodType',label:'血液型'},
+  {k:'height',label:'身長'},{k:'firstPerson',label:'一人称'},
   {k:'song',label:'イメージ曲'}
 ];
 const GROUP_PREF='sosaku-chara-group';
@@ -1337,7 +1341,8 @@ function renderChara(){
     ${inp('name','キャラ名','',true)}
     ${inp('alias','別名','あだ名・本名など')}
     <div class="grid2">${inp('age','年齢')}${inp('birthday','誕生日')}</div>
-    ${inp('height','身長')}
+    <div class="grid2">${inp('gender','性別')}${inp('bloodType','血液型')}</div>
+    <div class="grid2">${inp('height','身長')}${inp('firstPerson','一人称')}</div>
     <div class="fld"><span class="lbl">所属</span>
       <div class="chips">${affilGs.map(g=>`<span class="pchip">${gavatar(g,'sm')}${esc(g.name)}</span>`).join('')}<button type="button" class="chip" data-a="pickgroups">${affilGs.length?'変更':'グループを選ぶ'}</button></div>
     </div>
@@ -1357,7 +1362,7 @@ function autoGrow(t){ t.style.height='auto'; t.style.height=t.scrollHeight+2+'px
 
 function newDraft(){
   const t=Date.now();
-  return {id:uid(),name:'',alias:'',age:'',affilIds:[],birthday:'',height:'',song:'',personality:'',history:'',memo:'',custom:[],icon:'',
+  return {id:uid(),name:'',alias:'',age:'',affilIds:[],birthday:'',gender:'',bloodType:'',height:'',firstPerson:'',song:'',personality:'',history:'',memo:'',custom:[],icon:'',
     color:AV_COLORS[Math.floor(Math.random()*AV_COLORS.length)],createdAt:t,updatedAt:t};
 }
 function startEdit(c){ charDraft=c?JSON.parse(JSON.stringify(c)):newDraft(); charDirty=false; charView='edit'; render(); main.scrollTop=0; }
