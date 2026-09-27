@@ -384,7 +384,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.6.2';
+const APP_VERSION='0.6.3';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -829,7 +829,7 @@ $('#settingsBtn').addEventListener('click',()=>{
     <div class="title">同期設定</div>
     <div class="small">この端末だけのメモを、非公開リポジトリ <b>${GH.owner}/${GH.repo}</b> に自動で保存します。トークンはこの端末にだけ保存され、送信先はGitHubだけです。</div>
     <div class="sec">アクセストークン</div>
-    <input id="tokenInput" type="password" placeholder="github_pat_..." value="${has?'••••••••••••••••••••':''}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <input id="tokenInput" type="text" inputmode="text" placeholder="github_pat_..." value="${has?'••••••••••••••••••••':''}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
     <div class="small">未作成の場合：<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHubでトークンを作る</a>（Repository access を <b>Only select repositories → ${GH.repo}</b> に、Permissions の <b>Contents</b> を <b>Read and write</b> に設定）</div>
     <div class="row"><button type="button" data-a="save" class="primary">保存</button>${has?'<button type="button" data-a="clear" class="dangerbtn">削除</button>':''}</div>
     <div class="sec">状態</div>
