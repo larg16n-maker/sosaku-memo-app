@@ -181,6 +181,13 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .evs.line .ev.open .ecc span{display:inline}
 .evs.line .ev.open .edt{display:block}
 .rlist{list-style:none;margin:0;padding:0}
+.rme{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+.av.rm{width:44px;height:44px}
+.rmt{flex:1;min-width:0}
+.rmn{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmn span{font-size:12px;font-weight:400;color:var(--sub);margin-left:2px}
+.rms{font-size:11px;color:var(--sub);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmc{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 .rrow{border-bottom:1px solid var(--line);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:pointer}
 .rrow .rh{display:flex;align-items:center;gap:10px;padding:6px 14px}
 .rrow .cn{flex:none;max-width:45%;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1202,10 +1209,12 @@ function renderWorld(){
   }
   if(wView==='rc'){
     const me=charById(rcId);
-    $('#title').textContent=me.name+'の関係'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','関係を追加');
+    $('#title').textContent='関係性'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','関係を追加');
     const rs=relsOf(me.id);
-    if(!rs.length){ main.innerHTML='<div class="empty"><strong>まだ関係がありません</strong>右上の＋から追加できます。</div>'; return; }
-    main.innerHTML='<ul class="rlist">'+rs.map(r=>{
+    const sub=[(me.alias||'').trim(),(me.affil||'').trim()].filter(Boolean).map(esc).join(' · ');
+    const head=`<div class="rme">${avatar(me,'rm')}<div class="rmt"><div class="rmn">${esc(me.name)}<span>の関係</span></div>${sub?`<div class="rms">${sub}</div>`:''}</div><span class="rmc">${rs.length}件</span></div>`;
+    if(!rs.length){ main.innerHTML=head+'<div class="empty"><strong>まだ関係がありません</strong>右上の＋から追加できます。</div>'; return; }
+    main.innerHTML=head+'<ul class="rlist">'+rs.map(r=>{
       const v=relView(r,me.id), o=charById(v.other);
       const blocks=[
         (v.toOther||'').trim()?`<div><div class="rk">${esc(me.name)} → ${esc(o.name)}</div><div class="rv">${esc(v.toOther.trim())}</div></div>`:'',
