@@ -1,7 +1,7 @@
 {
-  "name": "創作メモ帳",
-  "short_name": "創作メモ",
-  "description": "会話・キャラクター・世界観をまとめる個人用の創作メモ",
+  "name": "BOXOX",
+  "short_name": "BOXOX",
+  "description": "BOXOX",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
