@@ -91,7 +91,7 @@ main{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;oversc
 
 /* composer */
 .composer{flex:none;display:flex;align-items:flex-end;gap:6px;padding:6px 8px 6px 10px;border-top:1px solid var(--line);background:var(--bg)}
-.composer textarea{flex:1;min-height:30px;max-height:38vh;resize:none;border:1px solid var(--line);border-radius:17px;background:var(--surface);color:var(--ink);padding:5px 12px;font:inherit;font-size:16px;line-height:1.3}
+.composer textarea{flex:1;min-height:30px;max-height:38vh;resize:none;border:1px solid var(--line);border-radius:17px;background:var(--surface);color:var(--ink);padding:6px 12px;font:inherit;font-size:13px;line-height:1.45}
 .composer textarea::placeholder{color:var(--faint)}
 .send{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;transition:opacity .15s}
 .send:disabled{opacity:.25;cursor:default}
@@ -115,7 +115,7 @@ body.typing nav.tabs{display:none}
 .act:active{background:var(--press)}
 .act svg{width:20px;height:20px;color:var(--sub)}
 .act.danger,.act.danger svg{color:var(--danger)}
-.sheet textarea,.sheet input{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;line-height:1.6;padding:10px 12px}
+.sheet textarea,.sheet input{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px;line-height:1.6;padding:9px 12px}
 .sheet textarea{min-height:40vh;resize:none}
 .row{display:flex;gap:8px;margin-top:8px}
 .row button{flex:1;height:42px;border-radius:12px;font-size:14px;font-weight:500;background:var(--press)}
@@ -477,7 +477,7 @@ main.addEventListener('keydown',e=>{
 });
 
 /* ---------- sheet ---------- */
-let scrim=null;
+let scrim=null, fitSheet=()=>{};
 function openSheet(html,onMount,kind){
   closeSheet();
   currentSheetKind=kind||null;
@@ -487,6 +487,7 @@ function openSheet(html,onMount,kind){
   scrim.addEventListener('click',e=>{ if(e.target===scrim) closeSheet(); });
   document.body.appendChild(scrim);
   onMount&&onMount(scrim.querySelector('.sheet'));
+  fitSheet(); setTimeout(fitSheet,350);
 }
 function closeSheet(){
   if(scrim){scrim.remove();scrim=null;}
@@ -669,12 +670,18 @@ $('#composer').addEventListener('submit',e=>{
 sendBtn.addEventListener('pointerdown',e=>e.preventDefault());
 try{ const d=localStorage.getItem(DRAFT); if(d){input.value=d;} }catch(e){}
 
-/* ---------- iOS keyboard: fit app to visible area ---------- */
+/* ---------- iOS keyboard: fit app and sheets to visible area ---------- */
 const app=$('#app');
 if(window.visualViewport){
-  const fit=()=>{ const vh=window.visualViewport.height;
-    if(vh < window.innerHeight-80){ app.style.height=vh+'px'; window.scrollTo(0,0); } else app.style.height=''; };
-  visualViewport.addEventListener('resize',fit); fit();
+  const fit=()=>{ const vv=window.visualViewport, vh=vv.height;
+    const kb = vh < window.innerHeight-80;
+    if(kb){ app.style.height=vh+'px'; window.scrollTo(0,0); } else app.style.height='';
+    if(scrim){ scrim.style.top=(kb?vv.offsetTop:0)+'px'; scrim.style.height=kb?vh+'px':''; scrim.style.bottom=kb?'auto':''; }
+  };
+  fitSheet=fit;
+  visualViewport.addEventListener('resize',fit);
+  visualViewport.addEventListener('scroll',fit);
+  fit();
 }
 
 /* ---------- service worker ---------- */
