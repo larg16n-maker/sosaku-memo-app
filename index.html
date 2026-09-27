@@ -319,6 +319,55 @@ body.kbopen .cedit{padding-bottom:120px}
 @keyframes fade{from{opacity:0}}
 @keyframes up{from{transform:translateY(24px);opacity:.5}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* characters: Q&A */
+.qablock{border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.qasum{display:flex;align-items:center;gap:6px;width:100%;padding:10px 12px;font-size:13px;font-weight:600;text-align:left;color:var(--ink)}
+.qasum svg{width:14px;height:14px;color:var(--faint);flex:none}
+.qasum .cnt{margin-left:auto;font-weight:400;font-size:11px;color:var(--faint)}
+.qasum .go{font-weight:400;font-size:12px;color:var(--sub);margin-left:10px}
+.qaitems{border-top:1px solid var(--line);padding:0 12px}
+.qi{padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.qi .q{font-size:11px;color:var(--sub);margin-bottom:2px;line-height:1.5}
+.qi .a{font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.qamore{display:block;width:100%;text-align:center;font-size:12px;color:var(--sub);padding:9px 0}
+.qaview{padding:10px 14px 32px;display:flex;flex-direction:column;gap:10px}
+.qbar{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--sub)}
+.qtog{display:flex;align-items:center;gap:6px;cursor:pointer}
+.qtog input{width:16px;height:16px;accent-color:var(--accent);margin:0}
+.qpills{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.qpills::-webkit-scrollbar{display:none}
+.qpills .chip{flex:none}
+.qpills .chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.qlist{display:flex;flex-direction:column}
+.qcat{font-size:11px;color:var(--faint);padding:14px 2px 4px;letter-spacing:.04em}
+.qlist .qcat:first-child{padding-top:2px}
+.qe{display:flex;flex-direction:column;gap:5px;padding:9px 0;border-bottom:1px solid var(--line)}
+.qe .q{font-size:12.5px;line-height:1.5}
+.qe textarea,.qe input{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;line-height:1.5;padding:7px 10px;resize:none}
+.qe textarea{min-height:36px;overflow:hidden}
+.qxhead{display:flex;gap:4px;align-items:center}
+.qxhead input{font-size:12.5px}
+.qxhead .del{flex:none;width:28px;height:30px;display:grid;place-items:center;color:var(--faint)}
+.qxhead .del svg{width:16px;height:16px}
+.qfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:4px}
+.qlink{font-size:12px;color:var(--sub);text-decoration:underline;padding:6px 2px}
+.qtplbar{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.qtplbar .small{flex:1;padding:0}
+.qtplbar .chip{flex:none}
+.qtpl .qcat{padding:14px 14px 4px}
+.qtlist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.qrow{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:13px;background:var(--bg);cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.qrow:active{background:var(--press)}
+.qrow .qt{flex:1;min-width:0;line-height:1.5}
+.qrow .handle{flex:none;width:36px;height:28px;margin-right:-8px;display:grid;place-items:center;color:var(--faint);touch-action:none;cursor:grab}
+.qrow .handle svg{width:18px;height:18px}
+.qrow.dragging{position:relative;z-index:5;background:var(--surface);box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.sheet textarea.qtext{min-height:88px}
+.sheet input.plain{font-family:var(--font);font-size:13px}
+.qcchips{padding:8px 2px 0}
+.toast.act-toast{display:flex;align-items:center;gap:14px;white-space:nowrap;max-width:92%}
+.toast.act-toast button{color:var(--bg);font-weight:600;text-decoration:underline;font-size:13px;flex:none}
 </style>
 </head>
 <body>
@@ -356,6 +405,9 @@ body.kbopen .cedit{padding-bottom:120px}
       <button class="hbtn" id="wAddBtn" hidden aria-label="追加">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
+      <button class="hbtn" id="qAddBtn" hidden aria-label="質問を追加">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
       <button class="hbtn txt strong" id="wSaveBtn" hidden>保存</button>
       <button class="hbtn txt" id="wEditBtn" hidden>編集</button>
       <button class="hbtn" id="addFolderBtn" aria-label="フォルダを作る">
@@ -388,7 +440,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.7.0';
+const APP_VERSION='0.8.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -419,7 +471,7 @@ function b64enc(str){ return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2}
 function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
 
 /* ---------- data model ---------- */
-const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels']];
+const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions']];
 function emptyDb(){ const d={meta:{updatedAt:0}}; for(const [a,b] of COLLS){ d[a]=[]; d[b]=[]; } return d; }
 function normalize(d){
   const e=emptyDb();
@@ -588,7 +640,7 @@ async function syncNow(){
 }
 
 function safeRerender(){
-  if(tab==='chara' && charView==='edit') return;
+  if(tab==='chara' && (charView==='edit'||charView==='qa')) return;
   if(tab==='world' && (wView==='ev'||wView==='rel')) return;
   const st=main.scrollTop;
   render();
@@ -627,7 +679,7 @@ function renderMain(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const inFolder = tab==='talk' && folderId;
   const wideTalk = tab==='talk' && isWide();
-  ['charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn','charSelectBtn','charDelSelBtn','wAddBtn','wCancelBtn','wSaveBtn','wEditBtn'].forEach(id=>$('#'+id).hidden=true);
+  ['charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn','charSelectBtn','charDelSelBtn','wAddBtn','wCancelBtn','wSaveBtn','wEditBtn','qAddBtn'].forEach(id=>$('#'+id).hidden=true);
   $('#settingsBtn').hidden=false;
   $('#backBtn').hidden=!inFolder || wideTalk;
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId) || wideTalk;
@@ -668,13 +720,18 @@ function toBottom(){ main.scrollTop=main.scrollHeight; }
 /* ---------- navigation ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
   if(tab===b.dataset.tab && tab==='talk'){folderId=null;}
-  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit'){charView='list'; reorderMode=false; selectMode=false; selected.clear();}
+  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa'){charView='list'; reorderMode=false; selectMode=false; selected.clear();}
   if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub'; grpReorderMode=false;}
   if(b.dataset.tab==='world') wReturn=null;
+  if(tab==='chara' && charView==='qtpl' && b.dataset.tab!=='chara'){ charView=(qtplBack&&qtplBack.cv)||'list'; qtplBack=null; }
   tab=b.dataset.tab; render(); if(folderId) toBottom();
 }));
 $('#backBtn').addEventListener('click',()=>{
-  if(tab==='chara'){ charView='list'; render(); return; }
+  if(tab==='chara'){
+    if(charView==='qa'){ finishQa(); return; }
+    if(charView==='qtpl'){ leaveQtpl(); return; }
+    charView='list'; render(); return;
+  }
   if(tab==='world'){ worldBack(); return; }
   folderId=null;render();
 });
@@ -856,6 +913,8 @@ $('#settingsBtn').addEventListener('click',()=>{
     <div class="sec">キーボード</div>
     <div class="small" style="padding-bottom:6px">Simejiなど他社キーボードで入力欄が隠れるときは、隠れなくなるまで上げてください。</div>
     <div class="kbopts" id="kbOpts">${KB_OPTS.map(o=>`<button type="button" class="chip" data-kb="${o.v}" aria-pressed="${kbExtra()===o.v}">${o.l}</button>`).join('')}</div>
+    <div class="sec">キャラの質問</div>
+    <button class="act" data-a="qtpl">${ICON.edit}質問テンプレを編集</button>
     <div class="sec">手動バックアップ</div>
     <button class="act" data-a="export">${ICON.down}書き出し（JSONファイル）</button>
     <button class="act" data-a="import">${ICON.up}読み込み（JSONファイル）</button>
@@ -877,6 +936,7 @@ $('#settingsBtn').addEventListener('click',()=>{
     const clearBtn=s.querySelector('[data-a=clear]');
     if(clearBtn) clearBtn.onclick=()=>{ setToken(''); toast('トークンを削除しました'); closeSheet(); };
     s.querySelector('[data-a=syncnow]').onclick=()=>{ if(!getToken()){toast('先にトークンを保存してください');return;} syncNow(); };
+    s.querySelector('[data-a=qtpl]').onclick=()=>{ closeSheet(); openQtpl(); };
     s.querySelector('[data-a=export]').onclick=doExport;
     const fileInput=s.querySelector('#importFile');
     s.querySelector('[data-a=import]').onclick=()=>fileInput.click();
@@ -943,8 +1003,11 @@ function commitCharDraft(){
   if(!charDirty) return !!charById(d.id);
   const name=(d.name||'').trim();
   if(!name) return false;
-  const custom=(d.custom||[]).filter(x=>(x.label||'').trim()||(x.value||'').trim());
+  const custom=(d.custom||[]).filter(x=>(x.label||'').trim()||(x.value||'').trim()).map(x=>({...x}));
   const payload=Object.assign({},d,{name,custom,updatedAt:Date.now()});
+  // Q&A answers: copy (never share objects with the draft) and drop blanks.
+  if(d.qa){ const qa={}; for(const [k,v] of Object.entries(d.qa)) if((v||'').trim()) qa[k]=v; payload.qa=qa; }
+  if(d.qx){ payload.qx=d.qx.filter(x=>(x.text||'').trim()||(x.a||'').trim()).map(x=>({...x})); }
   const ex=charById(d.id);
   if(ex){ Object.assign(ex,payload); }
   else{ payload.order=db.chars.reduce((m,c)=>Math.max(m,c.order??0),-1)+1; db.chars.push(payload); }
@@ -980,6 +1043,8 @@ function groupsOf(list){
 
 function renderChara(){
   if(charView==='detail' && !charById(charId)) charView='list';
+  if(charView==='qa'){ if(charDraft){ renderQa(); return; } charView=charById(charId)?'detail':'list'; }
+  if(charView==='qtpl'){ renderQtpl(); return; }
   if(charView==='list'){
     $('#title').textContent = reorderMode ? '並べ替え' : selectMode ? (selected.size?selected.size+'人を選択中':'キャラを選択') : 'キャラクター';
     if(reorderMode){ $('#settingsBtn').hidden=true; $('#charDoneBtn').hidden=false; }
@@ -1020,6 +1085,7 @@ function renderChara(){
       ${affilChipsHtml(c)}
       ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
       ${(c.memo||'').trim()?`<div class="cblock"><div class="clabel">詳細メモ</div><div class="ctext">${esc(c.memo.trim())}</div></div>`:''}
+      ${qaBlockHtml(c)}
       ${charLinksHtml(c)}
     </div>`;
     main.scrollTop=0;
@@ -1069,7 +1135,8 @@ function leaveEdit(){
 $('#charAddBtn').addEventListener('click',()=>startEdit(null));
 $('#charEditBtn').addEventListener('click',()=>{ const c=charById(charId); if(c) startEdit(c); });
 $('#charReorderBtn').addEventListener('click',()=>{ reorderMode=true; selectMode=false; render(); });
-$('#charDoneBtn').addEventListener('click',()=>{ reorderMode=false; render(); });
+$('#charDoneBtn').addEventListener('click',()=>{ if(charView==='qa'){ finishQa(); return; } reorderMode=false; render(); });
+$('#qAddBtn').addEventListener('click',()=>questionSheet(null));
 $('#charGroupBtn').addEventListener('click',()=>{
   charGroup=!charGroup; try{localStorage.setItem(GROUP_PREF,charGroup?'1':'0');}catch(e){}
   render(); toast(charGroup?'所属別に表示':'まとめて表示');
@@ -1097,7 +1164,7 @@ $('#charSaveBtn').addEventListener('click',()=>{
 
 /* edit form events */
 main.addEventListener('input',e=>{
-  if(!(tab==='chara'&&charView==='edit'&&charDraft)) return;
+  if(!inCharDraft()) return;
   const t=e.target;
   if(t.dataset.k){ charDraft[t.dataset.k]=t.value; charDirty=true; if(t.classList.contains('song')) autoGrow(t); scheduleCharAutosave(); }
   else if(t.dataset.cf){
@@ -1105,10 +1172,25 @@ main.addEventListener('input',e=>{
     if(f){ f[t.dataset.cf]=t.value; charDirty=true; scheduleCharAutosave(); }
     if(t.tagName==='TEXTAREA') autoGrow(t);
   }
+  else if(t.dataset.qid && charDraft.qa){ charDraft.qa[t.dataset.qid]=t.value; charDirty=true; autoGrow(t); scheduleCharAutosave(); updQaCount(); }
+  else if(t.dataset.qx && charDraft.qx){
+    const row=t.closest('[data-qxid]'), x=row&&charDraft.qx.find(v=>v.id===row.dataset.qxid);
+    if(x){ x[t.dataset.qx]=t.value; charDirty=true; scheduleCharAutosave(); updQaCount(); }
+    if(t.tagName==='TEXTAREA') autoGrow(t);
+  }
 });
 main.addEventListener('click',e=>{
   if(tab!=='chara') return;
-  if(charView==='detail'){ const j=e.target.closest('[data-jump]'); if(j) jumpFromChar(j); return; }
+  if(charView==='detail'){
+    const j=e.target.closest('[data-jump]'); if(j){ jumpFromChar(j); return; }
+    const qf=e.target.closest('[data-qfocus]'); if(qf){ startQa(charById(charId),qf.dataset.qfocus); return; }
+    const qb=e.target.closest('[data-a]'); if(!qb) return;
+    if(qb.dataset.a==='qa'){ startQa(charById(charId)); return; }
+    if(qb.dataset.a==='qatoggle'){ qaOpen=!qaOpen; try{localStorage.setItem(QA_OPEN_KEY,qaOpen?'1':'0');}catch(_){} const st=main.scrollTop; renderChara(); main.scrollTop=st; }
+    return;
+  }
+  if(charView==='qa'){ qaClick(e); return; }
+  if(charView==='qtpl'){ qtplClick(e); return; }
   const a=e.target.closest('[data-a]');
   if(charView==='edit' && a){
     const act=a.dataset.a;
@@ -1164,7 +1246,239 @@ document.addEventListener('focusin',e=>{ if(e.target.matches('main input, main t
 document.addEventListener('focusout',e=>{
   if(!e.target.matches('main input, main textarea')) return;
   document.body.classList.remove('typing');
-  if(tab==='chara'&&charView==='edit'&&charDraft){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
+  if(inCharDraft()){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
+});
+
+/* ---------- character Q&A ---------- */
+// One master question list (db.questions) shared by every character. Each character stores
+// only its answers, keyed by question id (c.qa = {questionId: answer}), plus any questions of
+// its own (c.qx = [{id,text,a}]). Editing a master question's wording shows up for everyone;
+// removing one only hides it — the answers stay on the characters, so undoing brings them back.
+const QA_OPEN_KEY='sosaku-qa-open', OWN_CAT='__own__';
+let qaOpen=(()=>{try{return localStorage.getItem(QA_OPEN_KEY)==='1';}catch(e){return false;}})();
+let qaCat='all', qaUnans=false, qtplBack=null, lastQCat='';
+function inCharDraft(){ return tab==='chara' && (charView==='edit'||charView==='qa') && !!charDraft; }
+function questionsSorted(){ return [...db.questions].sort((a,b)=>(a.order??0)-(b.order??0)||a.createdAt-b.createdAt); }
+function qById(id){ return db.questions.find(q=>q.id===id); }
+function nextQOrder(){ return db.questions.reduce((m,q)=>Math.max(m,q.order??0),-1)+1; }
+function qCats(){ const seen=[]; for(const q of questionsSorted()){ const c=(q.cat||'').trim(); if(!seen.includes(c)) seen.push(c); } return seen; }
+function catLabel(c){ return c||'カテゴリなし'; }
+function qaStats(c){
+  const qa=c.qa||{}, qx=c.qx||[];
+  return { total: db.questions.length+qx.length,
+    done: db.questions.filter(q=>(qa[q.id]||'').trim()).length + qx.filter(x=>(x.a||'').trim()).length };
+}
+function qaBlockHtml(c){
+  const {total,done}=qaStats(c), qa=c.qa||{};
+  const items=questionsSorted().filter(q=>(qa[q.id]||'').trim()).map(q=>({key:q.id,q:q.text,a:qa[q.id]}))
+    .concat((c.qx||[]).filter(x=>(x.a||'').trim()).map(x=>({key:'x:'+x.id,q:(x.text||'').trim()||'（質問なし）',a:x.a})));
+  const cnt = total ? `${done} / ${total} 回答済み` : '';
+  if(!items.length) return `<div class="qablock"><button type="button" class="qasum" data-a="qa"><span>質問</span><span class="cnt">${cnt}</span><span class="go">答える ›</span></button></div>`;
+  return `<div class="qablock"><button type="button" class="qasum" data-a="qatoggle" aria-expanded="${qaOpen}">${qaOpen?CI.chevDown:CI.chevRight}<span>質問</span><span class="cnt">${cnt}</span></button>${qaOpen?`<div class="qaitems">${items.map(it=>`<div class="qi" data-qfocus="${esc(it.key)}"><div class="q">${esc(it.q)}</div><div class="a">${esc(it.a.trim())}</div></div>`).join('')}<button type="button" class="qamore" data-a="qa">回答を編集・続きを答える ›</button></div>`:''}</div>`;
+}
+function startQa(c,focusKey){
+  if(!c) return;
+  charDraft=JSON.parse(JSON.stringify(c)); charDraft.qa=charDraft.qa||{}; charDraft.qx=charDraft.qx||[];
+  charDirty=false; charId=c.id; charView='qa';
+  if(focusKey){ qaCat='all'; qaUnans=false; }
+  render(); main.scrollTop=0;
+  if(focusKey){
+    const box=main.querySelector(`[data-qkey="${CSS.escape(focusKey)}"]`);
+    if(box){ box.scrollIntoView({block:'center'}); box.classList.add('flash'); setTimeout(()=>box.classList.remove('flash'),1200); if(isWide()){ const t=box.querySelector('textarea'); if(t) t.focus({preventScroll:true}); } }
+  }
+}
+function finishQa(){ clearTimeout(charAutosaveTimer); commitCharDraft(); charDraft=null; charDirty=false; charView=charById(charId)?'detail':'list'; render(); }
+function updQaCount(){ const el=main.querySelector('.qbar .qcnt'); if(el&&charDraft){ const {total,done}=qaStats(charDraft); el.textContent=`${done} / ${total} 回答済み`; } }
+function renderQa(){
+  const d=charDraft, qa=d.qa, cats=qCats(), hasOwn=d.qx.length>0;
+  $('#title').textContent=`${(d.name||'').trim()||'キャラ'}の質問`;
+  $('#settingsBtn').hidden=true; $('#backBtn').hidden=false; $('#charDoneBtn').hidden=false;
+  if(qaCat===OWN_CAT ? !hasOwn : (qaCat!=='all' && !cats.includes(qaCat))) qaCat='all';
+  const {total,done}=qaStats(d);
+  const opts=[['all','すべて'],...cats.map(c=>[c,catLabel(c)]),...(hasOwn?[[OWN_CAT,'このキャラだけ']]:[])];
+  const pills=opts.length>2||(opts.length===2&&!hasOwn)||(hasOwn&&cats.length)?`<div class="qpills">${opts.map(([v,l])=>`<button type="button" class="chip" data-qcat="${esc(v)}" aria-pressed="${qaCat===v}">${esc(l)}</button>`).join('')}</div>`:'';
+  const show=a=>!qaUnans||!(a||'').trim();
+  let body='';
+  if(qaCat!==OWN_CAT){
+    for(const c of cats){
+      if(qaCat!=='all' && qaCat!==c) continue;
+      const qs=questionsSorted().filter(q=>(q.cat||'').trim()===c && show(qa[q.id]));
+      if(!qs.length) continue;
+      body+=(cats.length>1&&qaCat==='all'?`<div class="qcat">${esc(catLabel(c))}</div>`:'')
+        +qs.map(q=>`<div class="qe" data-qkey="${q.id}"><label class="q" for="qa_${q.id}">${esc(q.text)}</label><textarea id="qa_${q.id}" rows="1" data-qid="${q.id}" placeholder="答えを書く">${esc(qa[q.id]||'')}</textarea></div>`).join('');
+    }
+  }
+  if(qaCat==='all'||qaCat===OWN_CAT){
+    const xs=d.qx.filter(x=>show(x.a)||!(x.text||'').trim());
+    if(xs.length) body+=(qaCat==='all'&&db.questions.length?'<div class="qcat">このキャラだけ</div>':'')
+      +xs.map(x=>`<div class="qe own" data-qkey="x:${x.id}" data-qxid="${x.id}"><div class="qxhead"><input type="text" data-qx="text" value="${esc(x.text||'')}" placeholder="質問" autocomplete="off"><button type="button" class="del" data-a="rmqx" aria-label="この質問を削除">${CI.x}</button></div><textarea rows="1" data-qx="a" placeholder="答えを書く">${esc(x.a||'')}</textarea></div>`).join('');
+  }
+  if(!body){
+    body = !db.questions.length && !d.qx.length
+      ? '<div class="empty"><strong>質問テンプレがまだありません</strong>設定の「質問テンプレを編集」から、全キャラ共通の質問リストを作れます。</div>'
+      : `<div class="empty">${qaUnans?'未回答の質問はありません':'質問がありません'}</div>`;
+  }
+  main.innerHTML=`<div class="qaview">
+    <div class="qbar"><span class="qcnt">${done} / ${total} 回答済み</span><label class="qtog"><input type="checkbox" data-qunans ${qaUnans?'checked':''}>未回答だけ</label></div>
+    ${pills}
+    <div class="qlist">${body}</div>
+    <div class="qfoot"><button type="button" class="addfld" data-a="addqx">${CI.plus}このキャラだけの質問を追加</button><button type="button" class="qlink" data-a="qtpl">質問テンプレを編集</button></div>
+  </div>`;
+  main.querySelectorAll('.qaview textarea').forEach(autoGrow);
+}
+function qaClick(e){
+  const pc=e.target.closest('[data-qcat]'); if(pc){ qaCat=pc.dataset.qcat; renderChara(); main.scrollTop=0; return; }
+  const a=e.target.closest('[data-a]'); if(!a) return;
+  const act=a.dataset.a;
+  if(act==='addqx'){
+    const x={id:uid(),text:'',a:''}; charDraft.qx.push(x); charDirty=true;
+    if(qaCat!=='all'&&qaCat!==OWN_CAT) qaCat='all';
+    renderChara();
+    const el=main.querySelector(`[data-qxid="${x.id}"] input`); if(el){ el.scrollIntoView({block:'center'}); el.focus(); }
+  }else if(act==='rmqx'){
+    const id=a.closest('[data-qxid]').dataset.qxid, x=charDraft.qx.find(v=>v.id===id);
+    const go=()=>{ charDraft.qx=charDraft.qx.filter(v=>v.id!==id); charDirty=true; scheduleCharAutosave(); const st=main.scrollTop; renderChara(); main.scrollTop=st; };
+    (x&&(x.a||'').trim()) ? confirmSheet('この質問を削除しますか？','このキャラの答えも一緒に消えます。','削除',go) : go();
+  }else if(act==='qtpl') openQtpl();
+}
+
+/* question template (master list) */
+function openQtpl(){
+  if(tab==='chara' && charView==='qtpl') return;
+  if(inCharDraft()){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
+  const fromQa = tab==='chara' && charView==='qa';
+  const cv = (charView==='edit'||charView==='qa') ? (charById(charId)?'detail':'list') : charView;
+  guardLeave(()=>{ qtplBack={tab, cv, qa:fromQa}; tab='chara'; charView='qtpl'; reorderMode=false; selectMode=false; render(); main.scrollTop=0; });
+}
+function leaveQtpl(){
+  const b=qtplBack||{tab:'chara',cv:'list',qa:false}; qtplBack=null;
+  tab=b.tab;
+  if(b.qa && charById(charId)){ tab='chara'; startQa(charById(charId)); return; }
+  charView=(b.cv==='detail'&&!charById(charId))?'list':b.cv; render();
+}
+function renderQtpl(){
+  $('#title').textContent='質問テンプレ';
+  $('#settingsBtn').hidden=true; $('#backBtn').hidden=false; $('#qAddBtn').hidden=false;
+  const qs=questionsSorted(), cats=qCats();
+  const head=`<div class="qtplbar"><span class="small">全キャラ共通の質問リスト（${qs.length}問）。タップで編集、右のつまみで並べ替え。</span><button type="button" class="chip" data-a="qbulk">まとめて追加</button></div>`;
+  main.innerHTML=`<div class="qtpl">${head}${!qs.length
+    ? '<div class="empty"><strong>まだ質問がありません</strong>右上の＋で1問ずつ、「まとめて追加」で貼り付けて一気に登録できます。</div>'
+    : cats.map(c=>`<div class="qcat">${esc(catLabel(c))}</div><ul class="qtlist">${qs.filter(q=>(q.cat||'').trim()===c).map(q=>`<li class="qrow" data-qid="${q.id}" tabindex="0"><span class="qt">${esc(q.text)}</span><span class="handle" aria-label="ドラッグで移動">${CI.grip}</span></li>`).join('')}</ul>`).join('')}</div>`;
+}
+function qtplClick(e){
+  if(e.target.closest('.handle')) return;
+  const a=e.target.closest('[data-a]'); if(a&&a.dataset.a==='qbulk'){ bulkSheet(); return; }
+  const r=e.target.closest('.qrow'); if(r){ const q=qById(r.dataset.qid); if(q) questionSheet(q); }
+}
+function applyQOrder(ids){
+  const all=questionsSorted().map(q=>q.id), set=new Set(ids);
+  const slots=all.map((id,i)=>set.has(id)?i:-1).filter(i=>i>=0);
+  slots.forEach((slot,k)=>{ all[slot]=ids[k]; });
+  const t=Date.now(); let changed=false;
+  all.forEach((id,i)=>{ const q=qById(id); if(q && q.order!==i){ q.order=i; q.updatedAt=t; changed=true; } });
+  if(changed) commit();
+}
+function questionSheet(q){
+  const cats=qCats().filter(Boolean);
+  openSheet(`<div class="title">${q?'質問を編集':'質問を追加'}</div>
+    <textarea id="qText" class="qtext" placeholder="例：休みの日は何をしている？">${esc(q?q.text:'')}</textarea>
+    <div class="fl">カテゴリ</div>
+    <input id="qCat" type="text" class="plain" maxlength="20" placeholder="例：性格（空欄でもOK）" value="${esc(q?(q.cat||''):lastQCat)}" autocomplete="off">
+    ${cats.length?`<div class="chips qcchips">${cats.map(c=>`<button type="button" class="chip" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:''}
+    ${q?'<div class="small" style="padding-top:8px">削除しても、各キャラの答えは消えません（表示されなくなるだけです）。</div>':''}
+    <div class="row">${q?'<button type="button" class="dangerbtn" data-a="del">削除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">${q?'保存':'追加'}</button></div>`, s=>{
+    const tx=s.querySelector('#qText'), ct=s.querySelector('#qCat'), ok=s.querySelector('[data-a=ok]');
+    const upd=()=>ok.disabled=!tx.value.trim(); upd(); tx.addEventListener('input',upd);
+    s.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ ct.value=b.dataset.c; });
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    ok.onclick=()=>{
+      const text=tx.value.trim(); if(!text) return;
+      const cat=ct.value.trim(), t=Date.now(); lastQCat=cat;
+      if(q){ const ex=qById(q.id); if(ex){ ex.text=text; ex.cat=cat; ex.updatedAt=t; } }
+      else db.questions.push({id:uid(),text,cat,order:nextQOrder(),createdAt:t,updatedAt:t});
+      closeSheet(); commit(); render();
+    };
+    const del=s.querySelector('[data-a=del]');
+    if(del) del.onclick=()=>{ closeSheet(); deleteQuestion(q.id); };
+    if(!q) tx.focus();
+  },'question');
+}
+function deleteQuestion(id){
+  const q=qById(id); if(!q) return;
+  const t=Date.now();
+  db.questions=db.questions.filter(x=>x.id!==id); db.deletedQuestions.push({id,deletedAt:t});
+  commit(); render();
+  toastAction('質問を削除しました','元に戻す',()=>{
+    if(qById(id)) return;
+    db.deletedQuestions=db.deletedQuestions.filter(d=>d.id!==id);
+    db.questions.push({...q,updatedAt:Date.now()}); commit(); render(); toast('元に戻しました');
+  });
+}
+function toastAction(msg,label,fn){
+  document.querySelectorAll('.toast').forEach(x=>x.remove());
+  const d=document.createElement('div'); d.className='toast act-toast';
+  d.innerHTML=`<span>${esc(msg)}</span><button type="button">${esc(label)}</button>`;
+  d.querySelector('button').onclick=()=>{ d.remove(); fn(); };
+  document.body.appendChild(d); clearTimeout(tt); tt=setTimeout(()=>d.remove(),6000);
+}
+/* Bulk add: one question per line; "# カテゴリ" / 【カテゴリ】 lines set the category for the
+   lines below. Leading numbering / bullets are stripped. A JSON array also works:
+   ["質問", ...] or [{"text":"質問","cat":"カテゴリ"}, ...]. */
+function parseBulk(text){
+  const out=[], t=(text||'').trim(); if(!t) return out;
+  if(t[0]==='['||t[0]==='{'){
+    try{
+      let j=JSON.parse(t); if(!Array.isArray(j)) j=Array.isArray(j.questions)?j.questions:[];
+      for(const it of j){
+        if(typeof it==='string'){ if(it.trim()) out.push({text:it.trim(),cat:''}); }
+        else if(it&&typeof it==='object'){ const tx=String(it.text||it.q||it.question||'').trim(); if(tx) out.push({text:tx,cat:String(it.cat||it.category||'').trim()}); }
+      }
+      return out;
+    }catch(e){ /* not JSON — fall through to line parsing */ }
+  }
+  let cat='';
+  for(let line of t.split(/\r?\n/)){
+    line=line.trim(); if(!line) continue;
+    const h=line.match(/^#+\s*(.+)$/)||line.match(/^【(.+)】$/)||line.match(/^■\s*(.+)$/);
+    if(h){ cat=h[1].trim(); continue; }
+    const tx=line.replace(/^(?:Q\s*\d+\s*[.．:：、)）]?\s*|Q\s*[.．:：]\s*|\d+\s*[.．:：、)）]\s*|[・\-*•]\s*)/i,'').trim();
+    if(tx) out.push({text:tx,cat});
+  }
+  return out;
+}
+function bulkSheet(){
+  openSheet(`<div class="title">質問をまとめて追加</div>
+    <div class="small" style="padding-bottom:6px">1行に1問ずつ貼り付けてください。「# カテゴリ名」の行を入れると、その下の質問がそのカテゴリになります。先頭の番号や「・」は自動で外します。</div>
+    <textarea id="bulkText" placeholder="# 基本&#10;好きな食べ物は？&#10;休みの日は何をしている？&#10;# 性格&#10;怒るとどうなる？"></textarea>
+    <div class="small" id="bulkInfo" style="padding-top:6px"></div>
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok" disabled>追加</button></div>`, s=>{
+    const ta=s.querySelector('#bulkText'), info=s.querySelector('#bulkInfo'), ok=s.querySelector('[data-a=ok]');
+    const existing=new Set(db.questions.map(q=>(q.text||'').trim()));
+    let items=[];
+    const upd=()=>{
+      const all=parseBulk(ta.value), seen=new Set();
+      items=all.filter(x=>{ if(existing.has(x.text)||seen.has(x.text)) return false; seen.add(x.text); return true; });
+      const dup=all.length-items.length, nc=new Set(items.map(x=>x.cat).filter(Boolean)).size;
+      info.textContent = all.length ? `${items.length}問を追加します${nc?`（${nc}カテゴリ）`:''}${dup?`／重複${dup}問はスキップ`:''}` : '';
+      ok.disabled=!items.length;
+    };
+    ta.addEventListener('input',upd);
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    ok.onclick=()=>{
+      if(!items.length) return;
+      let o=nextQOrder(); const t=Date.now();
+      for(const it of items) db.questions.push({id:uid(),text:it.text,cat:it.cat,order:o++,createdAt:t,updatedAt:t});
+      const n=items.length; closeSheet(); commit(); render(); toast(n+'問を追加しました');
+    };
+  },'bulk');
+}
+main.addEventListener('change',e=>{
+  if(!e.target.matches('[data-qunans]')) return;
+  qaUnans=e.target.checked; renderChara(); main.scrollTop=0;
+});
+main.addEventListener('keydown',e=>{
+  if(tab!=='chara'||charView!=='qtpl'||e.key!=='Enter') return;
+  const r=e.target.closest('.qrow'); if(r){ const q=qById(r.dataset.qid); if(q) questionSheet(q); }
 });
 
 /* ---------- drag to reorder ---------- */
@@ -1172,13 +1486,14 @@ let drag=null;
 main.addEventListener('pointerdown',e=>{
   const charMode = tab==='chara'&&charView==='list'&&reorderMode;
   const grpMode = tab==='world'&&wView==='rchars'&&relKind==='group'&&grpReorderMode;
-  if(!charMode && !grpMode) return;
+  const qMode = tab==='chara'&&charView==='qtpl';
+  if(!charMode && !grpMode && !qMode) return;
   const h=e.target.closest('.handle'); if(!h) return;
   e.preventDefault();
-  const row=h.closest(charMode?'.crow':'.wrow'), ul=row.parentElement;
+  const row=h.closest(charMode?'.crow':qMode?'.qrow':'.wrow'), ul=row.parentElement;
   try{h.setPointerCapture(e.pointerId);}catch(_){}
   row.classList.add('dragging');
-  drag={row,ul,h,startY:e.clientY,base:row.offsetTop,lastY:e.clientY,pid:e.pointerId,raf:null,kind:charMode?'char':'group'};
+  drag={row,ul,h,startY:e.clientY,base:row.offsetTop,lastY:e.clientY,pid:e.pointerId,raf:null,kind:charMode?'char':qMode?'q':'group'};
 });
 function dragMove(y){
   const {row,ul}=drag;
@@ -1210,9 +1525,9 @@ function endDrag(){
   if(!drag) return;
   const {row,ul,kind}=drag; if(drag.raf) cancelAnimationFrame(drag.raf);
   row.classList.remove('dragging'); row.style.transform='';
-  const newIds=[...ul.children].map(li=>kind==='group'?li.dataset.gid:li.dataset.cid);
+  const newIds=[...ul.children].map(li=>kind==='group'?li.dataset.gid:kind==='q'?li.dataset.qid:li.dataset.cid);
   drag=null;
-  kind==='group' ? applyGroupOrder(newIds) : applyOrder(newIds);
+  kind==='group' ? applyGroupOrder(newIds) : kind==='q' ? applyQOrder(newIds) : applyOrder(newIds);
 }
 main.addEventListener('pointerup',e=>{ if(drag&&e.pointerId===drag.pid) endDrag(); });
 main.addEventListener('pointercancel',e=>{ if(drag&&e.pointerId===drag.pid) endDrag(); });
@@ -1752,7 +2067,7 @@ function renderSide(){
       <button class="hbtn" data-sa="reorder" aria-label="並べ替え">${SV.reorder}</button>
       ${db.chars.length?'<button class="hbtn txt" data-sa="select">選択</button>':''}
       <button class="hbtn" data-sa="add" aria-label="キャラクターを追加">${SV.addp}</button></span>`;
-    const list=charsSorted(), act=c=>(charView!=='list' && charId===c.id)?' active':'';
+    const list=charsSorted(), act=c=>(charView!=='list' && charView!=='qtpl' && charId===c.id)?' active':'';
     const row=c=>`<li class="crow${act(c)}" data-scid="${c.id}" tabindex="0">${avatar(c)}<span class="cn">${esc(c.name)}</span></li>`;
     body = !list.length ? '<div class="pick-ph">まだキャラがいません</div>'
       : charGroup ? groupsOf(list).map(([g,cs,gid])=>{
@@ -1784,7 +2099,7 @@ function renderSide(){
   side.innerHTML=`<div class="shead">${head}</div>${sub}<div class="slist">${body}</div>`;
   side.querySelector('.slist').scrollTop=st;
 }
-function editing(){ return (tab==='chara'&&charView==='edit'&&charDirty) || (tab==='world'&&(wView==='ev'||wView==='rel')&&wDirty); }
+function editing(){ return (tab==='chara'&&(charView==='edit'||charView==='qa')&&charDirty) || (tab==='world'&&(wView==='ev'||wView==='rel')&&wDirty); }
 function guardLeave(fn){
   const go=()=>{ charDraft=null; charDirty=false; evDraft=null; relDraft=null; wDirty=false; fn(); };
   editing() ? confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',go) : go();
@@ -1840,7 +2155,7 @@ $('#composer').addEventListener('submit',e=>{
 sendBtn.addEventListener('pointerdown',e=>e.preventDefault());
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'){
-    if(tab==='chara' && charView==='edit' && charDraft){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
+    if(inCharDraft()){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
   }else if(document.visibilityState==='visible'){
     // Refresh from GitHub as soon as this device comes back to the foreground, so editing
     // starts from the latest version instead of whatever was on screen before it went away.
