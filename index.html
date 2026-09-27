@@ -398,6 +398,10 @@ body.kbopen .cedit{padding-bottom:120px}
 .shtop .title{flex:1;padding-bottom:6px}
 .shx{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--sub);background:var(--press)}
 .shx svg{width:18px;height:18px}
+.agechip{padding-right:10px;cursor:pointer;color:var(--ink);font:inherit;font-size:12px}
+.agechip .age{margin-left:4px;font-size:11px;font-weight:600;color:var(--ink)}
+.agechip .age.unset{font-weight:400;color:var(--faint);text-decoration:underline}
+.eage{font-style:normal;margin-left:3px;color:var(--faint)}
 </style>
 </head>
 <body>
@@ -470,7 +474,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.9.1';
+const APP_VERSION='0.9.2';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1714,7 +1718,7 @@ function renderWorld(){
       const d=dateLabel(e);
       return `<li class="ev wlp${first?' ystart':''}${openEv.has(e.id)?' open':''}" data-eid="${e.id}" tabindex="0">
         <div class="ey">${first?`<b>${yearLabel(tl,e.year)}</b>`:''}${d?`<span>${d}</span>`:''}</div>
-        <div class="eb"><div class="et">${esc(e.title)}</div>${cs.length?`<div class="ec">${cs.map(c=>`<span class="ecc">${avatar(c,'sm')}<span>${esc(c.name)}</span></span>`).join('')}</div>`:''}${(e.detail||'').trim()?`<div class="edt">${esc(e.detail.trim())}</div>`:''}</div>
+        <div class="eb"><div class="et">${esc(e.title)}</div>${cs.length?`<div class="ec">${cs.map(c=>{ const ag=ageLabel(ageAt(c,tl.id,e.year,e.month,e.day)); return `<span class="ecc">${avatar(c,'sm')}<span>${esc(c.name)}${ag?`<i class="eage">${ag}</i>`:''}</span></span>`; }).join('')}</div>`:''}${(e.detail||'').trim()?`<div class="edt">${esc(e.detail.trim())}</div>`:''}</div>
       </li>`;
     }).join('')+'</ul><div class="hint">'+(one?'タップで詳細、':'')+'長押しで編集・削除</div>';
     return;
@@ -1785,7 +1789,8 @@ function renderWorld(){
       <div class="fld"><label for="w_title">タイトル<span class="req">必須</span></label><input id="w_title" data-w="title" type="text" value="${esc(d.title)}"></div>
       <div class="fld"><label for="w_detail">詳細</label><textarea id="w_detail" data-w="detail">${esc(d.detail)}</textarea></div>
       <div class="fld"><span class="lbl">関わったキャラ</span>
-        <div class="chips">${cs.map(c=>`<span class="pchip">${avatar(c,'md')}${esc(c.name)}</span>`).join('')}<button type="button" class="chip" data-wa="pickchars">${cs.length?'変更':'キャラを選ぶ'}</button></div></div>
+        <div class="chips">${cs.map(c=>evChipHtml(c,d)).join('')}<button type="button" class="chip" data-wa="pickchars">${cs.length?'変更':'キャラを選ぶ'}</button></div>
+        ${cs.length?'<div class="small" style="padding:4px 2px 0">キャラをタップすると、この時系列での年齢（生まれた年）を設定できます</div>':''}</div>
       ${isNew?'':'<button type="button" class="delchar" data-wa="delev">このイベントを削除</button>'}
     </form>`;
     return;
@@ -2026,12 +2031,12 @@ function charLinksHtml(c){
     .sort((a,b)=>{ const ta=tlById(a.timelineId), tb=tlById(b.timelineId); return (ta.createdAt-tb.createdAt)||evSort(a,b); });
   const add=(a,l)=>`<button type="button" class="cladd" data-a="${a}">${CI.plus}${l}</button>`;
   const relH = rs.length ? `<ul class="xlist">${rs.map(r=>{
-      const v=relView(r,c.id), o=charById(v.other), co=(v.callOther||'').trim(), cm=(v.callMe||'').trim();
-      const calls=[co?`「${esc(co)}」と呼ぶ`:'', cm?`「${esc(cm)}」と呼ばれる`:''].filter(Boolean).join('・');
-      return `<li class="xrow" data-jump="rel" data-rid="${r.id}">${avatar(o,'md')}<div class="xev"><span>${esc(o.name)}</span>${calls?`<span class="xm">${calls}</span>`:''}</div><span class="xl">${esc((r.label||'').trim())}</span></li>`; }).join('')}</ul>`
+      const o=charById(relView(r,c.id).other);
+      return `<li class="xrow" data-jump="rel" data-rid="${r.id}">${avatar(o,'md')}<span>${esc(o.name)}</span><span class="xl">${esc((r.label||'').trim())}</span></li>`; }).join('')}</ul>`
     : '<div class="clempty">まだ関係がありません</div>';
   const evH = evs.length ? `<ul class="xlist">${evs.map(e=>{ const tl=tlById(e.timelineId), d=dateLabel(e);
-      return `<li class="xrow" data-jump="ev" data-eid="${e.id}"><div class="xev"><span class="xm">${esc(tl.name)} · ${yearLabel(tl,e.year)}${d?' '+d:''}</span><span>${esc(e.title)}</span></div></li>`; }).join('')}</ul>`
+      const ag=ageLabel(ageAt(c,tl.id,e.year,e.month,e.day));
+      return `<li class="xrow" data-jump="ev" data-eid="${e.id}"><div class="xev"><span class="xm">${esc(tl.name)} · ${yearLabel(tl,e.year)}${d?' '+d:''}${ag?` · ${ag}`:''}</span><span>${esc(e.title)}</span></div></li>`; }).join('')}</ul>`
     : '<div class="clempty">まだ登場イベントがありません</div>';
   return `<div class="clinked"><div class="clhead">世界観とのつながり</div>
     <div class="cblock"><div class="clabel"><span>関係性</span>${add('addrel','関係を追加')}</div>${relH}</div>
@@ -2150,6 +2155,64 @@ function deleteTerm(id){
   });
 }
 
+/* ---------- character ages on timelines ---------- */
+// Each character can have a birth year per timeline (c.born = {timelineId: year}, in that
+// timeline's own numbering). Age at an event = event year − birth year, minus one when the
+// event's month/day falls before the character's birthday (parsed from the 誕生日 field).
+function bornIn(c,tlid){ const v=c&&c.born?c.born[tlid]:undefined; return typeof v==='number'&&isFinite(v)?v:null; }
+function parseBirthday(s){ const m=String(s||'').match(/(\d{1,2})\s*(?:月|[\/／.\-])\s*(\d{1,2})?/); return m?{m:+m[1],d:m[2]?+m[2]:null}:null; }
+function ageAt(c,tlid,year,month,day){
+  const b=bornIn(c,tlid); if(b===null||typeof year!=='number'||!isFinite(year)) return null;
+  let age=year-b;
+  const bd=parseBirthday(c.birthday); month=Number(month)||0; day=Number(day)||0;
+  if(bd && month && (month<bd.m || (month===bd.m && day && bd.d && day<bd.d))) age--;
+  return age;
+}
+function ageLabel(a){ return a===null ? '' : a<0 ? '誕生前' : a+'歳'; }
+function evDraftYear(d){ const y=String(d.yabs||'').trim(); return /^\d+$/.test(y) ? d.sign*Number(y) : null; }
+function evChipHtml(c,d){
+  const a=ageAt(c,d.timelineId,evDraftYear(d),d.month,d.day), known=bornIn(c,d.timelineId)!==null;
+  return `<button type="button" class="pchip agechip" data-wa="setborn" data-cid="${c.id}">${avatar(c,'md')}${esc(c.name)}<span class="age${known?'':' unset'}">${known?(a===null?'年を入れると年齢表示':ageLabel(a)):'年齢を設定'}</span></button>`;
+}
+function updEvAges(){
+  if(!evDraft) return;
+  main.querySelectorAll('.agechip[data-cid]').forEach(b=>{ const c=charById(b.dataset.cid); if(c) b.outerHTML=evChipHtml(c,evDraft); });
+}
+function bornSheet(c,tl,evYear,evMonth,evDay){
+  const ad=tl.mode==='ad', cur=bornIn(c,tl.id);
+  const signs = ad ? [[1,'西暦'],[-1,'紀元前']] : [[-1,'前'],[1,'後']];
+  let sign = cur===null ? (ad?1:-1) : cur<0 ? -1 : (ad?1:(cur===0?-1:1));
+  const hasEv = typeof evYear==='number';
+  openSheet(`<div class="title">${esc(c.name)}の年齢</div>
+    <div class="msg">「${esc(tl.name)}」の中で何年に生まれたかを設定すると、この時系列のイベントに年齢が表示されます。</div>
+    ${hasEv?`<div class="fl">このイベント（${esc(yearLabel(tl,evYear))}）の時点で</div>
+    <div class="yrow"><input id="bornAge" type="text" inputmode="numeric" class="plain" placeholder="例：17" value="${cur===null?'':Math.max(0,evYear-cur)}"><span class="yu">歳</span></div>
+    <div class="fl" style="padding-top:12px">または、生まれた年</div>`:'<div class="fl">生まれた年</div>'}
+    <div class="yrow"><div class="seg" role="group" id="bornSign">${signs.map(([v,l])=>`<button type="button" data-bs="${v}" aria-pressed="${sign===v}">${l}</button>`).join('')}</div>
+      <input id="bornY" type="text" inputmode="numeric" class="plain" value="${cur===null?'':Math.abs(cur)}" placeholder="${ad?'例：1990':'0で基準年'}"><span class="yu">年</span></div>
+    <div class="small" style="padding-top:6px">誕生日（${esc((c.birthday||'').trim()||'未入力')}）が入っていれば、月日まで見て年齢を計算します。</div>
+    <div class="row">${cur!==null?'<button type="button" class="dangerbtn" data-a="clear">解除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
+    const yi=s.querySelector('#bornY'), ai=s.querySelector('#bornAge'), ok=s.querySelector('[data-a=ok]');
+    const num=el=>{ const v=el.value.replace(/[^0-9]/g,''); if(v!==el.value) el.value=v; return v===''?null:Number(v); };
+    const born=()=>{ const v=num(yi); return v===null?null:sign*v; };
+    const setSign=v=>{ sign=v; s.querySelectorAll('#bornSign [data-bs]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.bs)===v)); };
+    const upd=()=>{ ok.disabled=born()===null; };
+    // Typing an age fills in the birth year (and vice versa) so either can be used.
+    if(ai) ai.addEventListener('input',()=>{ const a=num(ai); if(a===null){ upd(); return; } let b=evYear-a;
+      // month/day before the birthday means they were born one year earlier
+      const bd=parseBirthday(c.birthday), m=Number(evMonth)||0, d=Number(evDay)||0;
+      if(bd && m && (m<bd.m || (m===bd.m && d && bd.d && d<bd.d))) b--;
+      setSign(b<0?-1:(ad?1:(b===0?sign:1))); yi.value=String(Math.abs(b)); upd(); });
+    yi.addEventListener('input',()=>{ num(yi); if(ai){ const b=born(); const a=b===null?null:ageAt({born:{[tl.id]:b},birthday:c.birthday},tl.id,evYear,evMonth,evDay); ai.value=a===null||a<0?'':String(a); } upd(); });
+    s.querySelector('#bornSign').addEventListener('click',e=>{ const b=e.target.closest('[data-bs]'); if(!b) return; setSign(Number(b.dataset.bs)); yi.dispatchEvent(new Event('input')); });
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    const save=v=>{ const ch=charById(c.id); if(!ch) return; ch.born={...(ch.born||{})}; if(v===null) delete ch.born[tl.id]; else ch.born[tl.id]=v; ch.updatedAt=Date.now(); commit(); closeSheet(); updEvAges(); if(!evDraft){ const st=main.scrollTop; render(); main.scrollTop=st; } };
+    ok.onclick=()=>{ const b=born(); if(b===null) return; save(b); };
+    const clr=s.querySelector('[data-a=clear]'); if(clr) clr.onclick=()=>save(null);
+    upd(); (ai||yi).focus();
+  },'born');
+}
+
 /* world: taps, long-press, form input */
 let wlp=null, suppressClick=false;
 function wlpDown(e){
@@ -2185,7 +2248,8 @@ main.addEventListener('click',e=>{
     const tr2=t.closest('.tmrow'); if(tr2){ tr2.classList.toggle('open'); const id=tr2.dataset.tmid; tr2.classList.contains('open')?openTm.add(id):openTm.delete(id); const box=$('#tmList'), st=main.scrollTop; if(box){ box.innerHTML=termListHtml(); main.scrollTop=st; } return; }
   }
   const rr=t.closest('.rrow'); if(rr && (wView==='rc'||wView==='rg')){ rr.classList.toggle('open'); rr.classList.contains('open')?openRel.add(rr.dataset.rid):openRel.delete(rr.dataset.rid); return; }
-  const sg=t.closest('[data-sign]'); if(sg && evDraft){ evDraft.sign=Number(sg.dataset.sign); wDirty=true; sg.parentElement.querySelectorAll('[data-sign]').forEach(b=>b.setAttribute('aria-pressed',b===sg)); return; }
+  const sg=t.closest('[data-sign]'); if(sg && evDraft){ evDraft.sign=Number(sg.dataset.sign); wDirty=true; sg.parentElement.querySelectorAll('[data-sign]').forEach(b=>b.setAttribute('aria-pressed',b===sg)); updEvAges(); return; }
+  const sb=t.closest('[data-wa="setborn"]'); if(sb && evDraft){ const c=charById(sb.dataset.cid), tl=tlById(evDraft.timelineId); if(c&&tl) bornSheet(c,tl,evDraftYear(evDraft),evDraft.month,evDraft.day); return; }
   const a=t.closest('[data-wa]'); if(!a) return;
   const act=a.dataset.wa;
   if(act==='grpreorder'){ grpReorderMode=!grpReorderMode; render(); }
@@ -2205,6 +2269,7 @@ main.addEventListener('input',e=>{
   if(k==='yabs'){ const v=t.value.replace(/[^0-9]/g,''); if(v!==t.value) t.value=v; d.yabs=v; }
   else d[k]=t.value;
   wDirty=true;
+  if(wView==='ev' && (k==='yabs'||k==='month'||k==='day')) updEvAges();
 });
 main.addEventListener('submit',e=>{ if(e.target.id==='wForm') e.preventDefault(); });
 
