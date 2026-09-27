@@ -95,8 +95,8 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 
 /* memos */
 .memos{list-style:none;margin:0;padding:0}
-.memo{padding:7px 14px;border-bottom:1px solid var(--line);white-space:pre-wrap;word-break:break-word;line-height:1.55;font-size:13px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.memos.oneline .memo{padding-block:6px;display:flex;align-items:baseline;gap:8px}
+.memo{padding:11px 14px;border-bottom:1px solid var(--line);white-space:pre-wrap;word-break:break-word;line-height:1.55;font-size:13px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.memos.oneline .memo{padding-block:9px;display:flex;align-items:baseline;gap:8px}
 .memo .l1{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .memo .more{flex:none;font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}
 .memo .all{display:none;flex:1;min-width:0}
@@ -320,6 +320,10 @@ body.kbopen .cedit{padding-bottom:120px}
 @keyframes fade{from{opacity:0}}
 @keyframes up{from{transform:translateY(24px);opacity:.5}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:799px){
+  .memo{font-size:12px}
+  .memo .more{font-size:9px}
+}
 
 /* characters: Q&A */
 .qablock{border:1px solid var(--line);border-radius:10px;background:var(--surface)}
@@ -500,12 +504,12 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.11.0';
+const APP_VERSION='0.11.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-09-27';
+const APP_DATE='2026-09-28';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
