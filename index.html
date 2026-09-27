@@ -57,6 +57,8 @@ header h1{margin:0;font-size:14px;font-weight:600;text-align:center;white-space:
 .hbtn.txt{padding-inline:8px;font-size:14px}
 .hbtn.txt.strong{font-weight:600}
 .hbtn.on{color:var(--brass)}
+.hbtn.danger{color:var(--danger)}
+.hbtn:disabled{opacity:.35;cursor:default}
 .hbtn svg{width:19px;height:19px}
 .hgroup{display:flex;align-items:center}
 .hgroup.right{justify-self:end}
@@ -99,6 +101,10 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .ghead .gcount{color:var(--faint);font-variant-numeric:tabular-nums}
 .crow{display:flex;align-items:center;gap:10px;padding:5px 14px;border-bottom:1px solid var(--line);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:var(--bg)}
 .crow:active{background:var(--press)}
+.crow .ck{flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--faint);display:grid;place-items:center;color:transparent}
+.crow .ck svg{width:12px;height:12px}
+.crow.sel{background:var(--press)}
+.crow.sel .ck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .crow .cn{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crow .handle{flex:none;width:36px;height:28px;margin-right:-8px;display:grid;place-items:center;color:var(--faint);touch-action:none;cursor:grab}
 .crow .handle svg{width:18px;height:18px}
@@ -217,6 +223,7 @@ body.kbopen .cedit{padding-bottom:120px}
       <button class="hbtn" id="settingsBtn" aria-label="同期設定">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 000-3l1.9-1.4-2-3.4-2.2.8a7.6 7.6 0 00-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 00-2.6 1.5l-2.2-.8-2 3.4L4.6 10.5a7.6 7.6 0 000 3L2.7 15l2 3.4 2.2-.8c.8.7 1.6 1.2 2.6 1.5l.5 2.5h4l.5-2.5a7.6 7.6 0 002.6-1.5l2.2.8 2-3.4z"/></svg>
       </button>
+      <button class="hbtn txt" id="charSelectBtn" hidden>選択</button>
     </span>
     <h1 id="title">会話</h1>
     <span class="hgroup right">
@@ -231,6 +238,7 @@ body.kbopen .cedit{padding-bottom:120px}
       <button class="hbtn txt" id="charEditBtn" hidden>編集</button>
       <button class="hbtn txt strong" id="charDoneBtn" hidden>完了</button>
       <button class="hbtn txt strong" id="charSaveBtn" hidden>保存</button>
+      <button class="hbtn txt danger" id="charDelSelBtn" hidden disabled>削除</button>
       <button class="hbtn" id="addFolderBtn" aria-label="フォルダを作る">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M12 10.5v5M9.5 13h5"/></svg>
       </button>
@@ -259,7 +267,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.2.2';
+const APP_VERSION='0.2.3';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -475,7 +483,7 @@ const main=$('#main');
 function render(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const inFolder = tab==='talk' && folderId;
-  ['charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn'].forEach(id=>$('#'+id).hidden=true);
+  ['charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn','charSelectBtn','charDelSelBtn'].forEach(id=>$('#'+id).hidden=true);
   $('#settingsBtn').hidden=false;
   $('#backBtn').hidden=!inFolder;
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId);
@@ -520,7 +528,7 @@ function toBottom(){ main.scrollTop=main.scrollHeight; }
 /* ---------- navigation ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
   if(tab===b.dataset.tab && tab==='talk'){folderId=null;}
-  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit'){charView='list'; reorderMode=false;}
+  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit'){charView='list'; reorderMode=false; selectMode=false; selected.clear();}
   tab=b.dataset.tab; render(); if(folderId) toBottom();
 }));
 $('#backBtn').addEventListener('click',()=>{
@@ -753,6 +761,7 @@ const PERSON_SVG='<svg viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="7.5" 
 const CI={
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   grip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8h14M5 12h14M5 16h14"/></svg>',
   group:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7M4 9h16M4 13h16M4 17h7M4 21h16"/></svg>',
   flat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>'
@@ -762,7 +771,8 @@ const FIELDS=[
   {k:'affil',label:'所属'},{k:'song',label:'イメージ曲'}
 ];
 const GROUP_PREF='sosaku-chara-group';
-let charView='list', charId=null, charDraft=null, charDirty=false, reorderMode=false;
+let charView='list', charId=null, charDraft=null, charDirty=false, reorderMode=false, selectMode=false;
+const selected=new Set();
 let charGroup=(()=>{try{return localStorage.getItem(GROUP_PREF)==='1';}catch(e){return false;}})();
 
 function charsSorted(){ return [...db.chars].sort((a,b)=>(a.order??0)-(b.order??0)||a.createdAt-b.createdAt); }
@@ -783,9 +793,11 @@ function groupsOf(list){
 function renderChara(){
   if(charView==='detail' && !charById(charId)) charView='list';
   if(charView==='list'){
-    $('#title').textContent = reorderMode ? '並べ替え' : 'キャラクター';
+    $('#title').textContent = reorderMode ? '並べ替え' : selectMode ? (selected.size?selected.size+'人を選択中':'キャラを選択') : 'キャラクター';
     if(reorderMode){ $('#settingsBtn').hidden=true; $('#charDoneBtn').hidden=false; }
+    else if(selectMode){ $('#settingsBtn').hidden=true; $('#charCancelBtn').hidden=false; $('#charDelSelBtn').hidden=false; $('#charDelSelBtn').disabled=!selected.size; }
     else{
+      $('#charSelectBtn').hidden=!db.chars.length;
       $('#charGroupBtn').hidden=false; $('#charReorderBtn').hidden=false; $('#charAddBtn').hidden=false;
       $('#charGroupBtn').innerHTML = charGroup ? CI.group : CI.flat;
       $('#charGroupBtn').classList.toggle('on',charGroup);
@@ -793,7 +805,7 @@ function renderChara(){
     }
     const list=charsSorted();
     if(!list.length){ main.innerHTML='<div class="empty"><strong>キャラクターがいません</strong>右上の人型ボタンから追加できます。</div>'; return; }
-    const row=c=>`<li class="crow" data-cid="${c.id}" tabindex="0">${avatar(c)}<span class="cn">${esc(c.name)}</span>${reorderMode?`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`:''}</li>`;
+    const row=c=>`<li class="crow${selectMode&&selected.has(c.id)?' sel':''}" data-cid="${c.id}" tabindex="0" ${selectMode?`role="checkbox" aria-checked="${selected.has(c.id)}"`:''}>${selectMode?`<span class="ck">${CI.check}</span>`:''}${avatar(c)}<span class="cn">${esc(c.name)}</span>${reorderMode?`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`:''}</li>`;
     if(charGroup){
       main.innerHTML=groupsOf(list).map(([g,cs])=>`<div class="grp"><div class="ghead"><span>${g?esc(g):'所属なし'}</span><span class="gcount">${cs.length}</span></div><ul class="clist" data-group="${esc(g)}">${cs.map(row).join('')}</ul></div>`).join('');
     }else{
@@ -856,13 +868,23 @@ function leaveEdit(){
 
 $('#charAddBtn').addEventListener('click',()=>startEdit(null));
 $('#charEditBtn').addEventListener('click',()=>{ const c=charById(charId); if(c) startEdit(c); });
-$('#charReorderBtn').addEventListener('click',()=>{ reorderMode=true; render(); });
+$('#charReorderBtn').addEventListener('click',()=>{ reorderMode=true; selectMode=false; render(); });
 $('#charDoneBtn').addEventListener('click',()=>{ reorderMode=false; render(); });
 $('#charGroupBtn').addEventListener('click',()=>{
   charGroup=!charGroup; try{localStorage.setItem(GROUP_PREF,charGroup?'1':'0');}catch(e){}
   render(); toast(charGroup?'所属別に表示':'まとめて表示');
 });
+$('#charSelectBtn').addEventListener('click',()=>{ selectMode=true; reorderMode=false; selected.clear(); render(); });
+$('#charDelSelBtn').addEventListener('click',()=>{
+  const n=selected.size; if(!n) return;
+  confirmSheet(`${n}人のキャラクターを削除しますか？`,'元に戻せません。','削除',()=>{
+    const t=Date.now();
+    db.chars=db.chars.filter(c=>{ if(selected.has(c.id)){ db.deletedChars.push({id:c.id,deletedAt:t}); return false; } return true; });
+    selected.clear(); selectMode=false; commit(); render(); toast(n+'人を削除しました');
+  });
+});
 $('#charCancelBtn').addEventListener('click',()=>{
+  if(selectMode){ selectMode=false; selected.clear(); render(); return; }
   if(!charDirty) return leaveEdit();
   confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',leaveEdit);
 });
@@ -912,13 +934,19 @@ main.addEventListener('click',e=>{
     }
     return;
   }
+  if(charView==='list' && selectMode){
+    const r=e.target.closest('.crow'); if(!r) return;
+    const id=r.dataset.cid; selected.has(id)?selected.delete(id):selected.add(id);
+    const st=main.scrollTop; renderChara(); main.scrollTop=st;
+    return;
+  }
   if(charView==='list' && !reorderMode){
     const r=e.target.closest('.crow'); if(!r) return;
     charId=r.dataset.cid; charView='detail'; render();
   }
 });
 main.addEventListener('keydown',e=>{
-  if(tab!=='chara'||charView!=='list'||reorderMode||e.key!=='Enter') return;
+  if(tab!=='chara'||charView!=='list'||reorderMode||selectMode||e.key!=='Enter') return;
   const r=e.target.closest('.crow'); if(r){ charId=r.dataset.cid; charView='detail'; render(); }
 });
 main.addEventListener('change',e=>{
