@@ -113,8 +113,10 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 
 /* characters: list */
 .clist{list-style:none;margin:0;padding:0}
-.ghead{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;padding:5px 14px 3px;font-size:10px;letter-spacing:.06em;color:var(--sub);background:var(--bg);border-bottom:1px solid var(--line)}
+.ghead{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;align-items:center;padding:5px 14px 3px;font-size:10px;letter-spacing:.06em;color:var(--sub);background:var(--bg);border-bottom:1px solid var(--line);cursor:pointer;-webkit-user-select:none;user-select:none}
 .ghead .gcount{color:var(--faint);font-variant-numeric:tabular-nums}
+.ghead .gtitle{display:inline-flex;align-items:center;gap:3px}
+.ghead .gtitle svg{width:12px;height:12px;flex:none}
 .crow{display:flex;align-items:center;gap:10px;padding:5px 14px;border-bottom:1px solid var(--line);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:var(--bg)}
 .crow:active{background:var(--press)}
 .crow .ck{flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--faint);display:grid;place-items:center;color:transparent}
@@ -122,9 +124,9 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .crow.sel{background:var(--press)}
 .crow.sel .ck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .crow .cn{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.crow .handle{flex:none;width:36px;height:28px;margin-right:-8px;display:grid;place-items:center;color:var(--faint);touch-action:none;cursor:grab}
-.crow .handle svg{width:18px;height:18px}
-.crow.dragging{position:relative;z-index:5;background:var(--surface);box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.crow .handle,.wrow .handle{flex:none;width:36px;height:28px;margin-right:-8px;display:grid;place-items:center;color:var(--faint);touch-action:none;cursor:grab}
+.crow .handle svg,.wrow .handle svg{width:18px;height:18px}
+.crow.dragging,.wrow.dragging{position:relative;z-index:5;background:var(--surface);box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .av{flex:none;width:28px;height:28px;border-radius:50%;overflow:hidden;display:grid;place-items:center}
 .av img{width:100%;height:100%;object-fit:cover;display:block}
 .av svg{width:78%;height:78%;margin-top:14%}
@@ -382,7 +384,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.5.1';
+const APP_VERSION='0.6.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -661,7 +663,7 @@ function toBottom(){ main.scrollTop=main.scrollHeight; }
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
   if(tab===b.dataset.tab && tab==='talk'){folderId=null;}
   if(tab===b.dataset.tab && tab==='chara' && charView!=='edit'){charView='list'; reorderMode=false; selectMode=false; selected.clear();}
-  if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub';}
+  if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub'; grpReorderMode=false;}
   if(b.dataset.tab==='world') wReturn=null;
   tab=b.dataset.tab; render(); if(folderId) toBottom();
 }));
@@ -900,7 +902,9 @@ const CI={
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   grip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8h14M5 12h14M5 16h14"/></svg>',
   group:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7M4 9h16M4 13h16M4 17h7M4 21h16"/></svg>',
-  flat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>'
+  flat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>',
+  chevDown:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  chevRight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'
 };
 const FIELDS=[
   {k:'age',label:'年齢'},{k:'birthday',label:'誕生日'},{k:'height',label:'身長'},
@@ -914,6 +918,11 @@ let charAutosaveTimer=null;
    name before it's written at all (same rule as the explicit save). */
 function commitCharDraft(){
   const d=charDraft; if(!d) return false;
+  // Nothing actually changed since the last save (e.g. the editor was just left open in the
+  // background) — skip the write entirely so we never re-stamp updatedAt on stale content.
+  // Re-stamping unchanged data would make it look "newest" and let it beat a genuinely newer
+  // edit made on another device during sync.
+  if(!charDirty) return !!charById(d.id);
   const name=(d.name||'').trim();
   if(!name) return false;
   const custom=(d.custom||[]).filter(x=>(x.label||'').trim()||(x.value||'').trim());
@@ -927,6 +936,11 @@ function commitCharDraft(){
 function scheduleCharAutosave(){ clearTimeout(charAutosaveTimer); charAutosaveTimer=setTimeout(commitCharDraft,800); }
 const selected=new Set();
 let charGroup=(()=>{try{return localStorage.getItem(GROUP_PREF)==='1';}catch(e){return false;}})();
+const COLLAPSE_KEY='sosaku-collapsed-groups';
+function loadCollapsed(){ try{ return new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY)||'[]')); }catch(e){ return new Set(); } }
+function saveCollapsed(){ try{ localStorage.setItem(COLLAPSE_KEY,JSON.stringify([...collapsedGroups])); }catch(e){} }
+let collapsedGroups=loadCollapsed();
+function toggleGroupCollapse(key){ collapsedGroups.has(key)?collapsedGroups.delete(key):collapsedGroups.add(key); saveCollapsed(); }
 
 function charsSorted(){ return [...db.chars].sort((a,b)=>(a.order??0)-(b.order??0)||a.createdAt-b.createdAt); }
 function charById(id){ return db.chars.find(c=>c.id===id); }
@@ -939,10 +953,10 @@ function groupsOf(list){
   const out=[];
   for(const g of groupsSorted()){
     const cs=list.filter(c=>(c.affilIds||[]).includes(g.id));
-    if(cs.length) out.push([(g.name||'').trim(),cs]);
+    if(cs.length) out.push([(g.name||'').trim(),cs,g.id]);
   }
   const none=list.filter(c=>!(c.affilIds||[]).length);
-  if(none.length) out.push(['',none]);
+  if(none.length) out.push(['',none,null]);
   return out;
 }
 
@@ -967,7 +981,10 @@ function renderChara(){
     if(!list.length){ main.innerHTML='<div class="empty"><strong>キャラクターがいません</strong>右上の人型ボタンから追加できます。</div>'; return; }
     const row=c=>`<li class="crow${selectMode&&selected.has(c.id)?' sel':''}" data-cid="${c.id}" tabindex="0" ${selectMode?`role="checkbox" aria-checked="${selected.has(c.id)}"`:''}>${selectMode?`<span class="ck">${CI.check}</span>`:''}${avatar(c)}<span class="cn">${esc(c.name)}</span>${reorderMode?`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`:''}</li>`;
     if(charGroup){
-      main.innerHTML=groupsOf(list).map(([g,cs])=>`<div class="grp"><div class="ghead"><span>${g?esc(g):'所属なし'}</span><span class="gcount">${cs.length}</span></div><ul class="clist" data-group="${esc(g)}">${cs.map(row).join('')}</ul></div>`).join('');
+      main.innerHTML=groupsOf(list).map(([g,cs,gid])=>{
+        const key=gid||'__none__', collapsed=!reorderMode && collapsedGroups.has(key);
+        return `<div class="grp"><div class="ghead" data-gkey="${esc(key)}" role="button" tabindex="0" aria-expanded="${!collapsed}"><span class="gtitle">${collapsed?CI.chevRight:CI.chevDown}<span>${g?esc(g):'所属なし'}</span></span><span class="gcount">${cs.length}</span></div>${collapsed?'':`<ul class="clist" data-group="${esc(g)}">${cs.map(row).join('')}</ul>`}</div>`;
+      }).join('');
     }else{
       main.innerHTML=`<ul class="clist">${list.map(row).join('')}</ul>`;
     }
@@ -1096,6 +1113,10 @@ main.addEventListener('click',e=>{
     }
     return;
   }
+  if(charView==='list' && !reorderMode){
+    const gh=e.target.closest('.ghead[data-gkey]');
+    if(gh){ toggleGroupCollapse(gh.dataset.gkey); const st=main.scrollTop; renderChara(); main.scrollTop=st; return; }
+  }
   if(charView==='list' && selectMode){
     const r=e.target.closest('.crow'); if(!r) return;
     const id=r.dataset.cid; selected.has(id)?selected.delete(id):selected.add(id);
@@ -1108,7 +1129,9 @@ main.addEventListener('click',e=>{
   }
 });
 main.addEventListener('keydown',e=>{
-  if(tab!=='chara'||charView!=='list'||reorderMode||selectMode||e.key!=='Enter') return;
+  if(tab!=='chara'||charView!=='list'||reorderMode||e.key!=='Enter') return;
+  const gh=e.target.closest('.ghead[data-gkey]'); if(gh){ toggleGroupCollapse(gh.dataset.gkey); const st=main.scrollTop; renderChara(); main.scrollTop=st; return; }
+  if(selectMode) return;
   const r=e.target.closest('.crow'); if(r){ charId=r.dataset.cid; charView='detail'; render(); }
 });
 main.addEventListener('change',e=>{
@@ -1129,13 +1152,15 @@ document.addEventListener('focusout',e=>{
 /* ---------- drag to reorder ---------- */
 let drag=null;
 main.addEventListener('pointerdown',e=>{
-  if(!(tab==='chara'&&charView==='list'&&reorderMode)) return;
+  const charMode = tab==='chara'&&charView==='list'&&reorderMode;
+  const grpMode = tab==='world'&&wView==='rchars'&&relKind==='group'&&grpReorderMode;
+  if(!charMode && !grpMode) return;
   const h=e.target.closest('.handle'); if(!h) return;
   e.preventDefault();
-  const row=h.closest('.crow'), ul=row.parentElement;
+  const row=h.closest(charMode?'.crow':'.wrow'), ul=row.parentElement;
   try{h.setPointerCapture(e.pointerId);}catch(_){}
   row.classList.add('dragging');
-  drag={row,ul,h,startY:e.clientY,base:row.offsetTop,lastY:e.clientY,pid:e.pointerId,raf:null};
+  drag={row,ul,h,startY:e.clientY,base:row.offsetTop,lastY:e.clientY,pid:e.pointerId,raf:null,kind:charMode?'char':'group'};
 });
 function dragMove(y){
   const {row,ul}=drag;
@@ -1165,11 +1190,11 @@ main.addEventListener('pointermove',e=>{
 },{passive:false});
 function endDrag(){
   if(!drag) return;
-  const {row,ul}=drag; if(drag.raf) cancelAnimationFrame(drag.raf);
+  const {row,ul,kind}=drag; if(drag.raf) cancelAnimationFrame(drag.raf);
   row.classList.remove('dragging'); row.style.transform='';
-  const newIds=[...ul.children].map(li=>li.dataset.cid);
+  const newIds=[...ul.children].map(li=>kind==='group'?li.dataset.gid:li.dataset.cid);
   drag=null;
-  applyOrder(newIds);
+  kind==='group' ? applyGroupOrder(newIds) : applyOrder(newIds);
 }
 main.addEventListener('pointerup',e=>{ if(drag&&e.pointerId===drag.pid) endDrag(); });
 main.addEventListener('pointercancel',e=>{ if(drag&&e.pointerId===drag.pid) endDrag(); });
@@ -1238,6 +1263,7 @@ const WI={
   line:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="12" r="2" fill="currentColor"/><path d="M11 12h9"/></svg>'
 };
 let wView='hub', tlId=null, rcId=null, rgId=null, relKind='char', evDraft=null, relDraft=null, wDirty=false, wReturn=null;
+let grpReorderMode=false;
 const openEv=new Set(), openRel=new Set();
 
 function tlById(id){ return db.timelines.find(t=>t.id===id); }
@@ -1250,7 +1276,16 @@ function yearLabel(tl,y){
 }
 function dateLabel(e){ return e.month ? (e.day ? `${e.month}/${e.day}` : `${e.month}月`) : ''; }
 function groupById(id){ return db.groups.find(g=>g.id===id); }
-function groupsSorted(){ return [...db.groups].sort((a,b)=>a.createdAt-b.createdAt); }
+function groupsSorted(){ return [...db.groups].sort((a,b)=>(a.order??0)-(b.order??0)||a.createdAt-b.createdAt); }
+function applyGroupOrder(newIds){
+  const all=groupsSorted().map(g=>g.id);
+  const set=new Set(newIds);
+  const slots=all.map((id,i)=>set.has(id)?i:-1).filter(i=>i>=0);
+  slots.forEach((slot,k)=>{ all[slot]=newIds[k]; });
+  const t=Date.now(); let changed=false;
+  all.forEach((id,i)=>{ const g=groupById(id); if(g && g.order!==i){ g.order=i; g.updatedAt=t; changed=true; } });
+  if(changed) commit();
+}
 function gavatar(g,cls){ return `<span class="av gav${cls?' '+cls:''}">${esc(((g&&g.name)||'?').trim().charAt(0)||'?')}</span>`; }
 function membersOf(g){ return charsSorted().filter(c=>(c.affilIds||[]).includes(g.id)); }
 const RK={
@@ -1311,13 +1346,17 @@ function renderWorld(){
   }
   if(wView==='rchars'){
     $('#title').textContent='関係性'; hdrBack();
-    if(wide){ main.innerHTML='<div class="pick-ph">左の一覧から'+(relKind==='group'?'グループ':'キャラ')+'を選んでください</div>'; return; }
+    const gsAll=groupsSorted(), reordering=grpReorderMode && relKind==='group' && gsAll.length>1;
+    if(grpReorderMode && !reordering) grpReorderMode=false;
+    if(wide && !reordering){ main.innerHTML='<div class="pick-ph">左の一覧から'+(relKind==='group'?'グループ':'キャラ')+'を選んでください</div>'; return; }
     const seg=`<div class="relseg"><div class="seg" role="group"><button type="button" data-rkset="char" aria-pressed="${relKind==='char'}">キャラ</button><button type="button" data-rkset="group" aria-pressed="${relKind==='group'}">グループ</button></div></div>`;
     if(relKind==='group'){
-      $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','グループを作る');
-      const gs=groupsSorted();
-      main.innerHTML = seg + (gs.length
-        ? gs.map(g=>`<div class="wrow wlp" data-gid="${g.id}" tabindex="0">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span><span class="wc">${relsOfK('group',g.id).length||''}</span></div>`).join('')+'<div class="hint">長押しで編集・削除</div>'
+      $('#wAddBtn').hidden=reordering; $('#wAddBtn').setAttribute('aria-label','グループを作る');
+      const gs=gsAll;
+      const bar = gs.length>1 ? `<div class="relseg" style="display:flex;justify-content:flex-end;padding-top:0"><button type="button" class="hbtn txt" data-wa="grpreorder">${reordering?'完了':'並べ替え'}</button></div>` : '';
+      const row=g=>`<div class="wrow${reordering?'':' wlp'}" data-gid="${g.id}" tabindex="0">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span>${reordering?`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`:`<span class="wc">${relsOfK('group',g.id).length||''}</span>`}</div>`;
+      main.innerHTML = seg + bar + (gs.length
+        ? `<div class="grouplist">${gs.map(row).join('')}</div>` + (reordering?'<div class="hint">右のつまみをドラッグして並べ替え</div>':'<div class="hint">長押しで編集・削除</div>')
         : '<div class="empty"><strong>グループがありません</strong>右上の＋から「学園」「王国」などのグループを作れます。</div>');
       return;
     }
@@ -1527,7 +1566,7 @@ function groupSheet(g){
     s.querySelector('[data-a=cancel]').onclick=closeSheet;
     ok.onclick=()=>{ const name=inp.value.trim(); if(!name) return; const t=Date.now();
       if(g){ g.name=name; g.desc=ta.value; g.updatedAt=t; }
-      else{ const id=uid(); db.groups.push({id,name,desc:ta.value,createdAt:t,updatedAt:t}); rgId=id; relKind='group'; wView='rg'; }
+      else{ const id=uid(), order=db.groups.reduce((m,x)=>Math.max(m,x.order??0),-1)+1; db.groups.push({id,name,desc:ta.value,order,createdAt:t,updatedAt:t}); rgId=id; relKind='group'; wView='rg'; }
       commit(); closeSheet(); render(); };
     const del=s.querySelector('[data-a=del]');
     if(del) del.onclick=()=>deleteGroupConfirm(g.id);
@@ -1637,15 +1676,16 @@ main.addEventListener('click',e=>{
   const go=t.closest('[data-go]'); if(go){ wView=go.dataset.go; render(); return; }
   const tr=t.closest('[data-tl]'); if(tr && wView==='tls'){ tlId=tr.dataset.tl; wView='tl'; render(); return; }
   const rc=t.closest('[data-rcid]'); if(rc){ rcId=rc.dataset.rcid; wView='rc'; render(); return; }
-  const gr=t.closest('[data-gid]'); if(gr){ rgId=gr.dataset.gid; wView='rg'; render(); return; }
-  const rks=t.closest('[data-rkset]'); if(rks){ relKind=rks.dataset.rkset; render(); return; }
+  const gr=t.closest('[data-gid]'); if(gr){ if(grpReorderMode) return; rgId=gr.dataset.gid; wView='rg'; render(); return; }
+  const rks=t.closest('[data-rkset]'); if(rks){ relKind=rks.dataset.rkset; if(relKind!=='group') grpReorderMode=false; render(); return; }
   const jc=t.closest('[data-jumpchar]'); if(jc){ tab='chara'; charId=jc.dataset.jumpchar; charView='detail'; render(); return; }
   const ev=t.closest('.ev'); if(ev && wView==='tl'){ if(tlById(tlId).view!=='full'){ ev.classList.toggle('open'); ev.classList.contains('open')?openEv.add(ev.dataset.eid):openEv.delete(ev.dataset.eid); } return; }
   const rr=t.closest('.rrow'); if(rr && (wView==='rc'||wView==='rg')){ rr.classList.toggle('open'); rr.classList.contains('open')?openRel.add(rr.dataset.rid):openRel.delete(rr.dataset.rid); return; }
   const sg=t.closest('[data-sign]'); if(sg && evDraft){ evDraft.sign=Number(sg.dataset.sign); wDirty=true; sg.parentElement.querySelectorAll('[data-sign]').forEach(b=>b.setAttribute('aria-pressed',b===sg)); return; }
   const a=t.closest('[data-wa]'); if(!a) return;
   const act=a.dataset.wa;
-  if(act==='pickchars') pickCharsSheet(evDraft.chars,ids=>{ evDraft.chars=ids; wDirty=true; const st=main.scrollTop; renderWorld(); main.scrollTop=st; });
+  if(act==='grpreorder'){ grpReorderMode=!grpReorderMode; render(); }
+  else if(act==='pickchars') pickCharsSheet(evDraft.chars,ids=>{ evDraft.chars=ids; wDirty=true; const st=main.scrollTop; renderWorld(); main.scrollTop=st; });
   else if(act==='pickpartner') pickPartnerSheet(relDraft.a,id=>{ relDraft.b=id; wDirty=true; const st=main.scrollTop; renderWorld(); main.scrollTop=st; },relDraft.kind);
   else if(act==='delev') confirmSheet('このイベントを削除しますか？','元に戻せません。','削除',()=>deleteEvent(evDraft.id));
   else if(act==='delrel') confirmSheet('この関係を削除しますか？','相手側からも見えなくなります。元に戻せません。','削除',()=>deleteRel(relDraft.id,relDraft.kind));
@@ -1690,12 +1730,15 @@ function renderSide(){
     const list=charsSorted(), act=c=>(charView!=='list' && charId===c.id)?' active':'';
     const row=c=>`<li class="crow${act(c)}" data-scid="${c.id}" tabindex="0">${avatar(c)}<span class="cn">${esc(c.name)}</span></li>`;
     body = !list.length ? '<div class="pick-ph">まだキャラがいません</div>'
-      : charGroup ? groupsOf(list).map(([g,cs])=>`<div class="ghead"><span>${g?esc(g):'所属なし'}</span><span class="gcount">${cs.length}</span></div><ul class="clist">${cs.map(row).join('')}</ul>`).join('')
+      : charGroup ? groupsOf(list).map(([g,cs,gid])=>{
+          const key=gid||'__none__', collapsed=collapsedGroups.has(key);
+          return `<div class="ghead" data-gkey="${esc(key)}" role="button" tabindex="0" aria-expanded="${!collapsed}"><span class="gtitle">${collapsed?CI.chevRight:CI.chevDown}<span>${g?esc(g):'所属なし'}</span></span><span class="gcount">${cs.length}</span></div>${collapsed?'':`<ul class="clist">${cs.map(row).join('')}</ul>`}`;
+        }).join('')
       : `<ul class="clist">${list.map(row).join('')}</ul>`;
   }else{
     const sec=worldSec();
     head=`<div class="seg" role="group"><button type="button" data-ssec="tl" aria-pressed="${sec==='tl'}">時系列</button><button type="button" data-ssec="rel" aria-pressed="${sec==='rel'}">関係性</button></div>
-      <span class="sbtns">${(sec==='tl'||relKind==='group')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':'グループを作る'}">${SV.plus}</button>`:''}</span>`;
+      <span class="sbtns">${(sec==='rel'&&relKind==='group'&&groupsSorted().length>1)?`<button class="hbtn${grpReorderMode?' on':''}" data-sa="grpreorder" aria-label="並べ替え">${SV.reorder}</button>`:''}${(sec==='tl'||relKind==='group')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':'グループを作る'}">${SV.plus}</button>`:''}</span>`;
     if(sec==='tl'){
       const ts=tlsSorted();
       body = ts.length ? ts.map(t=>`<div class="wrow wlp${(tlId===t.id&&(wView==='tl'||wView==='ev'))?' active':''}" data-tl="${t.id}" tabindex="0">${WI.line}<span class="wn">${esc(t.name)}<span class="ws">${t.mode==='ad'?'西暦':'基準からの年数'}</span></span><span class="wc">${eventsOf(t.id).length}</span></div>`).join('')
@@ -1732,15 +1775,20 @@ side.addEventListener('click',e=>{
     if(a==='select') return guardLeave(()=>{ selectMode=true; reorderMode=false; selected.clear(); charView='list'; render(); });
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
     if(a==='wadd') return worldSec()==='tl' ? newTimelineSheet() : groupSheet(null);
+    if(a==='grpreorder'){
+      if(grpReorderMode){ grpReorderMode=false; render(); return; }
+      return guardLeave(()=>{ grpReorderMode=true; relKind='group'; wView='rchars'; render(); });
+    }
   }
+  if((el=q('.ghead[data-gkey]'))){ toggleGroupCollapse(el.dataset.gkey); render(); return; }
   if((el=q('[data-scid]'))) return guardLeave(()=>{ reorderMode=false; selectMode=false; charId=el.dataset.scid; charView='detail'; render(); main.scrollTop=0; });
   if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
-  if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
+  if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; if(relKind!=='group') grpReorderMode=false; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-tl]'))) return guardLeave(()=>{ tlId=el.dataset.tl; wView='tl'; wReturn=null; render(); main.scrollTop=0; });
   if((el=q('[data-src]'))) return guardLeave(()=>{ rcId=el.dataset.src; wView='rc'; wReturn=null; render(); main.scrollTop=0; });
   if((el=q('[data-gid]'))) return guardLeave(()=>{ rgId=el.dataset.gid; wView='rg'; render(); main.scrollTop=0; });
 });
-side.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const el=e.target.closest('[data-scid],[data-tl],[data-src],[data-gid]'); if(el) el.click(); });
+side.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const el=e.target.closest('[data-scid],[data-tl],[data-src],[data-gid],.ghead[data-gkey]'); if(el) el.click(); });
 const onWideChange=()=>render();
 if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change',onWideChange); else if(WIDE_MQ.addListener) WIDE_MQ.addListener(onWideChange);
 
@@ -1761,7 +1809,13 @@ $('#composer').addEventListener('submit',e=>{
 });
 sendBtn.addEventListener('pointerdown',e=>e.preventDefault());
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden' && tab==='chara' && charView==='edit' && charDraft){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
+  if(document.visibilityState==='hidden'){
+    if(tab==='chara' && charView==='edit' && charDraft){ clearTimeout(charAutosaveTimer); commitCharDraft(); }
+  }else if(document.visibilityState==='visible'){
+    // Refresh from GitHub as soon as this device comes back to the foreground, so editing
+    // starts from the latest version instead of whatever was on screen before it went away.
+    if(getToken()) syncNow();
+  }
 });
 try{ const d=localStorage.getItem(DRAFT); if(d){input.value=d;} }catch(e){}
 
