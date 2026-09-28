@@ -51,6 +51,11 @@ img{max-width:100%}
 #app{position:fixed;top:0;bottom:0;left:0;right:0;display:flex;flex-direction:column;max-width:640px;margin:0 auto;background:var(--bg);
   padding-top:env(safe-area-inset-top,0px);padding-bottom:max(calc(env(safe-area-inset-bottom,0px) - 16px),0px)}
 body.kbopen #app{padding-bottom:0}
+/* iOS home-screen mode: after the keyboard closes, iOS can leave the layout viewport
+   shorter than the screen, so a bottom:0 #app stops short and leaves a blank strip under
+   the tab bar. Size #app to the full screen height instead (the keyboard code below still
+   overrides this with an inline height while the keyboard is open). */
+@media (display-mode: standalone){ #app{bottom:auto;height:100vh;height:100lvh} }
 .panes{flex:1;min-height:0;display:flex}
 .pmain{flex:1;min-width:0;display:flex;flex-direction:column}
 #app[data-split]{max-width:1180px;border-inline:1px solid var(--line)}
@@ -511,7 +516,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.14.0';
+const APP_VERSION='0.14.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
