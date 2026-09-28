@@ -103,12 +103,16 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .cmpbar select{flex:1 1 180px;min-width:0;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:0 8px}
 .cmpcount{padding:2px 16px 8px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 .cmplist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
-.cmprow{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer}
-.cmprow:active{background:var(--press)}
-.cmprow .av{margin-top:-2px}
+.cmprow{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.cmpwho{flex:none;display:flex;align-items:flex-start;gap:10px;font:inherit;line-height:1.5;padding:9px 6px 9px 14px;text-align:left;color:var(--ink)}
+.cmpwho .av{margin-top:-2px}
 .cmpn{flex:none;width:6.5em;font-size:13px;font-weight:500;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cmpv{flex:1;min-width:0;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.cmpv{flex:1;min-width:0;padding:9px 14px 9px 4px;text-align:left;font:inherit;font-size:13px;line-height:1.5;color:var(--ink);white-space:pre-wrap;word-break:break-word;border-radius:0}
 .cmpv.none{color:var(--faint)}
+.cmpwho:active,.cmpv:active{background:var(--press)}
+.cmpwho:focus-visible,.cmpv:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+.sheet textarea.cmpta{min-height:140px}
+.cmprow.flash{animation:flash 1.2s ease-out}
 /* bulk replace */
 .rppair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:end;padding:0 2px}
 .rppair label{display:block;font-size:11px;color:var(--sub);margin:0 0 4px 2px}
@@ -551,7 +555,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.17.0';
+const APP_VERSION='0.18.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1798,15 +1802,43 @@ function renderCmp(){
       <div class="seg" role="group" aria-label="並び順"><button type="button" data-cmpsort="order" aria-pressed="${cmpSort==='order'}">登録順</button><button type="button" data-cmpsort="value" aria-pressed="${cmpSort==='value'}">値の順</button></div>
     </div>
     <div class="cmpcount">入力済み ${filled} / ${chars.length}人</div>
-    <ul class="cmplist">${rows.map(({c,v})=>`<li class="cmprow" data-cid="${c.id}" tabindex="0">${avatar(c)}<span class="cmpn">${esc(c.name)}</span><span class="cmpv${v?'':' none'}">${v?esc(v):'未入力'}</span></li>`).join('')}</ul>
-    <div class="hint">タップでキャラ詳細へ</div>`;
+    <ul class="cmplist">${rows.map(({c,v})=>`<li class="cmprow" data-cid="${c.id}"><button type="button" class="cmpwho" aria-label="${esc(c.name)}の詳細を開く">${avatar(c)}<span class="cmpn">${esc(c.name)}</span></button><button type="button" class="cmpv${v?'':' none'}" aria-label="${esc(c.name)}の値を編集">${v?esc(v):'未入力'}</button></li>`).join('')}</ul>
+    <div class="hint">値をタップでその場で編集、名前をタップでキャラ詳細へ</div>`;
 }
 function cmpClick(e){
   const sb=e.target.closest('[data-cmpsort]'); if(sb){ cmpSort=sb.dataset.cmpsort; saveCmpPref(); renderChara(); return; }
-  const r=e.target.closest('.cmprow'); if(r){ cmpScroll=main.scrollTop; charId=r.dataset.cid; charView='detail'; cmpReturn=true; render(); main.scrollTop=0; }
+  const r=e.target.closest('.cmprow'); if(!r) return;
+  if(e.target.closest('.cmpv')){ const c=charById(r.dataset.cid); if(c) cmpEdit(c); return; }
+  if(e.target.closest('.cmpwho')){ cmpScroll=main.scrollTop; charId=r.dataset.cid; charView='detail'; cmpReturn=true; render(); main.scrollTop=0; }
+}
+function cmpLabel(key){ const o=cmpOptions(); const hit=[...o.basic,...o.custom,...o.qs].find(([k])=>k===key); return hit?hit[1]:''; }
+// Edit one character's value for the item being compared, without leaving the comparison.
+function cmpEdit(c){
+  const key=cmpKey, label=cmpLabel(key);
+  const done=()=>{ c.updatedAt=Date.now(); commit(); closeSheet(); const st=main.scrollTop; renderChara(); main.scrollTop=st;
+    const row=main.querySelector(`.cmprow[data-cid="${c.id}"]`); if(row) row.classList.add('flash'); if(isWide()) renderSide(); };
+  if(key==='affil'){ pickGroupsSheet(c.affilIds||[], ids=>{ c.affilIds=ids; done(); }); return; }
+  const multi = ['f:personality','f:history','f:memo','f:song'].includes(key) || key.startsWith('c:') || key.startsWith('q:');
+  const cur=cmpValue(c,key);
+  openSheet(`<div class="title">${esc(c.name)}の${esc(label)}</div>
+    ${multi?`<textarea id="cmpIn" class="cmpta" aria-label="${esc(label)}">${esc(cur)}</textarea>`:`<input id="cmpIn" type="text" value="${esc(cur)}" aria-label="${esc(label)}" autocomplete="off">`}
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
+    const inp=s.querySelector('#cmpIn');
+    const save=()=>{
+      const v = multi ? inp.value.replace(/\s+$/,'') : inp.value.trim();
+      const k=key.slice(2);
+      if(key.startsWith('f:')) c[k]=v;
+      else if(key.startsWith('c:')){ c.custom=c.custom||[]; const x=c.custom.find(y=>(y.label||'').trim()===k); if(x) x.value=v; else if(v) c.custom.push({id:uid(),label:k,value:v}); }
+      else if(key.startsWith('q:')){ c.qa={...(c.qa||{})}; if(v.trim()) c.qa[k]=v; else delete c.qa[k]; }
+      done();
+    };
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    s.querySelector('[data-a=ok]').onclick=save;
+    if(!multi) inp.addEventListener('keydown',e=>{ if(e.key==='Enter' && !e.isComposing){ e.preventDefault(); save(); } });
+    inp.focus(); const n=inp.value.length; try{ inp.setSelectionRange(n,n); }catch(_){}
+  },'cmpedit');
 }
 main.addEventListener('change',e=>{ if(tab==='chara' && charView==='cmp' && e.target.id==='cmpKey'){ cmpKey=e.target.value; saveCmpPref(); renderChara(); main.scrollTop=0; } });
-main.addEventListener('keydown',e=>{ if(tab==='chara' && charView==='cmp' && e.key==='Enter'){ const r=e.target.closest('.cmprow'); if(r) r.click(); } });
 /* ---------- bulk replace (一括置換) ----------
    Finds every occurrence of a string across the user's text (memos, characters, relationships,
    timelines, glossary, groups, folder names), lists each hit for review, and replaces only the
