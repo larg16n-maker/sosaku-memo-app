@@ -380,6 +380,9 @@ body.kbopen .cedit{padding-bottom:120px}
 .composer{flex-direction:column;align-items:stretch;padding:6px 8px 6px 8px}
 .composer .crow{display:flex;align-items:flex-end;gap:6px}
 .ctagbar{display:flex;flex-wrap:wrap;gap:5px;padding:0 2px 6px}
+.qbar{display:flex;flex-wrap:wrap;gap:6px;padding:0 2px 6px;overflow-x:auto}
+.qbtn{flex:none;height:28px;padding:0 12px;border-radius:14px;background:var(--press);color:var(--ink);font-size:12px;white-space:nowrap;-webkit-user-select:none;user-select:none}
+.qbtn:active{opacity:.7}
 .tagbtn{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--faint);background:transparent}
 .tagbtn.on{color:var(--accent);background:var(--press)}
 .tagbtn svg{width:18px;height:18px}
@@ -479,6 +482,7 @@ body.kbopen .cedit{padding-bottom:120px}
   <main id="main"></main>
   <form class="composer" id="composer" hidden>
     <div class="ctagbar" id="composerTagBar" hidden></div>
+    <div class="qbar" id="composerQuickBar"></div>
     <div class="crow">
       <button class="tagbtn" id="composerTagBtn" type="button" aria-label="キャラでタグ付け">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8l8 8-8 8-8-8z"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/></svg>
@@ -507,7 +511,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.13.0';
+const APP_VERSION='0.14.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -700,6 +704,7 @@ function buildStoryBible(){
       if((c.bloodType||'').trim()) meta.push(`血液型: ${c.bloodType.trim()}`);
       if((c.height||'').trim()) meta.push(`身長: ${c.height.trim()}`);
       if((c.firstPerson||'').trim()) meta.push(`一人称: ${c.firstPerson.trim()}`);
+      if((c.secondPerson||'').trim()) meta.push(`二人称: ${c.secondPerson.trim()}`);
       const gs=(c.affilIds||[]).map(groupById).filter(Boolean); if(gs.length) meta.push('所属: '+gs.map(g=>groupLabel(g)).join('、'));
       if(meta.length) L.push(meta.join(' / '));
       if((c.song||'').trim()) L.push(`イメージ曲: ${c.song.trim()}`);
@@ -881,6 +886,26 @@ function renderComposerTags(){
   bar.hidden=!cs.length;
   bar.innerHTML=cs.map(c=>tagChip(c,true)).join('');
   $('#composerTagBtn').classList.toggle('on',!!cs.length);
+  renderQuickBar(cs);
+}
+// Quick-insert buttons above the composer: a plain 「」 button, plus one per tagged
+// character (「ミナト「」」-style, SSwrite風) so dialogue-heavy memos can be typed fast.
+function renderQuickBar(taggedChars){
+  const qbar=$('#composerQuickBar'); if(!qbar) return;
+  const cs=taggedChars||composerTags.map(charById).filter(Boolean);
+  qbar.innerHTML='<button type="button" class="qbtn" data-qi="">「」</button>'
+    + cs.map(c=>`<button type="button" class="qbtn" data-qi="${c.id}">${esc(c.name)}「」</button>`).join('');
+}
+function insertQuote(cid){
+  const el=input; if(!el) return;
+  const name=cid?((charById(cid)||{}).name||''):'';
+  const snippet=name+'「」';
+  const start=el.selectionStart??el.value.length, end=el.selectionEnd??el.value.length;
+  el.value=el.value.slice(0,start)+snippet+el.value.slice(end);
+  const pos=start+snippet.length-1;
+  el.dispatchEvent(new Event('input'));
+  el.focus();
+  el.setSelectionRange(pos,pos);
 }
 function memoTagsHtml(m){
   const cs=(m.tags||[]).map(charById).filter(Boolean);
@@ -1226,7 +1251,7 @@ const CI={
 };
 const FIELDS=[
   {k:'age',label:'年齢'},{k:'birthday',label:'誕生日'},{k:'gender',label:'性別'},{k:'bloodType',label:'血液型'},
-  {k:'height',label:'身長'},{k:'firstPerson',label:'一人称'},
+  {k:'height',label:'身長'},{k:'firstPerson',label:'一人称'},{k:'secondPerson',label:'二人称'},
   {k:'song',label:'イメージ曲'}
 ];
 const GROUP_PREF='sosaku-chara-group';
@@ -1347,6 +1372,7 @@ function renderChara(){
     <div class="grid2">${inp('age','年齢')}${inp('birthday','誕生日')}</div>
     <div class="grid2">${inp('gender','性別')}${inp('bloodType','血液型')}</div>
     <div class="grid2">${inp('height','身長')}${inp('firstPerson','一人称')}</div>
+    ${inp('secondPerson','二人称','例：君、あなた')}
     <div class="fld"><span class="lbl">所属</span>
       <div class="chips">${affilGs.map(g=>`<span class="pchip">${gavatar(g,'sm')}${esc(groupLabel(g))}</span>`).join('')}<button type="button" class="chip" data-a="pickgroups">${affilGs.length?'変更':'グループを選ぶ'}</button></div>
     </div>
@@ -1366,7 +1392,7 @@ function autoGrow(t){ t.style.height='auto'; t.style.height=t.scrollHeight+2+'px
 
 function newDraft(){
   const t=Date.now();
-  return {id:uid(),name:'',alias:'',age:'',affilIds:[],birthday:'',gender:'',bloodType:'',height:'',firstPerson:'',song:'',personality:'',history:'',memo:'',custom:[],icon:'',
+  return {id:uid(),name:'',alias:'',age:'',affilIds:[],birthday:'',gender:'',bloodType:'',height:'',firstPerson:'',secondPerson:'',song:'',personality:'',history:'',memo:'',custom:[],icon:'',
     color:AV_COLORS[Math.floor(Math.random()*AV_COLORS.length)],createdAt:t,updatedAt:t};
 }
 function startEdit(c){ charDraft=c?JSON.parse(JSON.stringify(c)):newDraft(); charDirty=false; charView='edit'; render(); main.scrollTop=0; }
@@ -2429,6 +2455,7 @@ function bornSheet(c,tl,evYear,evMonth,evDay){
     <div class="yrow"><div class="seg" role="group" id="bornSign">${signs.map(([v,l])=>`<button type="button" data-bs="${v}" aria-pressed="${sign===v}">${l}</button>`).join('')}</div>
       <input id="bornY" type="text" inputmode="numeric" class="plain" value="${cur===null?'':Math.abs(cur)}" placeholder="${ad?'例：1990':'0で基準年'}"><span class="yu">年</span></div>
     <div class="small" style="padding-top:6px">誕生日（${esc((c.birthday||'').trim()||'未入力')}）が入っていれば、月日まで見て年齢を計算します。</div>
+    ${(c.age||'').trim()?`<div class="small">参考：キャラ詳細の「年齢」欄は「${esc(c.age.trim())}」に設定されています</div>`:''}
     <div class="row">${cur!==null?'<button type="button" class="dangerbtn" data-a="clear">解除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
     const yi=s.querySelector('#bornY'), ai=s.querySelector('#bornAge'), ok=s.querySelector('[data-a=ok]');
     const num=el=>{ const v=el.value.replace(/[^0-9]/g,''); if(v!==el.value) el.value=v; return v===''?null:Number(v); };
@@ -2639,8 +2666,10 @@ sendBtn.addEventListener('pointerdown',e=>e.preventDefault());
 // shift) can miss the button entirely.
 $('#composerTagBtn').addEventListener('pointerdown',e=>e.preventDefault());
 $('#composerTagBar').addEventListener('pointerdown',e=>{ if(e.target.closest('[data-untag]')) e.preventDefault(); });
+$('#composerQuickBar').addEventListener('pointerdown',e=>{ if(e.target.closest('.qbtn')) e.preventDefault(); });
 $('#composerTagBtn').addEventListener('click',()=>{ pickCharsSheet(composerTags, ids=>{ composerTags=ids; renderComposerTags(); }, 'このメモのキャラをタグ付け'); });
 $('#composerTagBar').addEventListener('click',e=>{ const b=e.target.closest('[data-untag]'); if(!b) return; composerTags=composerTags.filter(id=>id!==b.dataset.untag); renderComposerTags(); });
+$('#composerQuickBar').addEventListener('click',e=>{ const b=e.target.closest('.qbtn'); if(!b) return; insertQuote(b.dataset.qi||null); });
 $('#tagFilterBtn').addEventListener('click',()=>{ pickCharsSheet(tagFilter, ids=>{ tagFilter=ids; const st=main.scrollTop; renderMain(); main.scrollTop=st; }, 'キャラで絞り込み'); });
 main.addEventListener('click',e=>{
   if(tab!=='talk') return;
