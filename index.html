@@ -93,6 +93,22 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .folder .fname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .folder .fcount{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 
+/* compare */
+.cmpentry{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub);text-align:left}
+.cmpentry svg{width:17px;height:17px;flex:none}
+.cmpentry .chev{margin-left:auto;color:var(--faint)}
+.cmpentry.center{width:auto;margin:-60px auto 0;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
+.cmpentry:active{background:var(--press)}
+.cmpbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px 6px}
+.cmpbar select{flex:1 1 180px;min-width:0;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:0 8px}
+.cmpcount{padding:2px 16px 8px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.cmplist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.cmprow{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.cmprow:active{background:var(--press)}
+.cmprow .av{margin-top:-2px}
+.cmpn{flex:none;width:6.5em;font-size:13px;font-weight:500;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmpv{flex:1;min-width:0;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.cmpv.none{color:var(--faint)}
 /* bulk replace */
 .rppair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:end;padding:0 2px}
 .rppair label{display:block;font-size:11px;color:var(--sub);margin:0 0 4px 2px}
@@ -535,7 +551,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.16.0';
+const APP_VERSION='0.17.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1002,7 +1018,7 @@ function toBottom(){ main.scrollTop=main.scrollHeight; }
 /* ---------- navigation ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
   if(tab===b.dataset.tab && tab==='talk'){closeFolder();}
-  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa'){charView='list'; reorderMode=false; selectMode=false; selected.clear();}
+  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa'){charView='list'; cmpReturn=false; reorderMode=false; selectMode=false; selected.clear();}
   if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub'; grpReorderMode=false;}
   if(b.dataset.tab==='world') wReturn=null;
   if(tab==='chara' && charView==='qtpl' && b.dataset.tab!=='chara'){ charView=(qtplBack&&qtplBack.cv)||'list'; qtplBack=null; }
@@ -1012,7 +1028,8 @@ $('#backBtn').addEventListener('click',()=>{
   if(tab==='chara'){
     if(charView==='qa'){ finishQa(); return; }
     if(charView==='qtpl'){ leaveQtpl(); return; }
-    charView='list'; render(); return;
+    if(charView==='detail' && cmpReturn){ cmpReturn=false; charView='cmp'; render(); main.scrollTop=cmpScroll; return; }
+    cmpReturn=false; charView='list'; render(); return;
   }
   if(tab==='world'){ worldBack(); return; }
   closeFolder(); render();
@@ -1347,12 +1364,13 @@ function renderChara(){
   if(charView==='detail' && !charById(charId)) charView='list';
   if(charView==='qa'){ if(charDraft){ renderQa(); return; } charView=charById(charId)?'detail':'list'; }
   if(charView==='qtpl'){ renderQtpl(); return; }
+  if(charView==='cmp'){ renderCmp(); return; }
   if(charView==='list'){
     $('#title').textContent = reorderMode ? '並べ替え' : selectMode ? (selected.size?selected.size+'人を選択中':'キャラを選択') : 'キャラクター';
     if(reorderMode){ $('#settingsBtn').hidden=true; $('#charDoneBtn').hidden=false; }
     else if(selectMode){ $('#settingsBtn').hidden=true; $('#charCancelBtn').hidden=false; $('#charCancelBtn').textContent='キャンセル'; $('#charDelSelBtn').hidden=false; $('#charDelSelBtn').disabled=!selected.size; }
     else if(isWide()){
-      main.innerHTML='<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>';
+      main.innerHTML='<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>'+(db.chars.length>1?CMP_ENTRY.replace('cmpentry','cmpentry center'):'');
       return;
     }
     else{
@@ -1373,6 +1391,7 @@ function renderChara(){
     }else{
       main.innerHTML=`<ul class="clist">${list.map(row).join('')}</ul>`;
     }
+    if(!reorderMode && !selectMode && list.length>1) main.insertAdjacentHTML('afterbegin',CMP_ENTRY);
     if(reorderMode) main.insertAdjacentHTML('beforeend','<div class="hint">右のつまみをドラッグして並べ替え'+(charGroup?'（同じ所属の中で移動）':'')+'</div>');
     return;
   }
@@ -1499,6 +1518,8 @@ main.addEventListener('click',e=>{
   }
   if(charView==='qa'){ qaClick(e); return; }
   if(charView==='qtpl'){ qtplClick(e); return; }
+  if(charView==='cmp'){ cmpClick(e); return; }
+  if(charView==='list' && !reorderMode && !selectMode && e.target.closest('[data-a=cmp]')){ openCmp(); return; }
   const a=e.target.closest('[data-a]');
   if(charView==='edit' && a){
     const act=a.dataset.a;
@@ -1729,6 +1750,63 @@ function toastAction(msg,label,fn,ms){
   d.querySelector('button').onclick=()=>{ d.remove(); fn(); };
   document.body.appendChild(d); clearTimeout(tt); tt=setTimeout(()=>d.remove(),ms||6000);
 }
+/* ---------- compare (見比べ) ----------
+   One item at a time (a basic field, a custom field label, or a Q&A template question) shown
+   for every character side by side, so things like 一人称 or 身長 can be checked for overlap. */
+const CMP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15"/></svg>';
+const CMP_ENTRY=`<button type="button" class="cmpentry" data-a="cmp">${CMP_ICON}<span>項目ごとに見比べる</span><span class="chev">›</span></button>`;
+const CMP_PREF='sosaku-cmp';
+let cmpKey='f:firstPerson', cmpSort='order', cmpReturn=false, cmpScroll=0;
+try{ const p=JSON.parse(localStorage.getItem(CMP_PREF)||'null'); if(p){ cmpKey=p.k||cmpKey; cmpSort=p.s||cmpSort; } }catch(_){}
+function saveCmpPref(){ try{ localStorage.setItem(CMP_PREF,JSON.stringify({k:cmpKey,s:cmpSort})); }catch(_){} }
+function cmpOptions(){
+  const basic=[['f:alias','別名'],...FIELDS.map(f=>['f:'+f.k,f.label]),['affil','所属'],['f:personality','性格'],['f:history','来歴']];
+  const seen=new Set(), custom=[];
+  for(const c of charsSorted()) for(const x of (c.custom||[])){ const l=(x.label||'').trim(); if(l && !seen.has(l)){ seen.add(l); custom.push(['c:'+l,l]); } }
+  const qs=questionsSorted().map(q=>['q:'+q.id,q.text]);
+  return {basic,custom,qs};
+}
+function cmpValue(c,key){
+  if(key==='affil') return (c.affilIds||[]).map(groupById).filter(Boolean).map(groupLabel).join('・');
+  const k=key.slice(2);
+  if(key.startsWith('f:')) return (c[k]||'').trim();
+  if(key.startsWith('c:')){ const x=(c.custom||[]).find(v=>(v.label||'').trim()===k); return x?(x.value||'').trim():''; }
+  if(key.startsWith('q:')) return ((c.qa||{})[k]||'').trim();
+  return '';
+}
+function cmpNum(v){ const m=v.replace(/[０-９．]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).match(/-?\d+(?:\.\d+)?/); return m?Number(m[0]):null; }
+function openCmp(){ charView='cmp'; cmpReturn=false; render(); main.scrollTop=0; }
+function renderCmp(){
+  $('#title').textContent='見比べ';
+  if(!isWide()){ $('#settingsBtn').hidden=true; $('#backBtn').hidden=false; }
+  const o=cmpOptions(), all=[...o.basic,...o.custom,...o.qs];
+  if(!all.some(([k])=>k===cmpKey)) cmpKey='f:firstPerson';
+  const opt=([k,l])=>`<option value="${esc(k)}"${k===cmpKey?' selected':''}>${esc(l)}</option>`;
+  const chars=charsSorted(), rows=chars.map(c=>({c,v:cmpValue(c,cmpKey)}));
+  if(cmpSort==='value'){
+    rows.sort((a,b)=>{ if(!a.v!==!b.v) return a.v?-1:1; if(!a.v) return 0;
+      const na=cmpNum(a.v), nb=cmpNum(b.v); if(na!==null&&nb!==null&&na!==nb) return na-nb;
+      return a.v.localeCompare(b.v,'ja'); });
+  }
+  const filled=rows.filter(r=>r.v).length;
+  main.innerHTML=`<div class="cmpbar">
+      <select id="cmpKey" aria-label="見比べる項目">
+        <optgroup label="基本の項目">${o.basic.map(opt).join('')}</optgroup>
+        ${o.custom.length?`<optgroup label="追加した項目">${o.custom.map(opt).join('')}</optgroup>`:''}
+        ${o.qs.length?`<optgroup label="質問">${o.qs.map(opt).join('')}</optgroup>`:''}
+      </select>
+      <div class="seg" role="group" aria-label="並び順"><button type="button" data-cmpsort="order" aria-pressed="${cmpSort==='order'}">登録順</button><button type="button" data-cmpsort="value" aria-pressed="${cmpSort==='value'}">値の順</button></div>
+    </div>
+    <div class="cmpcount">入力済み ${filled} / ${chars.length}人</div>
+    <ul class="cmplist">${rows.map(({c,v})=>`<li class="cmprow" data-cid="${c.id}" tabindex="0">${avatar(c)}<span class="cmpn">${esc(c.name)}</span><span class="cmpv${v?'':' none'}">${v?esc(v):'未入力'}</span></li>`).join('')}</ul>
+    <div class="hint">タップでキャラ詳細へ</div>`;
+}
+function cmpClick(e){
+  const sb=e.target.closest('[data-cmpsort]'); if(sb){ cmpSort=sb.dataset.cmpsort; saveCmpPref(); renderChara(); return; }
+  const r=e.target.closest('.cmprow'); if(r){ cmpScroll=main.scrollTop; charId=r.dataset.cid; charView='detail'; cmpReturn=true; render(); main.scrollTop=0; }
+}
+main.addEventListener('change',e=>{ if(tab==='chara' && charView==='cmp' && e.target.id==='cmpKey'){ cmpKey=e.target.value; saveCmpPref(); renderChara(); main.scrollTop=0; } });
+main.addEventListener('keydown',e=>{ if(tab==='chara' && charView==='cmp' && e.key==='Enter'){ const r=e.target.closest('.cmprow'); if(r) r.click(); } });
 /* ---------- bulk replace (一括置換) ----------
    Finds every occurrence of a string across the user's text (memos, characters, relationships,
    timelines, glossary, groups, folder names), lists each hit for review, and replaces only the
@@ -2722,9 +2800,10 @@ function renderSide(){
     head=`<span class="stitle">キャラクター</span><span class="sbtns">
       <button class="hbtn${charGroup?' on':''}" data-sa="group" aria-label="所属別表示の切り替え">${charGroup?CI.group:CI.flat}</button>
       <button class="hbtn" data-sa="reorder" aria-label="並べ替え">${SV.reorder}</button>
+      ${db.chars.length>1?`<button class="hbtn${charView==='cmp'?' on':''}" data-sa="cmp" aria-label="項目ごとに見比べる">${CMP_ICON}</button>`:''}
       ${db.chars.length?'<button class="hbtn txt" data-sa="select">選択</button>':''}
       <button class="hbtn" data-sa="add" aria-label="キャラクターを追加">${SV.addp}</button></span>`;
-    const list=charsSorted(), act=c=>(charView!=='list' && charView!=='qtpl' && charId===c.id)?' active':'';
+    const list=charsSorted(), act=c=>(charView!=='list' && charView!=='qtpl' && charView!=='cmp' && charId===c.id)?' active':'';
     const row=c=>`<li class="crow${act(c)}" data-scid="${c.id}" tabindex="0">${avatar(c)}<span class="cn">${esc(c.name)}</span></li>`;
     body = !list.length ? '<div class="pick-ph">まだキャラがいません</div>'
       : charGroup ? groupsOf(list).map(([g,cs,gid])=>{
@@ -2773,6 +2852,7 @@ side.addEventListener('click',e=>{
     const a=el.dataset.sa;
     if(a==='group'){ charGroup=!charGroup; try{localStorage.setItem(GROUP_PREF,charGroup?'1':'0');}catch(_){} render(); return; }
     if(a==='reorder') return guardLeave(()=>{ reorderMode=true; selectMode=false; charView='list'; render(); });
+    if(a==='cmp') return guardLeave(()=>{ reorderMode=false; selectMode=false; openCmp(); });
     if(a==='select') return guardLeave(()=>{ selectMode=true; reorderMode=false; selected.clear(); charView='list'; render(); });
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
     if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : groupSheet(null); }
@@ -2783,7 +2863,7 @@ side.addEventListener('click',e=>{
     }
   }
   if((el=q('.ghead[data-gkey]'))){ toggleGroupCollapse(el.dataset.gkey); render(); return; }
-  if((el=q('[data-scid]'))) return guardLeave(()=>{ reorderMode=false; selectMode=false; charId=el.dataset.scid; charView='detail'; render(); main.scrollTop=0; });
+  if((el=q('[data-scid]'))) return guardLeave(()=>{ reorderMode=false; selectMode=false; cmpReturn=false; charId=el.dataset.scid; charView='detail'; render(); main.scrollTop=0; });
   if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='term' ? 'terms' : el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; if(relKind!=='group') grpReorderMode=false; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-tl]'))) return guardLeave(()=>{ tlId=el.dataset.tl; wView='tl'; wReturn=null; render(); main.scrollTop=0; });
