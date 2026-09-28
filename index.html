@@ -93,6 +93,30 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .folder .fname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .folder .fcount{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 
+/* bulk replace */
+.rppair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:end;padding:0 2px}
+.rppair label{display:block;font-size:11px;color:var(--sub);margin:0 0 4px 2px}
+.rparrow{padding-bottom:10px;color:var(--faint)}
+.rpsum{font-size:12px;color:var(--sub);padding:8px 4px 2px;line-height:1.6;font-variant-numeric:tabular-nums}
+.rpsum b{color:var(--ink)}
+.rpbar{display:flex;gap:6px;padding:4px 2px}
+#rpList{display:flex;flex-direction:column;gap:8px;padding:4px 0}
+.rpgrp{flex:none;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.rpgh{display:flex;align-items:center;padding:7px 12px;background:var(--press);font-size:12px;font-weight:600}
+.rpgh .rpn{margin-left:auto;font-weight:400;color:var(--sub);font-variant-numeric:tabular-nums}
+.rphit{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-top:1px solid var(--line);font-size:12px;line-height:1.6;cursor:pointer}
+.rpgh+.rphit{border-top:0}
+.rphit .ck{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:1.5px solid var(--faint);display:grid;place-items:center;color:transparent}
+.rphit .ck svg{width:11px;height:11px}
+.rphit[aria-checked="true"] .ck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.rptx{min-width:0;word-break:break-word}
+.rpwhere{display:block;font-size:10px;color:var(--faint)}
+.rphit del{color:var(--danger);background:var(--press)}
+.rphit ins{color:var(--ok);font-weight:600;text-decoration:none;background:var(--press)}
+.rphit[aria-checked="false"] .rptx{color:var(--faint)}
+.rphit[aria-checked="false"] ins{display:none}
+.rphit[aria-checked="false"] del{text-decoration:underline dotted var(--brass);text-underline-offset:3px;color:var(--sub);background:transparent}
+.rpwarn{display:block;font-size:10px;color:var(--brass)}
 /* memos */
 .memos{list-style:none;margin:0;padding:0}
 .memo{padding:11px 14px;border-bottom:1px solid var(--line);white-space:pre-wrap;word-break:break-word;line-height:1.55;font-size:13px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -511,12 +535,12 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.15.0';
+const APP_VERSION='0.16.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-09-28';
+const APP_DATE='2026-09-29';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
@@ -1185,6 +1209,9 @@ $('#settingsBtn').addEventListener('click',()=>{
     <button class="act" data-a="qtpl">${ICON.edit}質問テンプレを編集</button>
     <div class="sec">AI連携</div>
     <div class="small" style="padding-bottom:6px">キャラ・世界観・メモを、画像やIDを含まない文章としてまとめます。同期が有効なときは、内容が変わるたびに<b>${STORY_PATH}</b>として同じリポジトリに自動で保存されるので、ChatGPTなどにそのファイルを見てもらえます。</div>
+    <div class="sec">一括置換</div>
+    <button class="act" data-a="replace">${ICON.edit}文字をまとめて置き換える</button>
+    <div class="small" style="padding-bottom:6px">仮名を本名に変えるときなどに。メモ・キャラ・関係性・時系列・単語帳・グループ・フォルダ名をまとめて置き換えます。</div>
     <div class="sec">手動バックアップ</div>
     <button class="act" data-a="export">${ICON.down}書き出し（JSONファイル）</button>
     <button class="act" data-a="exportstory">${ICON.down}AI用に書き出し（テキスト）</button>
@@ -1209,6 +1236,7 @@ $('#settingsBtn').addEventListener('click',()=>{
     if(clearBtn) clearBtn.onclick=()=>{ setToken(''); toast('トークンを削除しました'); closeSheet(); };
     s.querySelector('[data-a=syncnow]').onclick=()=>{ if(!getToken()){toast('先にトークンを保存してください');return;} syncNow(); };
     s.querySelector('[data-a=qtpl]').onclick=()=>{ closeSheet(); openQtpl(); };
+    s.querySelector('[data-a=replace]').onclick=()=>replaceSheet();
     s.querySelector('[data-a=export]').onclick=doExport;
     s.querySelector('[data-a=exportstory]').onclick=doExportStory;
     const fileInput=s.querySelector('#importFile');
@@ -1694,12 +1722,132 @@ function deleteQuestion(id){
     db.questions.push({...q,updatedAt:Date.now()}); commit(); render(); toast('元に戻しました');
   });
 }
-function toastAction(msg,label,fn){
+function toastAction(msg,label,fn,ms){
   document.querySelectorAll('.toast').forEach(x=>x.remove());
   const d=document.createElement('div'); d.className='toast act-toast';
   d.innerHTML=`<span>${esc(msg)}</span><button type="button">${esc(label)}</button>`;
   d.querySelector('button').onclick=()=>{ d.remove(); fn(); };
-  document.body.appendChild(d); clearTimeout(tt); tt=setTimeout(()=>d.remove(),6000);
+  document.body.appendChild(d); clearTimeout(tt); tt=setTimeout(()=>d.remove(),ms||6000);
+}
+/* ---------- bulk replace (一括置換) ----------
+   Finds every occurrence of a string across the user's text (memos, characters, relationships,
+   timelines, glossary, groups, folder names), lists each hit for review, and replaces only the
+   checked ones. Hits that look like part of a longer name (a katakana/kanji/alnum character
+   right next to the match, e.g. "ユハ" inside "ユハナ") start unchecked. One undo is offered
+   right after applying: the touched records are snapshotted and restored with a fresh
+   updatedAt so the restore also wins in sync. */
+const CHAR_TEXT_FIELDS=[['name','名前'],['alias','別名'],['age','年齢'],['birthday','誕生日'],['gender','性別'],['bloodType','血液型'],['height','身長'],['firstPerson','一人称'],['secondPerson','二人称'],['song','イメージ曲'],['personality','性格'],['history','来歴'],['memo','詳細メモ']];
+function rpTargets(){
+  const T=[], add=(coll,area,item,where,get,set)=>{ const v=get(); if(typeof v==='string'&&v) T.push({coll,area,id:item.id,where,get,set}); };
+  const plain=(coll,area,item,key,where)=>add(coll,area,item,where,()=>item[key],v=>{item[key]=v;});
+  for(const m of db.memos){ const f=folderById(m.folderId); plain('memos','メモ',m,'text',f?f.name:'メモ'); }
+  for(const c of db.chars){
+    for(const [k,l] of CHAR_TEXT_FIELDS) plain('chars','キャラ',c,k,`${c.name} › ${l}`);
+    for(const x of (c.custom||[])){
+      add('chars','キャラ',c,`${c.name} › 項目名`,()=>x.label,v=>{x.label=v;});
+      add('chars','キャラ',c,`${c.name} › ${(x.label||'').trim()||'追加項目'}`,()=>x.value,v=>{x.value=v;});
+    }
+    for(const [qid,a] of Object.entries(c.qa||{})){ const q=qById(qid); add('chars','キャラ',c,`${c.name} › ${q?q.text:'質問'}`,()=>c.qa[qid],v=>{c.qa[qid]=v;}); }
+    for(const x of (c.qx||[])){
+      add('chars','キャラ',c,`${c.name} › 質問`,()=>x.text,v=>{x.text=v;});
+      add('chars','キャラ',c,`${c.name} › ${(x.text||'').trim()||'質問'}`,()=>x.a,v=>{x.a=v;});
+    }
+  }
+  const relName=(K,r)=>{ const a=K(r.a), b=K(r.b); return `${a?a.name:'?'} ⇔ ${b?b.name:'?'}`; };
+  for(const r of db.rels){ const w=relName(charById,r); [['label','関係名'],['nab','呼び方'],['nba','呼び方'],['ab','気持ち'],['ba','気持ち'],['detail','詳細']].forEach(([k,l])=>plain('rels','関係性',r,k,`${w} › ${l}`)); }
+  for(const r of db.grels){ const w=relName(groupById,r); [['label','関係名'],['ab','気持ち'],['ba','気持ち'],['detail','詳細']].forEach(([k,l])=>plain('grels','関係性',r,k,`${w} › ${l}`)); }
+  for(const t of db.timelines) plain('timelines','時系列',t,'name','時系列の名前');
+  for(const e of db.events){ const tl=tlById(e.timelineId), w=tl?`${tl.name} › ${yearLabel(tl,e.year)}`:'イベント'; plain('events','時系列',e,'title',w); plain('events','時系列',e,'detail',`${w} › 詳細`); }
+  for(const t of db.terms){ plain('terms','単語帳',t,'word','単語'); plain('terms','単語帳',t,'yomi',`${t.word} › 読み`); plain('terms','単語帳',t,'desc',`${t.word} › 説明`); }
+  for(const g of db.groups){ plain('groups','グループ',g,'name','グループ名'); plain('groups','グループ',g,'desc',`${g.name} › 説明`); }
+  for(const f of db.folders) plain('folders','フォルダ',f,'name','フォルダ名');
+  return T;
+}
+const RP_AREAS=['メモ','キャラ','関係性','時系列','単語帳','グループ','フォルダ'];
+const RP_WORDCH=/[゠-ヿ々一-鿿A-Za-z0-9ー]/;
+function rpFind(from){
+  const hits=[]; if(!from) return hits;
+  rpTargets().forEach(t=>{ const s=t.get(); let p=0;
+    while((p=s.indexOf(from,p))!==-1){
+      const partial=RP_WORDCH.test(s[p-1]||'')||RP_WORDCH.test(s[p+from.length]||'');
+      hits.push({t,p,partial,on:!partial}); p+=from.length;
+    } });
+  return hits;
+}
+function rpSnippet(s,p,from,to){
+  const a=Math.max(0,p-18), b=Math.min(s.length,p+from.length+18);
+  const one=x=>esc(x).replace(/\n/g,' ⏎ ');
+  return (a>0?'…':'')+one(s.slice(a,p))+`<del>${esc(from)}</del><ins>${esc(to)}</ins>`+one(s.slice(p+from.length,b))+(b<s.length?'…':'');
+}
+function replaceSheet(){
+  let hits=[], from='', to='', timer=null;
+  const MAX_SHOW=400;
+  openSheet(`<div class="shtop"><div class="title">一括置換</div><button type="button" class="shx" data-a="close" aria-label="閉じる">${CI.x}</button></div>
+    <div class="rppair"><div><label for="rpFrom">置換前</label><input id="rpFrom" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="例：仮名"></div>
+      <span class="rparrow" aria-hidden="true">→</span>
+      <div><label for="rpTo">置換後</label><input id="rpTo" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="例：本名"></div></div>
+    <div class="rpsum" id="rpSum">置換前の文字を入れると、見つかった場所がここに並びます。</div>
+    <div class="rpbar" id="rpBar" hidden><button type="button" class="chip" data-a="all">すべて選択</button><button type="button" class="chip" data-a="none">すべて外す</button></div>
+    <div id="rpList"></div>
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok" disabled>置換する</button></div>`, s=>{
+    const fi=s.querySelector('#rpFrom'), ti=s.querySelector('#rpTo'), list=s.querySelector('#rpList'), sum=s.querySelector('#rpSum'), bar=s.querySelector('#rpBar'), ok=s.querySelector('[data-a=ok]');
+    const counts=()=>{
+      const on=hits.filter(h=>h.on).length, warn=hits.filter(h=>h.partial&&!h.on).length;
+      if(!from){ sum.innerHTML='置換前の文字を入れると、見つかった場所がここに並びます。'; }
+      else if(!hits.length){ sum.innerHTML='見つかりませんでした。'; }
+      else sum.innerHTML=`<b>${on}か所</b>を置換します（見つかったのは${hits.length}か所${warn?`・別の名前の一部かもしれない${warn}か所は外してあります`:''}）`;
+      list.querySelectorAll('[data-area]').forEach(g=>{ const hs=hits.filter(h=>h.t.area===g.dataset.area); g.querySelector('.rpn').textContent=`${hs.filter(h=>h.on).length} / ${hs.length}`; });
+      bar.hidden=!hits.length;
+      ok.disabled=!(on && from && to && from!==to);
+    };
+    const draw=()=>{
+      from=fi.value; to=ti.value; hits=rpFind(from);
+      if(!hits.length){ list.innerHTML=''; counts(); return; }
+      let shown=0;
+      list.innerHTML=RP_AREAS.map(area=>{ const hs=hits.map((h,k)=>[h,k]).filter(([h])=>h.t.area===area); if(!hs.length) return '';
+        const rows=hs.filter(()=>shown++<MAX_SHOW).map(([h,k])=>`<div class="rphit" role="checkbox" tabindex="0" data-k="${k}" aria-checked="${h.on}"><span class="ck">${CI.check}</span><span class="rptx"><span class="rpwhere">${esc(h.t.where)}</span>${rpSnippet(h.t.get(),h.p,from,to)}${h.partial?'<span class="rpwarn">別の名前の一部かもしれません</span>':''}</span></div>`).join('');
+        return `<div class="rpgrp" data-area="${area}"><div class="rpgh">${area}<span class="rpn"></span></div>${rows}</div>`; }).join('')
+        + (hits.length>MAX_SHOW?`<div class="small" style="text-align:center">ほか${hits.length-MAX_SHOW}か所は一覧を省略しています（「すべて選択」「すべて外す」はこれらにも効きます）</div>`:'');
+      counts();
+    };
+    const later=()=>{ clearTimeout(timer); timer=setTimeout(draw,150); };
+    fi.addEventListener('input',later);
+    let toTimer=null;
+    ti.addEventListener('input',()=>{ clearTimeout(toTimer); toTimer=setTimeout(()=>{ to=ti.value; // only the preview text changes
+      list.querySelectorAll('.rphit ins').forEach(x=>x.textContent=to); counts(); },120); });
+    const toggle=row=>{ const h=hits[+row.dataset.k]; if(!h) return; h.on=!h.on; row.setAttribute('aria-checked',h.on); counts(); };
+    list.addEventListener('click',e=>{ const r=e.target.closest('.rphit'); if(r) toggle(r); });
+    list.addEventListener('keydown',e=>{ const r=e.target.closest('.rphit'); if(r&&(e.key===' '||e.key==='Enter')){ e.preventDefault(); toggle(r); } });
+    const setAll=v=>{ hits.forEach(h=>h.on=v); list.querySelectorAll('.rphit').forEach(r=>r.setAttribute('aria-checked',v)); counts(); };
+    s.querySelector('[data-a=all]').onclick=()=>setAll(true);
+    s.querySelector('[data-a=none]').onclick=()=>setAll(false);
+    s.querySelector('[data-a=close]').onclick=closeSheet;
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    ok.onclick=()=>{ clearTimeout(timer); clearTimeout(toTimer); if(fi.value!==from){ draw(); return; } if(ti.value!==to){ to=ti.value; list.querySelectorAll(".rphit ins").forEach(x=>x.textContent=to); counts(); } if(!ok.disabled) applyReplace(hits.filter(h=>h.on),from,to); };
+    fi.focus();
+  },'replace');
+}
+function applyReplace(sel,from,to){
+  if(!sel.length) return;
+  // Snapshot every record we're about to touch so the change can be undone once.
+  const snap=new Map(); // "coll:id" -> deep copy
+  for(const h of sel){ const key=h.t.coll+':'+h.t.id; if(!snap.has(key)){ const it=db[h.t.coll].find(x=>x.id===h.t.id); if(it) snap.set(key,{coll:h.t.coll,item:JSON.parse(JSON.stringify(it))}); } }
+  // Group hits by the exact text field, then replace right-to-left so earlier positions stay valid.
+  const byField=new Map();
+  for(const h of sel){ if(!byField.has(h.t)) byField.set(h.t,[]); byField.get(h.t).push(h.p); }
+  const now=Date.now(), touched=new Set();
+  for(const [t,ps] of byField){
+    let v=t.get(); ps.sort((a,b)=>b-a);
+    for(const p of ps){ if(v.substr(p,from.length)===from) v=v.slice(0,p)+to+v.slice(p+from.length); }
+    t.set(v); touched.add(t.coll+':'+t.id);
+  }
+  for(const key of touched){ const {coll,item}=snap.get(key); const it=db[coll].find(x=>x.id===item.id); if(it) it.updatedAt=now; }
+  commit(); closeSheet(); const st=main.scrollTop; render(); main.scrollTop=st;
+  toastAction(`${sel.length}か所を置換しました`,'元に戻す',()=>{
+    const t2=Date.now();
+    for(const {coll,item} of snap.values()){ const i=db[coll].findIndex(x=>x.id===item.id); if(i>=0) db[coll][i]={...item,updatedAt:t2}; }
+    commit(); const st2=main.scrollTop; render(); main.scrollTop=st2; toast('元に戻しました');
+  },12000);
 }
 /* Bulk add: one question per line; "# カテゴリ" / 【カテゴリ】 lines set the category for the
    lines below. Leading numbering / bullets are stripped. A JSON array also works:
