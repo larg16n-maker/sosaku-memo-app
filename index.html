@@ -273,7 +273,7 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 
 /* composer */
 .composer{flex:none;display:flex;align-items:flex-end;gap:6px;padding:6px 8px 6px 10px;border-top:1px solid var(--line);background:var(--bg)}
-.composer textarea{flex:1;min-height:30px;max-height:38vh;resize:none;border:1px solid var(--line);border-radius:17px;background:var(--surface);color:var(--ink);padding:6px 12px;font:inherit;font-size:13px;line-height:1.45}
+.composer textarea{flex:1;min-height:30px;max-height:38vh;overflow-y:auto;resize:none;border:1px solid var(--line);border-radius:17px;background:var(--surface);color:var(--ink);padding:6px 12px;font:inherit;font-size:13px;line-height:1.45}
 .composer textarea::placeholder{color:var(--faint)}
 .send{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;transition:opacity .15s}
 .send:disabled{opacity:.25;cursor:default}
@@ -511,7 +511,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.14.2';
+const APP_VERSION='0.15.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -890,14 +890,16 @@ function renderComposerTags(){
 }
 // Quick-insert buttons above the composer: a plain 「」 button, plus one per tagged
 // character (「ミナト「」」-style, SSwrite風) so dialogue-heavy memos can be typed fast.
-function renderQuickBar(taggedChars){
-  const qbar=$('#composerQuickBar'); if(!qbar) return;
-  const cs=taggedChars||composerTags.map(charById).filter(Boolean);
-  qbar.innerHTML='<button type="button" class="qbtn" data-qi="">「」</button>'
+function quickBtnsHtml(cs){
+  return '<button type="button" class="qbtn" data-qi="">「」</button>'
     + cs.map(c=>`<button type="button" class="qbtn" data-qi="${c.id}">${esc(c.name)}「」</button>`).join('');
 }
-function insertQuote(cid){
-  const el=input; if(!el) return;
+function renderQuickBar(taggedChars){
+  const qbar=$('#composerQuickBar'); if(!qbar) return;
+  qbar.innerHTML=quickBtnsHtml(taggedChars||composerTags.map(charById).filter(Boolean));
+}
+function insertQuote(cid,target){
+  const el=target||input; if(!el) return;
   const name=cid?((charById(cid)||{}).name||''):'';
   const snippet=name+'「」';
   const start=el.selectionStart??el.value.length, end=el.selectionEnd??el.value.length;
@@ -1073,9 +1075,15 @@ function memoMenu(id){
   },'memo');
 }
 function editMemo(m){
-  openSheet(`<div class="title">メモを編集</div><textarea id="editArea">${esc(m.text)}</textarea>
+  const cs=(m.tags||[]).map(charById).filter(Boolean);
+  openSheet(`<div class="title">メモを編集</div>
+    <div class="qbar" id="editQuickBar">${quickBtnsHtml(cs)}</div>
+    <textarea id="editArea">${esc(m.text)}</textarea>
     <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
-    const ta=s.querySelector('#editArea'), ok=s.querySelector('[data-a=ok]');
+    const ta=s.querySelector('#editArea'), ok=s.querySelector('[data-a=ok]'), qb=s.querySelector('#editQuickBar');
+    // Keep the textarea focused (and the keyboard up) while tapping the quote buttons.
+    qb.addEventListener('pointerdown',e=>{ if(e.target.closest('.qbtn')) e.preventDefault(); });
+    qb.addEventListener('click',e=>{ const b=e.target.closest('.qbtn'); if(b) insertQuote(b.dataset.qi||null,ta); });
     ta.addEventListener('input',()=>ok.disabled=!ta.value.trim());
     s.querySelector('[data-a=cancel]').onclick=closeSheet;
     ok.onclick=()=>{ m.text=ta.value.replace(/\s+$/,''); m.updatedAt=Date.now(); commit(); closeSheet();
@@ -2643,7 +2651,16 @@ if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change',onWideChange); el
 /* ---------- composer ---------- */
 const input=$('#input'), sendBtn=$('#sendBtn');
 const DRAFT='sosaku-draft';
-function grow(){ input.style.height='auto'; input.style.height=Math.min(input.scrollHeight, window.innerHeight*.38)+'px'; sendBtn.disabled=!input.value.trim(); }
+// The composer grows with its text up to about 13 lines, then stops and scrolls inside
+// itself, so a long memo doesn't push the box down behind the keyboard.
+const COMPOSER_MAX_LINES=13;
+function grow(){
+  const cs=getComputedStyle(input), lh=parseFloat(cs.lineHeight)||18.85;
+  const cap=lh*COMPOSER_MAX_LINES+parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom)+parseFloat(cs.borderTopWidth)+parseFloat(cs.borderBottomWidth);
+  input.style.height='auto';
+  input.style.height=Math.min(input.scrollHeight, cap, window.innerHeight*.38)+'px';
+  sendBtn.disabled=!input.value.trim();
+}
 input.addEventListener('input',()=>{ grow(); try{localStorage.setItem(DRAFT,input.value)}catch(e){} });
 input.addEventListener('focus',()=>{ document.body.classList.add('typing'); setTimeout(toBottom,300); });
 input.addEventListener('blur',()=>document.body.classList.remove('typing'));
