@@ -150,9 +150,9 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .mmage{font-size:12px;color:var(--ink);padding:2px 4px;min-height:1em;font-variant-numeric:tabular-nums}
 .mmage .faint{color:var(--faint);font-size:11px}
 /* groups in the character tab */
+.gblk{background:var(--bg)}
+.gblk.dragging,.wrow.dragging{box-shadow:0 4px 14px rgba(0,0,0,.14);position:relative;z-index:2;background:var(--surface)}
 .ckseg{padding:10px 14px 8px;border-bottom:1px solid var(--line)}
-.glink{display:flex;align-items:center;gap:8px;width:100%;margin-top:6px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;color:var(--ink);text-align:left}
-.glink span{margin-left:auto;color:var(--faint)}
 /* compare */
 .cmpentry{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub);text-align:left}
 .cmpentry svg{width:17px;height:17px;flex:none}
@@ -617,7 +617,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.22.0';
+const APP_VERSION='0.23.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1112,9 +1112,9 @@ function toBottom(){ main.scrollTop=main.scrollHeight; }
 /* ---------- navigation ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
   if(tab===b.dataset.tab && tab==='talk'){closeFolder();}
-  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa' && charView!=='gedit'){charView='list'; cmpReturn=false; gdReturn=null; reorderMode=false; selectMode=false; selected.clear();}
-  if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub'; grpReorderMode=false;}
-  if(b.dataset.tab==='world') wReturn=null;
+  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa' && charView!=='gedit'){charView='list'; cmpReturn=false; gdReturn=null; reorderMode=false; grpReorderMode=false; selectMode=false; selected.clear();}
+  if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub';}
+  if(b.dataset.tab==='world'){ wReturn=null; wReturnG=null; }
   if(tab==='chara' && charView==='qtpl' && b.dataset.tab!=='chara'){ charView=(qtplBack&&qtplBack.cv)||'list'; qtplBack=null; }
   tab=b.dataset.tab; render(); if(folderId) toBottom();
 }));
@@ -1571,8 +1571,8 @@ function leaveEdit(){
 
 $('#charAddBtn').addEventListener('click',()=>{ if(charKind==='group') return openGroupEdit(null,false); startEdit(null); });
 $('#charEditBtn').addEventListener('click',()=>{ if(charView==='gdetail'){ const g=groupById(gId); if(g) openGroupEdit(g,false); return; } const c=charById(charId); if(c) startEdit(c); });
-$('#charReorderBtn').addEventListener('click',()=>{ reorderMode=true; selectMode=false; render(); });
-$('#charDoneBtn').addEventListener('click',()=>{ if(charView==='qa'){ finishQa(); return; } reorderMode=false; render(); });
+$('#charReorderBtn').addEventListener('click',()=>{ if(charKind==='group'){ grpReorderMode=true; render(); return; } reorderMode=true; selectMode=false; render(); });
+$('#charDoneBtn').addEventListener('click',()=>{ if(charView==='qa'){ finishQa(); return; } reorderMode=false; grpReorderMode=false; render(); });
 $('#qAddBtn').addEventListener('click',()=>questionSheet(null));
 $('#charGroupBtn').addEventListener('click',()=>{
   charGroup=!charGroup; try{localStorage.setItem(GROUP_PREF,charGroup?'1':'0');}catch(e){}
@@ -1896,7 +1896,8 @@ function memColor(m){ return m.groupId ? groupColor(m.groupId) : MEM_GREY; }
 function tmemsOf(tlid){ return db.tmems.filter(x=>x.timelineId===tlid && charById(x.charId) && memOk(x)).sort((a,b)=>ymS(a.y,a.m)-ymS(b.y,b.m)); }
 function memLabelsUsed(){ return [...new Set(db.tmems.filter(x=>!x.groupId).map(x=>(x.label||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ja')); }
 function memRangeText(tl,m){ const f=(y,mm)=>yearLabel(tl,y)+(mm?` ${mm}月`:''); return `${f(m.y,m.m)} 〜 ${m.ey==null?'現在も在籍':f(m.ey,m.em)}`; }
-function groupColor(gid){ const g=groupById(gid); if(g&&/^#[0-9a-f]{6}$/i.test(g.color||'')) return g.color; const i=groupsTreeSorted().findIndex(x=>x.id===gid); return `var(--gc${(i<0?0:i)%6+1})`; }
+function groupColor(gid){ const g=groupById(gid); if(g&&/^#[0-9a-f]{6}$/i.test(g.color||'')) return g.color; // Auto colour comes from the id, so it doesn't change when groups are reordered.
+  let h=0; for(const ch of String(gid||'')) h=(h*31+ch.charCodeAt(0))>>>0; return `var(--gc${h%6+1})`; }
 const GROUP_SWATCHES=['#8a6fb0','#6f8fb8','#5f9ea3','#4f8a5b','#9a8a3e','#d08a3c','#b8835f','#c26a78'];
 function tlAddChooser(){
   const tl=tlById(tlId); if(!tl) return;
@@ -2106,13 +2107,25 @@ const CK_PREF='sosaku-charkind';
 const CHAR_ADD_HTML=$('#charAddBtn').innerHTML;
 let charKind=(()=>{ try{ return localStorage.getItem(CK_PREF)==='group'?'group':'char'; }catch(_){ return 'char'; } })();
 let gId=null, gDraft=null, gDirty=false, gEditReturn=null, gdReturn=null, gBackChar=null;
-function setCharKind(k){ charKind=k==='group'?'group':'char'; try{ localStorage.setItem(CK_PREF,charKind); }catch(_){} reorderMode=false; selectMode=false; charView='list'; render(); main.scrollTop=0; }
+function setCharKind(k){ charKind=k==='group'?'group':'char'; try{ localStorage.setItem(CK_PREF,charKind); }catch(_){} reorderMode=false; grpReorderMode=false; selectMode=false; charView='list'; render(); main.scrollTop=0; }
 function CK_SEG(){ return `<div class="ckseg"><div class="seg" role="group" aria-label="表示の切り替え"><button type="button" data-ck="char" aria-pressed="${charKind==='char'}">キャラ</button><button type="button" data-ck="group" aria-pressed="${charKind==='group'}">グループ</button></div></div>`; }
 function renderGroupList(){
+  const gs=groupsTreeSorted();
+  if(grpReorderMode && gs.length<2) grpReorderMode=false;
+  if(grpReorderMode){
+    // Top-level groups drag as a block (with their subgroups); subgroups drag within their parent.
+    $('#title').textContent='並べ替え'; $('#settingsBtn').hidden=true; $('#charDoneBtn').hidden=false;
+    const h=`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`;
+    const tops=topGroupsSorted();
+    main.innerHTML=`<div class="grouplist">${tops.map(g=>{ const kids=childGroupsOf(g.id);
+      return `<div class="gblk" data-gdrag data-gid="${g.id}"><div class="wrow">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span>${h}</div>${kids.length?`<div class="gkids">${kids.map(k=>`<div class="wrow wsub" data-gdrag data-gid="${k.id}">${gavatar(k,'md')}<span class="wn">${esc(k.name)}</span>${h}</div>`).join('')}</div>`:''}</div>`; }).join('')}</div>
+      <div class="hint">右のつまみをドラッグして並べ替え（支部・課は同じ親の中で移動）</div>`;
+    return;
+  }
   $('#title').textContent='グループ';
+  if(gs.length>1) $('#charReorderBtn').hidden=false;
   if(isWide()){ main.innerHTML='<div class="pick-ph">'+(db.groups.length?'左の一覧からグループを選んでください':'左上の＋からグループを作れます')+'</div>'; return; }
   $('#charAddBtn').hidden=false; $('#charAddBtn').setAttribute('aria-label','グループを作る'); $('#charAddBtn').innerHTML=SV.plus;
-  const gs=groupsTreeSorted();
   main.innerHTML=CK_SEG()+(gs.length
     ? gs.map(g=>`<div class="wrow${g.parentId?' wsub':''}" data-gopen="${g.id}" tabindex="0">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span><span class="wc">${membersOf(g).length?membersOf(g).length+'人':''}</span></div>`).join('')+'<div class="hint">タップで詳細</div>'
     : '<div class="empty"><strong>グループがありません</strong>右上の＋から「学園」「王国」などのグループを作れます。</div>');
@@ -2134,8 +2147,22 @@ function renderGroupDetail(){
     ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
     ${(g.desc||'').trim()?`<div class="cblock"><div class="clabel">説明</div><div class="ctext">${esc(g.desc.trim())}</div></div>`:''}
     <div class="cblock"><div class="clabel">所属キャラ</div>${ms.length?`<div class="chips">${ms.map(c=>`<span class="pchip link" data-jumpchar="${c.id}">${avatar(c,'md')}${esc(c.name)}</span>`).join('')}</div>`:'<div class="small" style="padding:0">キャラの編集画面の「所属」でこのグループを選ぶと、ここに並びます。</div>'}</div>
-    <button type="button" class="glink" data-a="grels">関係性を見る（世界観タブ）<span>›</span></button>
+    ${groupLinksHtml(g)}
   </div>`;
+}
+function groupLinksHtml(g){
+  const rs=relsOfK('group',g.id);
+  const relH = rs.length ? `<ul class="xlist">${rs.map(r=>{ const o=groupById(relView(r,g.id).other);
+      return `<li class="xrow" data-gjump="${r.id}">${gavatar(o,'md')}<span>${esc(groupLabel(o))}</span><span class="xl">${esc((r.label||'').trim())}</span></li>`; }).join('')}</ul>`
+    : '<div class="clempty">まだ関係がありません</div>';
+  return `<div class="clinked"><div class="clhead">世界観とのつながり</div>
+    <div class="cblock"><div class="clabel"><span>関係性</span><button type="button" class="cladd" data-a="gaddrel">${CI.plus}関係を追加</button></div>${relH}</div></div>`;
+}
+let wReturnG=null, wEditReturnG=null; // group id to come back to after visiting / editing in the world tab
+function startRelFromGroup(gid){
+  tab='world'; relKind='group'; rgId=gid;
+  relDraft={id:uid(),kind:'group',a:gid,b:'',label:'',ab:'',ba:'',nab:'',nba:'',detail:'',createdAt:Date.now()};
+  wDirty=false; wView='rel'; wEditReturnG=gid; render(); main.scrollTop=0;
 }
 function openGroupEdit(g,fromWorld){
   gDraft = g ? JSON.parse(JSON.stringify(g)) : {id:uid(),name:'',desc:'',parentId:null,color:null,leaderId:'',purpose:'',song:'',custom:[]};
@@ -2195,7 +2222,8 @@ function groupClick(e){
   if(charView==='list'){ const r=t.closest('[data-gopen]'); if(r){ gId=r.dataset.gopen; gdReturn=null; gBackChar=null; charView='gdetail'; render(); main.scrollTop=0; } return; }
   if(charView==='gdetail'){
     const j=t.closest('[data-jumpchar]'); if(j){ gdReturn=gId; charId=j.dataset.jumpchar; charView='detail'; render(); main.scrollTop=0; return; }
-    if(t.closest('[data-a=grels]')){ tab='world'; relKind='group'; rgId=gId; wView='rg'; wReturn=null; render(); main.scrollTop=0; }
+    const gj=t.closest('[data-gjump]'); if(gj){ wReturnG=gId; wReturn=null; tab='world'; relKind='group'; rgId=gId; wView='rg'; openRel.add(gj.dataset.gjump); render(); flashEl(`[data-rid="${gj.dataset.gjump}"]`); return; }
+    if(t.closest('[data-a=gaddrel]')){ if(db.groups.length<2){ toast('ほかのグループがありません'); return; } startRelFromGroup(gId); }
     return;
   }
   if(charView==='gedit'){
@@ -2490,12 +2518,12 @@ main.addEventListener('keydown',e=>{
 let drag=null;
 main.addEventListener('pointerdown',e=>{
   const charMode = tab==='chara'&&charView==='list'&&reorderMode;
-  const grpMode = tab==='world'&&wView==='rchars'&&relKind==='group'&&grpReorderMode;
+  const grpMode = tab==='chara'&&charView==='list'&&charKind==='group'&&grpReorderMode;
   const qMode = tab==='chara'&&charView==='qtpl';
   if(!charMode && !grpMode && !qMode) return;
   const h=e.target.closest('.handle'); if(!h) return;
   e.preventDefault();
-  const row=h.closest(charMode?'.crow':qMode?'.qrow':'.wrow'), ul=row.parentElement;
+  const row=h.closest(charMode?'.crow':qMode?'.qrow':'[data-gdrag]'), ul=row.parentElement;
   try{h.setPointerCapture(e.pointerId);}catch(_){}
   row.classList.add('dragging');
   drag={row,ul,h,startY:e.clientY,base:row.offsetTop,lastY:e.clientY,pid:e.pointerId,raf:null,kind:charMode?'char':qMode?'q':'group'};
@@ -2704,24 +2732,13 @@ function renderWorld(){
   }
   if(wView==='rchars'){
     $('#title').textContent='関係性'; hdrBack();
-    const gsAll=groupsSorted(), reordering=grpReorderMode && relKind==='group' && gsAll.length>1;
-    if(grpReorderMode && !reordering) grpReorderMode=false;
-    if(wide && !reordering){ main.innerHTML='<div class="pick-ph">左の一覧から'+(relKind==='group'?'グループ':'キャラ')+'を選んでください</div>'; return; }
+    if(wide){ main.innerHTML='<div class="pick-ph">左の一覧から'+(relKind==='group'?'グループ':'キャラ')+'を選んでください</div>'; return; }
     const seg=`<div class="relseg"><div class="seg" role="group"><button type="button" data-rkset="char" aria-pressed="${relKind==='char'}">キャラ</button><button type="button" data-rkset="group" aria-pressed="${relKind==='group'}">グループ</button></div></div>`;
     if(relKind==='group'){
-      $('#wAddBtn').hidden=reordering; $('#wAddBtn').setAttribute('aria-label','グループを作る');
-      const gs=gsAll, tops=topGroupsSorted();
-      const bar = gs.length>1 ? `<div class="relseg" style="display:flex;justify-content:flex-end;padding-top:0"><button type="button" class="hbtn txt" data-wa="grpreorder">${reordering?'完了':'並べ替え'}</button></div>` : '';
-      const row=(g,sub)=>`<div class="wrow${reordering?'':' wlp'}${sub?' wsub':''}" data-gid="${g.id}" tabindex="0">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span>${reordering?`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`:`<span class="wc">${relsOfK('group',g.id).length||''}</span>`}</div>`;
-      // Reorder mode only reorders top-level groups; a group's subgroups keep their
-      // relative order (added order) beneath it — nesting is one level, so there's
-      // no separate drag UI for subgroup order yet.
-      const rows = reordering
-        ? tops.map(g=>row(g,false)).join('')
-        : tops.map(g=>row(g,false)+childGroupsOf(g.id).map(k=>row(k,true)).join('')).join('');
-      main.innerHTML = seg + bar + (gs.length
-        ? `<div class="grouplist">${rows}</div>` + (reordering?'<div class="hint">右のつまみをドラッグして並べ替え</div>':'<div class="hint">長押しで編集・削除</div>')
-        : '<div class="empty"><strong>グループがありません</strong>右上の＋から「学園」「王国」などのグループを作れます。</div>');
+      const gs=groupsTreeSorted();
+      main.innerHTML = seg + (gs.length
+        ? `<div class="grouplist">${gs.map(g=>`<div class="wrow wlp${g.parentId?' wsub':''}" data-gid="${g.id}" tabindex="0">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span><span class="wc">${relsOfK('group',g.id).length||''}</span></div>`).join('')}</div><div class="hint">長押しで編集・削除</div>`
+        : '<div class="empty"><strong>グループがありません</strong>キャラクタータブの「グループ」から作れます。</div>');
       return;
     }
     const list=charsSorted();
@@ -2740,8 +2757,8 @@ function renderWorld(){
     const sub = kind==='char' ? [(me.alias||'').trim(),affilNames].filter(Boolean).map(esc).join(' · ') : (groupParent(me)?`グループ・${esc(groupParent(me).name)}の支部`:'グループ');
     let head=`<div class="rme">${K.av(me,'rm')}<div class="rmt"><div class="rmn">${esc(nm(me))}<span>の関係</span></div>${sub?`<div class="rms">${sub}</div>`:''}</div><span class="rmc">${rs.length}件</span></div>`;
     if(kind==='group'){
-      const ms=membersOf(me), desc=(me.desc||'').trim();
-      if(desc||ms.length) head+=`<div class="gmeta">${desc?`<div><div class="clabel">説明</div><div class="gdesc">${esc(desc)}</div></div>`:''}${ms.length?`<div><div class="clabel">所属キャラ</div><div class="chips">${ms.map(c=>`<span class="pchip link" data-jumpchar="${c.id}">${avatar(c,'md')}${esc(c.name)}</span>`).join('')}</div></div>`:''}</div>`;
+      const ms=membersOf(me), desc=(me.desc||'').trim(), ld=charById(me.leaderId), pur=(me.purpose||'').trim();
+      if(desc||ms.length||ld||pur) head+=`<div class="gmeta">${ld?`<div><div class="clabel">代表</div><div class="chips"><span class="pchip link" data-jumpchar="${ld.id}">${avatar(ld,'md')}${esc(ld.name)}</span></div></div>`:''}${pur?`<div><div class="clabel">目的</div><div class="gdesc">${esc(pur)}</div></div>`:''}${desc?`<div><div class="clabel">説明</div><div class="gdesc">${esc(desc)}</div></div>`:''}${ms.length?`<div><div class="clabel">所属キャラ</div><div class="chips">${ms.map(c=>`<span class="pchip link" data-jumpchar="${c.id}">${avatar(c,'md')}${esc(c.name)}</span>`).join('')}</div></div>`:''}</div>`;
     }
     if(!rs.length){ main.innerHTML=head+'<div class="empty"><strong>まだ関係がありません</strong>右上の＋から追加できます。</div>'; return; }
     main.innerHTML=head+'<ul class="rlist">'+rs.map(r=>{
@@ -2813,6 +2830,8 @@ function renderWorld(){
 function relsOfAllCount(){ return db.rels.filter(r=>charById(r.a)&&charById(r.b)).length + db.grels.filter(r=>groupById(r.a)&&groupById(r.b)).length; }
 
 function worldBack(){
+  if(wReturnG && wView==='rg' && groupById(wReturnG)){ const g=wReturnG; wReturnG=null; tab='chara'; gId=g; charView='gdetail'; render(); return; }
+  wReturnG=null;
   if(wReturn && (wView==='tl'||wView==='rc')){ const cid=wReturn; wReturn=null; tab='chara'; charView='detail'; charId=cid; render(); return; }
   wView = wView==='tl'?'tls' : (wView==='rc'||wView==='rg')?'rchars' : 'hub';
   render();
@@ -2829,7 +2848,6 @@ $('#wAddBtn').addEventListener('click',()=>{
   if(wView==='tls') return newTimelineSheet();
   if(wView==='terms') return termSheet(null);
   if(wView==='tl') return tlAddChooser();
-  if(wView==='rchars' && relKind==='group') return openGroupEdit(null,true);
   if(wView==='rc'||wView==='rg'){ const kind=wView==='rg'?'group':'char'; relDraft={id:uid(),kind,a:kind==='group'?rgId:rcId,b:'',label:'',ab:'',ba:'',nab:'',nba:'',detail:'',createdAt:Date.now()}; wDirty=false; wView='rel'; render(); main.scrollTop=0; }
 });
 $('#wEditBtn').addEventListener('click',()=>{
@@ -3041,6 +3059,7 @@ function charLinksHtml(c){
    cancelling) the form, the person lands back on that character instead of the world tab. */
 let wEditReturn=null;
 function backToCharFromWorld(){
+  if(wEditReturnG){ const g=wEditReturnG; wEditReturnG=null; if(groupById(g)){ tab='chara'; gId=g; charView='gdetail'; render(); return true; } }
   const c=wEditReturn; wEditReturn=null;
   if(!c||!charById(c)) return false;
   tab='chara'; charId=c; charView='detail'; render(); return true;
@@ -3235,8 +3254,8 @@ main.addEventListener('click',e=>{
   const go=t.closest('[data-go]'); if(go){ wView=go.dataset.go; render(); return; }
   const tr=t.closest('[data-tl]'); if(tr && wView==='tls'){ tlId=tr.dataset.tl; wView='tl'; render(); return; }
   const rc=t.closest('[data-rcid]'); if(rc){ rcId=rc.dataset.rcid; wView='rc'; render(); return; }
-  const gr=t.closest('[data-gid]'); if(gr){ if(grpReorderMode) return; rgId=gr.dataset.gid; wView='rg'; render(); return; }
-  const rks=t.closest('[data-rkset]'); if(rks){ relKind=rks.dataset.rkset; if(relKind!=='group') grpReorderMode=false; render(); return; }
+  const gr=t.closest('[data-gid]'); if(gr){ rgId=gr.dataset.gid; wView='rg'; render(); return; }
+  const rks=t.closest('[data-rkset]'); if(rks){ relKind=rks.dataset.rkset; render(); return; }
   const jc=t.closest('[data-jumpchar]'); if(jc){ tab='chara'; charId=jc.dataset.jumpchar; charView='detail'; render(); return; }
   const ev=t.closest('.ev'); if(ev && wView==='tl'){ if(tlById(tlId).view!=='full'){ ev.classList.toggle('open'); ev.classList.contains('open')?openEv.add(ev.dataset.eid):openEv.delete(ev.dataset.eid); } return; }
   if(wView==='terms'){
@@ -3249,8 +3268,7 @@ main.addEventListener('click',e=>{
   const sb=t.closest('[data-wa="setborn"]'); if(sb && evDraft){ const c=charById(sb.dataset.cid), tl=tlById(evDraft.timelineId); if(c&&tl) bornSheet(c,tl,evDraftYear(evDraft),evDraft.month,evDraft.day); return; }
   const a=t.closest('[data-wa]'); if(!a) return;
   const act=a.dataset.wa;
-  if(act==='grpreorder'){ grpReorderMode=!grpReorderMode; render(); }
-  else if(act==='pickchars') pickCharsSheet(evDraft.chars,ids=>{ evDraft.chars=ids; wDirty=true; const st=main.scrollTop; renderWorld(); main.scrollTop=st; });
+  if(act==='pickchars') pickCharsSheet(evDraft.chars,ids=>{ evDraft.chars=ids; wDirty=true; const st=main.scrollTop; renderWorld(); main.scrollTop=st; });
   else if(act==='pickpartner') pickPartnerSheet(relDraft.a,id=>{ relDraft.b=id; wDirty=true; const st=main.scrollTop; renderWorld(); main.scrollTop=st; },relDraft.kind);
   else if(act==='delev') confirmSheet('このイベントを削除しますか？','元に戻せません。','削除',()=>deleteEvent(evDraft.id));
   else if(act==='delrel') confirmSheet('この関係を削除しますか？','相手側からも見えなくなります。元に戻せません。','削除',()=>deleteRel(relDraft.id,relDraft.kind));
@@ -3301,7 +3319,7 @@ function renderSide(){
       return `<div class="wrow${folderId===f.id?' active':''}" data-id="${f.id}" tabindex="0">${ICON.folder}<span class="wn">${esc(f.name)}</span><span class="wc">${n||''}</span></div>`;
     }).join('') : '<div class="pick-ph">まだフォルダがありません</div>';
   }else if(tab==='chara' && charKind==='group'){
-    head=`<span class="stitle">グループ</span><span class="sbtns"><button class="hbtn" data-sa="gadd" aria-label="グループを作る">${SV.plus}</button></span>`;
+    head=`<span class="stitle">グループ</span><span class="sbtns">${db.groups.length>1?`<button class="hbtn${grpReorderMode?' on':''}" data-sa="greorder" aria-label="並べ替え">${SV.reorder}</button>`:''}<button class="hbtn" data-sa="gadd" aria-label="グループを作る">${SV.plus}</button></span>`;
     sub=`<div class="ssub"><div class="seg" role="group"><button type="button" data-sck="char" aria-pressed="false">キャラ</button><button type="button" data-sck="group" aria-pressed="true">グループ</button></div></div>`;
     const gs=groupsTreeSorted();
     body = gs.length ? gs.map(g=>`<div class="wrow${g.parentId?' wsub':''}${((charView==='gdetail'&&gId===g.id)||(charView==='gedit'&&gDraft&&gDraft.id===g.id))?' active':''}" data-sgid="${g.id}" tabindex="0">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span><span class="wc">${membersOf(g).length||''}</span></div>`).join('')
@@ -3325,7 +3343,7 @@ function renderSide(){
   }else{
     const sec=worldSec();
     head=`<div class="seg" role="group"><button type="button" data-ssec="tl" aria-pressed="${sec==='tl'}">時系列</button><button type="button" data-ssec="rel" aria-pressed="${sec==='rel'}">関係性</button><button type="button" data-ssec="term" aria-pressed="${sec==='term'}">単語帳</button></div>
-      <span class="sbtns">${(sec==='rel'&&relKind==='group'&&groupsSorted().length>1)?`<button class="hbtn${grpReorderMode?' on':''}" data-sa="grpreorder" aria-label="並べ替え">${SV.reorder}</button>`:''}${(sec==='tl'||sec==='term'||relKind==='group')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':sec==='term'?'単語を追加':'グループを作る'}">${SV.plus}</button>`:''}</span>`;
+      <span class="sbtns">${(sec==='tl'||sec==='term')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':'単語を追加'}">${SV.plus}</button>`:''}</span>`;
     if(sec==='term'){
       const ts=termsSorted();
       body = ts.length ? termsGrouped(ts).map(([h,list])=>`<div class="tmhead">${h==='他'?'英数・その他':h}</div>`+list.map(t=>`<div class="wrow wlp${openTm.has(t.id)?' active':''}" data-tmid="${t.id}" tabindex="0"><span class="wn">${esc(t.word)}${(t.yomi||'').trim()?`<span class="ws">${esc(t.yomi.trim())}</span>`:''}</span></div>`).join('')).join('')
@@ -3352,7 +3370,7 @@ function renderSide(){
 }
 function editing(){ return (tab==='chara'&&charView==='gedit'&&gDirty) || (tab==='chara'&&(charView==='edit'||charView==='qa')&&charDirty) || (tab==='world'&&(wView==='ev'||wView==='rel')&&wDirty); }
 function guardLeave(fn){
-  const go=()=>{ charDraft=null; charDirty=false; gDraft=null; gDirty=false; gEditReturn=null; charEditReturn=null; evDraft=null; relDraft=null; wDirty=false; wEditReturn=null; fn(); };
+  const go=()=>{ charDraft=null; charDirty=false; gDraft=null; gDirty=false; gEditReturn=null; charEditReturn=null; evDraft=null; relDraft=null; wDirty=false; wEditReturn=null; wEditReturnG=null; fn(); };
   editing() ? confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',go) : go();
 }
 side.addEventListener('click',e=>{
@@ -3365,21 +3383,18 @@ side.addEventListener('click',e=>{
     if(a==='reorder') return guardLeave(()=>{ reorderMode=true; selectMode=false; charView='list'; render(); });
     if(a==='cmp') return guardLeave(()=>{ reorderMode=false; selectMode=false; openCmp(); });
     if(a==='select') return guardLeave(()=>{ selectMode=true; reorderMode=false; selected.clear(); charView='list'; render(); });
-    if(a==='gadd') return guardLeave(()=>openGroupEdit(null,false));
+    if(a==='gadd') return guardLeave(()=>{ grpReorderMode=false; openGroupEdit(null,false); });
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
-    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : openGroupEdit(null,true); }
+    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : null; }
     if(a==='addfolder') return newFolderSheet();
-    if(a==='grpreorder'){
-      if(grpReorderMode){ grpReorderMode=false; render(); return; }
-      return guardLeave(()=>{ grpReorderMode=true; relKind='group'; wView='rchars'; render(); });
-    }
+    if(a==='greorder') return guardLeave(()=>{ grpReorderMode=!grpReorderMode; charView='list'; render(); });
   }
   if((el=q('.ghead[data-gkey]'))){ toggleGroupCollapse(el.dataset.gkey); render(); return; }
   if((el=q('[data-sck]'))) return guardLeave(()=>setCharKind(el.dataset.sck));
   if((el=q('[data-sgid]'))) return guardLeave(()=>{ gId=el.dataset.sgid; gdReturn=null; gBackChar=null; charView='gdetail'; render(); main.scrollTop=0; });
   if((el=q('[data-scid]'))) return guardLeave(()=>{ reorderMode=false; selectMode=false; cmpReturn=false; charId=el.dataset.scid; charView='detail'; render(); main.scrollTop=0; });
   if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='term' ? 'terms' : el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
-  if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; if(relKind!=='group') grpReorderMode=false; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
+  if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-tl]'))) return guardLeave(()=>{ tlId=el.dataset.tl; wView='tl'; wReturn=null; render(); main.scrollTop=0; });
   if((el=q('[data-src]'))) return guardLeave(()=>{ rcId=el.dataset.src; wView='rc'; wReturn=null; render(); main.scrollTop=0; });
   if((el=q('[data-gid]'))) return guardLeave(()=>{ rgId=el.dataset.gid; wView='rg'; render(); main.scrollTop=0; });
