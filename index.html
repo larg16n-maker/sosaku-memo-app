@@ -93,6 +93,42 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .folder .fname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .folder .fcount{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 
+/* timeline: periods, memberships, figure */
+.chkrow{display:flex;align-items:center;gap:8px;font-size:13px;padding:2px 2px}
+.chkrow input,.sheet .chkrow input{width:18px;height:18px;padding:0;flex:none;accent-color:var(--accent)}
+.endbox{display:flex;flex-direction:column;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.erng{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums;margin-top:1px}
+.agechip{height:auto;min-height:28px;flex-wrap:wrap;row-gap:3px;padding-block:3px}
+.mg{margin-left:4px;font-size:10px;line-height:1.5;padding:0 6px;border-radius:8px;background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.mg.out{border-style:dashed;color:var(--faint);background:transparent}
+.figbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+.figbar .lbl{font-size:10px;color:var(--faint)}
+.ftg{height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--sub);font-size:11px;display:inline-flex;align-items:center;gap:5px}
+.ftg i{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.5}
+.ftg[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.ftg[aria-pressed="true"] i{opacity:1}
+.fchips{display:flex;gap:6px;padding:8px 12px 4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.fch{flex:none;height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:11px;white-space:nowrap}
+.fch[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);font-weight:600}
+.flegend{display:flex;flex-wrap:wrap;gap:6px 12px;padding:4px 12px 6px;font-size:10px;color:var(--sub)}
+.flegend span{display:inline-flex;align-items:center;gap:4px}
+.flegend i{width:10px;height:10px;border-radius:2px}
+.tlfig{position:relative;margin:0 0 8px}
+.tlfig svg{display:block}
+.fhead{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);height:22px}
+.fhead span{position:absolute;top:4px;font-size:9px;font-weight:600;text-align:center;overflow:hidden;white-space:nowrap}
+.flab{position:absolute;display:block;text-align:left;padding:0 4px;border-radius:6px;overflow:hidden}
+.flab b{display:block;font-size:12px;font-weight:600;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flab small{display:block;font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.flab.born b{color:var(--brass)}
+.flab:active{background:var(--press)}
+.fhit{cursor:pointer}
+.evinfo{display:flex;flex-direction:column;gap:6px;padding:0 6px 8px;font-size:13px;line-height:1.6}
+.evinfo .d{color:var(--sub);font-size:12px;font-variant-numeric:tabular-nums}
+.evinfo .x{white-space:pre-wrap;word-break:break-word}
+:root{--gc1:#8a6fb0;--gc2:#b8835f;--gc3:#c26a78;--gc4:#5f9ea3;--gc5:#9a8a3e;--gc6:#6f8fb8;--evc:#3f6f9e}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--gc1:#b39ad6;--gc2:#d09a74;--gc3:#df8a97;--gc4:#76b6ba;--gc5:#cbb967;--gc6:#86a6cf;--evc:#8ab4dd} }
+:root[data-theme="dark"]{--gc1:#b39ad6;--gc2:#d09a74;--gc3:#df8a97;--gc4:#76b6ba;--gc5:#cbb967;--gc6:#86a6cf;--evc:#8ab4dd}
 /* compare */
 .cmpentry{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub);text-align:left}
 .cmpentry svg{width:17px;height:17px;flex:none}
@@ -495,6 +531,7 @@ body.kbopen .cedit{padding-bottom:120px}
     </span>
     <h1 id="title">メモ</h1>
     <span class="hgroup right">
+      <button class="hbtn" id="figBtn" hidden aria-label="図と一覧を切り替え"></button>
       <button class="hbtn" id="viewBtn" hidden aria-label="表示を切り替え"></button>
       <button class="hbtn" id="tagFilterBtn" hidden aria-label="キャラで絞り込み">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8l8 8-8 8-8-8z"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/></svg>
@@ -555,7 +592,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.18.0';
+const APP_VERSION='0.19.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -586,7 +623,7 @@ function b64enc(str){ return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2}
 function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
 
 /* ---------- data model ---------- */
-const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms']];
+const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms'],['tmems','deletedTmems']];
 function emptyDb(){ const d={meta:{updatedAt:0}}; for(const [a,b] of COLLS){ d[a]=[]; d[b]=[]; } return d; }
 function normalize(d){
   const e=emptyDb();
@@ -791,10 +828,12 @@ function buildStoryBible(){
       if(!evs.length) L.push('（イベントなし）');
       for(const e of evs){
         const d=dateLabel(e);
-        const cs=(e.chars||[]).map(charById).filter(Boolean).map(c=>{ const ag=ageAt(c,tl.id,e.year,e.month,e.day); return ag===null?c.name:`${c.name}(${ageLabel(ag)})`; });
-        L.push(`- ${yearLabel(tl,e.year)}${d?' '+d:''} 「${e.title}」${cs.length?'　['+cs.join('、')+']':''}`);
+        const cs=(e.chars||[]).map(charById).filter(Boolean).map(c=>{ const ag=evAgeLabel(c,tl.id,e); return ag?`${c.name}(${ag})`:c.name; });
+        L.push(`- ${yearLabel(tl,e.year)}${d?' '+d:''}${typeof e.endYear==='number'?' 〜 '+endLabel(tl,e):''} 「${e.title}」${cs.length?'　['+cs.join('、')+']':''}`);
         if((e.detail||'').trim()) L.push('  '+e.detail.trim().replace(/\n/g,'\n  '));
       }
+      const ms=tmemsOf(tl.id);
+      if(ms.length){ L.push('在籍期間:'); for(const m of ms){ const c=charById(m.charId), g=groupById(m.groupId); L.push(`- ${c.name}｜${groupLabel(g)}：${memRangeText(tl,m)}`); } }
       L.push('');
     }
   }
@@ -975,7 +1014,7 @@ function renderMain(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const inFolder = tab==='talk' && folderId;
   const wideTalk = tab==='talk' && isWide();
-  ['charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn','charSelectBtn','charDelSelBtn','wAddBtn','wCancelBtn','wSaveBtn','wEditBtn','qAddBtn'].forEach(id=>$('#'+id).hidden=true);
+  ['figBtn','charCancelBtn','charGroupBtn','charReorderBtn','charAddBtn','charEditBtn','charDoneBtn','charSaveBtn','charSelectBtn','charDelSelBtn','wAddBtn','wCancelBtn','wSaveBtn','wEditBtn','qAddBtn'].forEach(id=>$('#'+id).hidden=true);
   $('#settingsBtn').hidden=false;
   $('#backBtn').hidden=!inFolder || wideTalk;
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId) || wideTalk;
@@ -1476,7 +1515,7 @@ $('#charDelSelBtn').addEventListener('click',()=>{
   confirmSheet(`${n}人のキャラクターを削除しますか？`,'元に戻せません。','削除',()=>{
     const t=Date.now();
     db.chars=db.chars.filter(c=>{ if(selected.has(c.id)){ db.deletedChars.push({id:c.id,deletedAt:t}); return false; } return true; });
-    dropRelsOf(new Set(selected),t);
+    dropRelsOf(new Set(selected),t); dropTmems(x=>selected.has(x.charId),t);
     selected.clear(); selectMode=false; commit(); render(); toast(n+'人を削除しました');
   });
 });
@@ -1540,7 +1579,7 @@ main.addEventListener('click',e=>{
     else if(act==='delchar'){
       const c=charById(charDraft.id); if(!c) return;
       confirmSheet(`「${c.name}」を削除しますか？`,'元に戻せません。','削除',()=>{
-        const t=Date.now(); db.chars=db.chars.filter(x=>x.id!==c.id); db.deletedChars.push({id:c.id,deletedAt:t}); dropRelsOf(new Set([c.id]),t);
+        const t=Date.now(); db.chars=db.chars.filter(x=>x.id!==c.id); db.deletedChars.push({id:c.id,deletedAt:t}); dropRelsOf(new Set([c.id]),t); dropTmems(x=>x.charId===c.id,t);
         commit(); charDraft=null; charDirty=false; charView='list'; render(); toast('削除しました');
       });
     }
@@ -1754,6 +1793,195 @@ function toastAction(msg,label,fn,ms){
   d.querySelector('button').onclick=()=>{ d.remove(); fn(); };
   document.body.appendChild(d); clearTimeout(tt); tt=setTimeout(()=>d.remove(),ms||6000);
 }
+/* ---------- timeline: event periods, memberships (在籍期間), figure view ----------
+   Events can have an end date (endYear/endMonth/endDay, in the timeline's own numbering).
+   Memberships live per timeline, like birth years: {timelineId, charId, groupId, y, m, ey, em}
+   with ey=null meaning "still a member". The figure is one vertical line of event titles; picking
+   characters narrows it to their events and adds a column of their membership bands. */
+function ymdKey(y,m,d){ return (y*12+((m||1)-1))*32+(d||0); }
+const ymS=(y,m)=>y*12+((m||1)-1);
+const ymE=(y,m)=>y*12+((m||12)-1);
+function endLabel(tl,e){ const d=dateLabel({month:e.endMonth,day:e.endDay}); return yearLabel(tl,e.endYear)+(d?' '+d:''); }
+function evAgeLabel(c,tlid,e){
+  const a=ageAt(c,tlid,e.year,e.month,e.day); if(a===null) return '';
+  if(typeof e.endYear!=='number') return ageLabel(a);
+  const b=ageAt(c,tlid,e.endYear,e.endMonth,e.endDay);
+  if(b===null||b===a||a<0) return ageLabel(a);
+  return `${a}〜${b}歳`;
+}
+function newEvDraft(tlid,chars){ const tl=tlById(tlid), s=tl&&tl.mode==='ad'?1:-1; return {id:uid(),timelineId:tlid,sign:s,yabs:'',month:'',day:'',title:'',detail:'',chars:chars||[],createdAt:Date.now(),period:false,esign:s,eyabs:'',emonth:'',eday:''}; }
+function dropTmems(pred,t){ db.tmems=db.tmems.filter(x=>{ if(pred(x)){ db.deletedTmems.push({id:x.id,deletedAt:t}); return false; } return true; }); }
+function tmemsOf(tlid){ return db.tmems.filter(x=>x.timelineId===tlid && charById(x.charId) && groupById(x.groupId)).sort((a,b)=>ymS(a.y,a.m)-ymS(b.y,b.m)); }
+function memRangeText(tl,m){ const f=(y,mm)=>yearLabel(tl,y)+(mm?` ${mm}月`:''); return `${f(m.y,m.m)} 〜 ${m.ey==null?'現在も在籍':f(m.ey,m.em)}`; }
+function groupColor(gid){ const i=groupsTreeSorted().findIndex(g=>g.id===gid); return `var(--gc${(i<0?0:i)%6+1})`; }
+// Groups the character belonged to at an event (solid) or had already left (dashed).
+function memHintHtml(c,tlid,year,month){
+  if(typeof year!=='number') return '';
+  const evS=month?ymS(year,month):ymS(year,1), evE=month?ymS(year,month):ymE(year,12);
+  const ms=db.tmems.filter(x=>x.timelineId===tlid&&x.charId===c.id&&groupById(x.groupId)); if(!ms.length) return '';
+  const inG=new Set(), past=new Set();
+  for(const x of ms){ const s=ymS(x.y,x.m), e=x.ey==null?Infinity:ymE(x.ey,x.em); if(s<=evE && e>=evS) inG.add(x.groupId); else if(e<evS) past.add(x.groupId); }
+  for(const g of inG) past.delete(g);
+  return [...inG].map(g=>`<span class="mg">${esc(groupById(g).name)}</span>`).join('')+[...past].map(g=>`<span class="mg out">${esc(groupById(g).name)}（脱退後）</span>`).join('');
+}
+function tlAddChooser(){
+  const tl=tlById(tlId); if(!tl) return;
+  openSheet(`<div class="title">${esc(tl.name)}に追加</div>
+    <button class="act" data-a="ev">${SV.plus}イベント</button>
+    <button class="act" data-a="mem">${SV.plus}在籍期間<span class="small" style="margin-left:6px">キャラがグループにいた期間</span></button>`, s=>{
+    s.querySelector('[data-a=ev]').onclick=()=>{ closeSheet(); evDraft=newEvDraft(tlId,[]); wDirty=false; wView='ev'; render(); main.scrollTop=0; };
+    s.querySelector('[data-a=mem]').onclick=()=>{ closeSheet(); memSheet(tl,null); };
+  },'tladd');
+}
+function memSheet(tl,rec,preset){
+  const chars=charsSorted(), groups=groupsTreeSorted();
+  if(!chars.length){ toast('先にキャラクターを登録してください'); return; }
+  if(!groups.length){ toast('先にグループを作ってください（世界観 › 関係性 › グループ）'); return; }
+  const ad=tl.mode==='ad', signs=ad?[[1,'西暦'],[-1,'紀元前']]:[[-1,'前'],[1,'後']];
+  const sgn=y=>y<0?-1:(ad?1:(y===0?-1:1));
+  let ss=rec?sgn(rec.y):(ad?1:-1), es=rec&&rec.ey!=null?sgn(rec.ey):ss;
+  const ongoing=rec?rec.ey==null:false;
+  const monthOpts=v=>'<option value="">—</option>'+Array.from({length:12},(_,i)=>`<option value="${i+1}"${String(v||'')===String(i+1)?' selected':''}>${i+1}月</option>`).join('');
+  const segHtml=(nm,cur)=>`<div class="seg" role="group" data-seg="${nm}">${signs.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${cur===v}">${l}</button>`).join('')}</div>`;
+  const cid=rec?rec.charId:(preset&&preset.charId)||'';
+  openSheet(`<div class="title">${rec?'在籍期間を編集':'在籍期間を追加'}</div>
+    <div class="fld"><label for="mmChar">キャラ</label><select id="mmChar"><option value="">選んでください</option>${chars.map(c=>`<option value="${c.id}"${c.id===cid?' selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div class="fld"><label for="mmGroup">グループ</label><select id="mmGroup"><option value="">選んでください</option>${groups.map(g=>`<option value="${g.id}"${rec&&rec.groupId===g.id?' selected':''}>${g.parentId?'　':''}${esc(groupLabel(g))}</option>`).join('')}</select></div>
+    <div class="fld"><span class="lbl">開始</span><div class="yrow">${segHtml('s',ss)}<input id="mmY" type="text" inputmode="numeric" value="${rec?Math.abs(rec.y):''}" placeholder="${ad?'例：2018':'0で基準年'}"><span class="yu">年</span></div>
+      <select id="mmM" style="margin-top:6px">${monthOpts(rec&&rec.m)}</select></div>
+    <label class="chkrow"><input type="checkbox" id="mmOn" ${ongoing?'checked':''}><span>今も在籍中（終了なし）</span></label>
+    <div class="fld" id="mmEndBox" ${ongoing?'hidden':''}><span class="lbl">終了</span><div class="yrow">${segHtml('e',es)}<input id="mmEY" type="text" inputmode="numeric" value="${rec&&rec.ey!=null?Math.abs(rec.ey):''}" placeholder="${ad?'例：2021':'0で基準年'}"><span class="yu">年</span></div>
+      <select id="mmEM" style="margin-top:6px">${monthOpts(rec&&rec.em)}</select></div>
+    <div class="row">${rec?'<button type="button" class="dangerbtn" data-a="del">削除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
+    s.querySelectorAll('[data-seg]').forEach(sg=>sg.addEventListener('click',e=>{ const b=e.target.closest('[data-v]'); if(!b) return; const v=Number(b.dataset.v); if(sg.dataset.seg==='s') ss=v; else es=v; sg.querySelectorAll('[data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b)); }));
+    const digits=el=>el.addEventListener('input',()=>{ const v=el.value.replace(/[^0-9]/g,''); if(v!==el.value) el.value=v; });
+    digits(s.querySelector('#mmY')); digits(s.querySelector('#mmEY'));
+    const on=s.querySelector('#mmOn'); on.addEventListener('change',()=>{ s.querySelector('#mmEndBox').hidden=on.checked; });
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    const del=s.querySelector('[data-a=del]');
+    if(del) del.onclick=()=>confirmSheet('この在籍期間を削除しますか？','元に戻せません。','削除',()=>{ dropTmems(x=>x.id===rec.id,Date.now()); commit(); const st=main.scrollTop; render(); main.scrollTop=st; toast('削除しました'); });
+    s.querySelector('[data-a=ok]').onclick=()=>{
+      const c=s.querySelector('#mmChar').value, g=s.querySelector('#mmGroup').value, y=s.querySelector('#mmY').value.trim(), ey=s.querySelector('#mmEY').value.trim();
+      if(!c){ toast('キャラを選んでください'); return; }
+      if(!g){ toast('グループを選んでください'); return; }
+      if(!/^\d+$/.test(y)){ toast('開始の年を数字で入力してください'); return; }
+      const m=Number(s.querySelector('#mmM').value)||null, em=Number(s.querySelector('#mmEM').value)||null;
+      const r={y:ss*Number(y), m, ey:null, em:null};
+      if(!on.checked){
+        if(!/^\d+$/.test(ey)){ toast('終了の年を数字で入力するか、「今も在籍中」にチェックしてください'); return; }
+        r.ey=es*Number(ey); r.em=em;
+        if(ymE(r.ey,r.em)<ymS(r.y,r.m)){ toast('終了は開始より後にしてください'); return; }
+      }
+      const t=Date.now();
+      if(rec){ Object.assign(rec,{charId:c,groupId:g},r,{updatedAt:t}); }
+      else db.tmems.push({id:uid(),timelineId:tl.id,charId:c,groupId:g,...r,createdAt:t,updatedAt:t});
+      commit(); closeSheet(); const st=main.scrollTop; render(); main.scrollTop=st; toast('保存しました');
+    };
+  },'mem');
+}
+
+const FIG_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><circle cx="12" cy="7" r="2" fill="currentColor"/><circle cx="12" cy="15" r="2" fill="currentColor"/><path d="M15 7h5M15 15h5M4 10h4"/></svg>';
+const FIG_PREF='sosaku-tlfig';
+let figPref={on:{},mem:false,born:false};
+try{ const p=JSON.parse(localStorage.getItem(FIG_PREF)||'null'); if(p) figPref={on:p.on||{},mem:!!p.mem,born:!!p.born}; }catch(_){}
+function saveFigPref(){ try{ localStorage.setItem(FIG_PREF,JSON.stringify(figPref)); }catch(_){} }
+function tlFigOn(id){ return !!figPref.on[id]; }
+const figPick={}; // timelineId -> Set of charIds (this session only)
+$('#figBtn').addEventListener('click',()=>{ if(tab!=='world'||wView!=='tl') return; figPref.on[tlId]=!figPref.on[tlId]; saveFigPref(); render(); main.scrollTop=0; });
+
+function renderTlFig(tl){
+  const evs=eventsOf(tl.id), mems=tmemsOf(tl.id);
+  const pick=figPick[tl.id]||(figPick[tl.id]=new Set());
+  // characters that appear anywhere in this timeline
+  const seen=new Set(); evs.forEach(e=>(e.chars||[]).forEach(id=>seen.add(id))); mems.forEach(m=>seen.add(m.charId)); db.chars.forEach(c=>{ if(bornIn(c,tl.id)!==null) seen.add(c.id); });
+  const cands=charsSorted().filter(c=>seen.has(c.id));
+  for(const id of [...pick]) if(!seen.has(id)) pick.delete(id);
+  const who=pick.size?cands.filter(c=>pick.has(c.id)):cands;
+  const bar=`<div class="figbar"><span class="lbl">表示</span>
+      <button type="button" class="ftg" data-fig="mem" aria-pressed="${figPref.mem}"><i></i>所属</button>
+      <button type="button" class="ftg" data-fig="born" aria-pressed="${figPref.born}"><i></i>誕生</button></div>
+    ${cands.length?`<div class="fchips"><button type="button" class="fch" data-fpick="" aria-pressed="${pick.size===0}">全員</button>${cands.map(c=>`<button type="button" class="fch" data-fpick="${c.id}" aria-pressed="${pick.has(c.id)}">${esc(c.name)}</button>`).join('')}</div>`:''}`;
+  // items on the main line
+  const items=[];
+  for(const e of evs){ if(pick.size && !(e.chars||[]).some(id=>pick.has(id))) continue; items.push({k:'e',e,s:ymS(e.year,e.month)+((e.day||1)-1)/31,en:typeof e.endYear==='number'?ymE(e.endYear,e.endMonth)+1:null}); }
+  if(figPref.born) for(const c of who){ const b=bornIn(c,tl.id); if(b!==null){ const bd=parseBirthday(c.birthday); items.push({k:'b',c,s:ymS(b,bd?bd.m:1)}); } }
+  const cols=(pick.size&&figPref.mem)?who:[];
+  const colMems=cols.map(c=>mems.filter(m=>m.charId===c.id));
+  if(!items.length && !colMems.some(a=>a.length)){
+    main.innerHTML=bar+`<div class="empty"><strong>${evs.length?'表示するものがありません':'イベントがありません'}</strong>${evs.length?'キャラの絞り込みを変えてみてください。':'右上の＋から追加できます。'}</div>`;
+    return;
+  }
+  // year range
+  let lo=Infinity, hi=-Infinity; const see=v=>{ if(v<lo) lo=v; if(v>hi) hi=v; };
+  items.forEach(o=>{ see(Math.floor(o.s/12)); if(o.en!=null) see(Math.floor((o.en-1)/12)); });
+  colMems.flat().forEach(m=>{ see(m.y); if(m.ey!=null) see(m.ey); });
+  if(tl.mode!=='ad' && colMems.flat().some(m=>m.ey==null)) see(Math.max(0,hi));
+  const openEnd=hi+1; // "still a member" bands run to the end of the last year shown
+  // label slots per year → variable year heights so titles stay beside their year
+  const cnt={}; items.forEach(o=>{ const y=Math.floor(o.s/12); cnt[y]=(cnt[y]||0)+1; });
+  const LH=36, MIN=22, TOP=10, ys=[]; let acc=TOP;
+  for(let y=lo;y<=hi+1;y++){ ys.push([y,acc]); acc+=y>hi?0:Math.max(MIN,(cnt[y]||0)*LH+6); }
+  const yTop=y=>{ const i=y-lo; return i<0?TOP:i>=ys.length?acc:ys[i][1]; };
+  const pos=v=>{ const y=Math.floor(v/12), f=(v-y*12)/12; return yTop(y)+f*(yTop(y+1)-yTop(y)); };
+  const H=acc+14;
+  const W=Math.max(300,Math.min(main.clientWidth||360,760));
+  const YW=48, CW=30, PL=16, nPer=(()=>{ const lanes=[]; items.filter(o=>o.en!=null).sort((a,b)=>a.s-b.s).forEach(o=>{ let l=0; while(lanes[l]!==undefined&&lanes[l]>o.s) l++; lanes[l]=o.en; o.lane=l; }); return lanes.length; })();
+  const LINE=YW+cols.length*CW+8+Math.max(1,nPer)*8+4;
+  let g='';
+  const every=hi-lo>40?5:1;
+  for(const [y,top] of ys){ if(y>hi) break; const lab=(y%every===0)||cnt[y]||y===0;
+    g+=`<line x1="${YW-4}" x2="${W}" y1="${top}" y2="${top}" stroke="${y===0&&tl.mode!=='ad'?'var(--sub)':'var(--line)'}"/>`;
+    if(lab) g+=`<text x="${YW-8}" y="${top+11}" font-size="9" text-anchor="end" fill="${cnt[y]?'var(--sub)':'var(--faint)'}">${esc(yearLabel(tl,y))}</text>`; }
+  // membership columns
+  cols.forEach((c,k)=>{ const x0=YW+k*CW, list=colMems[k], lanes=[];
+    g+=`<line x1="${x0+CW/2}" x2="${x0+CW/2}" y1="${TOP}" y2="${H-14}" stroke="var(--line)" stroke-dasharray="2 3"/>`;
+    const segs=list.map(m=>({m,s:ymS(m.y,m.m),e:m.ey==null?openEnd*12:ymE(m.ey,m.em)+1})).sort((a,b)=>a.s-b.s);
+    segs.forEach(o=>{ let l=0; while(lanes[l]!==undefined&&lanes[l]>o.s) l++; lanes[l]=o.e; o.l=l; });
+    const lw=(CW-6)/Math.max(1,lanes.length);
+    segs.forEach(o=>{ const x=x0+3+o.l*lw, y1=pos(o.s), y2=Math.max(y1+6,pos(o.e)), col=groupColor(o.m.groupId);
+      g+=`<g class="fhit" data-mem="${o.m.id}"><rect x="${x}" y="${y1}" width="${lw-2}" height="${y2-y1}" rx="3" fill="${col}" opacity=".28"/><rect x="${x}" y="${y1}" width="2.5" height="${y2-y1}" fill="${col}"/>${o.m.ey==null?`<text x="${x+(lw-2)/2}" y="${y2-3}" font-size="9" text-anchor="middle" fill="${col}">↓</text>`:''}</g>`; });
+  });
+  g+=`<line x1="${LINE}" x2="${LINE}" y1="${TOP}" y2="${H-14}" stroke="var(--faint)" stroke-width="1.5"/>`;
+  // marks
+  items.forEach(o=>{ o.y=pos(o.s);
+    if(o.k==='b'){ o.from=LINE; g+=`<g class="fhit" data-born="${o.c.id}"><path d="M${LINE} ${o.y-6} L${LINE+6} ${o.y} L${LINE} ${o.y+6} L${LINE-6} ${o.y} Z" fill="var(--brass)"/><rect x="${LINE-12}" y="${o.y-12}" width="24" height="24" fill="transparent"/></g>`; return; }
+    if(o.en!=null){ const x=LINE-8-(o.lane||0)*8, y2=Math.max(o.y+6,pos(o.en)); o.from=x; g+=`<g class="fhit" data-fev="${o.e.id}"><rect x="${x-3}" y="${o.y}" width="6" height="${y2-o.y}" rx="3" fill="var(--evc)"/><rect x="${x-8}" y="${o.y}" width="16" height="${y2-o.y}" fill="transparent"/></g>`; }
+    else { o.from=LINE; g+=`<g class="fhit" data-fev="${o.e.id}"><circle cx="${LINE}" cy="${o.y}" r="5" fill="var(--evc)" stroke="var(--bg)" stroke-width="2"/><circle cx="${LINE}" cy="${o.y}" r="13" fill="transparent"/></g>`; }
+  });
+  items.sort((a,b)=>a.y-b.y||(a.k==='b'?-1:1)); let last=-99; items.forEach(o=>{ o.ly=Math.max(o.y-6,last+LH); last=o.ly; });
+  const LX=LINE+16; let labs='';
+  items.forEach(o=>{
+    const col=o.k==='b'?'var(--brass)':'var(--evc)';
+    g+=`<path d="M${o.from+5} ${o.y} L${LX-4} ${o.ly+8}" stroke="${col}" stroke-width="1" fill="none" opacity=".5"/>`;
+    if(o.k==='b'){ const b=bornIn(o.c,tl.id); labs+=`<button type="button" class="flab born" data-born="${o.c.id}" style="top:${o.ly}px;left:${LX}px;right:6px"><b>${esc(o.c.name)} 誕生</b><small>${esc(yearLabel(tl,b))}</small></button>`; }
+    else { const e=o.e, d=dateLabel(e); labs+=`<button type="button" class="flab" data-fev="${e.id}" style="top:${o.ly}px;left:${LX}px;right:6px"><b>${esc(e.title)}</b><small>${esc(yearLabel(tl,e.year)+(d?' '+d:'')+(typeof e.endYear==='number'?' 〜 '+endLabel(tl,e):''))}</small></button>`; }
+  });
+  const H2=Math.max(H,last+LH+10);
+  const legend = figPref.mem ? (pick.size ? [...new Set(colMems.flat().map(m=>m.groupId))].map(id=>`<span><i style="background:${groupColor(id)};opacity:.7"></i>${esc(groupLabel(groupById(id)))}</span>`).join('')+(colMems.flat().some(m=>m.ey==null)?'<span>↓ 今も在籍中</span>':'')+(colMems.flat().length?'':'<span>このキャラの在籍期間はまだありません（＋から追加）</span>')
+    : '<span>キャラを選ぶと、在籍期間が左に並びます</span>') : '';
+  const head=cols.length?`<div class="fhead">${cols.map((c,k)=>`<span style="left:${YW+k*CW-4}px;width:${CW+8}px">${esc(c.name.slice(0,3))}</span>`).join('')}</div>`:'';
+  main.innerHTML=bar+(legend?`<div class="flegend">${legend}</div>`:'')+head+`<div class="tlfig" style="height:${H2}px"><svg width="${W}" height="${H2}" viewBox="0 0 ${W} ${H2}" aria-hidden="true">${g}</svg>${labs}</div><div class="hint">タイトルや帯をタップで詳細</div>`;
+}
+function evInfoSheet(ev){
+  const tl=tlById(ev.timelineId), d=dateLabel(ev), cs=(ev.chars||[]).map(charById).filter(Boolean);
+  openSheet(`<div class="title">${esc(ev.title)}</div>
+    <div class="evinfo"><div class="d">${esc(yearLabel(tl,ev.year)+(d?' '+d:'')+(typeof ev.endYear==='number'?' 〜 '+endLabel(tl,ev):''))}</div>
+      ${cs.length?`<div class="ec">${cs.map(c=>{ const ag=evAgeLabel(c,tl.id,ev); return `<span class="ecc">${avatar(c,'sm')}<span>${esc(c.name)}${ag?`<i class="eage">${ag}</i>`:''}</span></span>`; }).join('')}</div>`:''}
+      ${(ev.detail||'').trim()?`<div class="x">${esc(ev.detail.trim())}</div>`:''}</div>
+    <button class="act" data-a="edit">${ICON.edit}編集</button>`, s=>{
+    s.querySelector('[data-a=edit]').onclick=()=>{ closeSheet(); editEvent(ev); };
+  },'evinfo');
+}
+main.addEventListener('click',e=>{
+  if(tab!=='world'||wView!=='tl'||!tlFigOn(tlId)) return;
+  const tl=tlById(tlId); if(!tl) return;
+  const t=e.target;
+  const tg=t.closest('[data-fig]'); if(tg){ figPref[tg.dataset.fig]=!figPref[tg.dataset.fig]; saveFigPref(); const st=main.scrollTop; render(); main.scrollTop=st; return; }
+  const fp=t.closest('[data-fpick]'); if(fp){ const set=figPick[tl.id]||(figPick[tl.id]=new Set()), id=fp.dataset.fpick; if(!id) set.clear(); else set.has(id)?set.delete(id):set.add(id); const sx=main.querySelector('.fchips')?.scrollLeft||0, st=main.scrollTop; render(); main.scrollTop=st; const fc=main.querySelector('.fchips'); if(fc) fc.scrollLeft=sx; return; }
+  const fe=t.closest('[data-fev]'); if(fe){ const ev=db.events.find(x=>x.id===fe.dataset.fev); if(ev) evInfoSheet(ev); return; }
+  const fm=t.closest('[data-mem]'); if(fm){ const m=db.tmems.find(x=>x.id===fm.dataset.mem); if(m) memSheet(tl,m); return; }
+  const fb=t.closest('[data-born]'); if(fb){ const c=charById(fb.dataset.born); if(c) bornSheet(c,tl); return; }
+});
 /* ---------- compare (見比べ) ----------
    One item at a time (a basic field, a custom field label, or a Q&A template question) shown
    for every character side by side, so things like 一人称 or 身長 can be checked for overlap. */
@@ -2215,7 +2443,10 @@ function renderWorld(){
   }
   if(wView==='tl'){
     const tl=tlById(tlId), one=tl.view!=='full';
-    $('#title').textContent=tl.name; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','イベントを追加');
+    $('#title').textContent=tl.name; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','追加');
+    const fig=tlFigOn(tl.id);
+    $('#figBtn').hidden=false; $('#figBtn').innerHTML=fig?ICON.lines+'一覧':FIG_ICON+'図'; $('#figBtn').classList.add('txt');
+    if(fig){ renderTlFig(tl); return; }
     $('#viewBtn').hidden=false;
     $('#viewBtn').innerHTML=(one?ICON.lines+'1行':ICON.full+'全文');
     const evs=eventsOf(tl.id);
@@ -2224,10 +2455,10 @@ function renderWorld(){
     main.innerHTML='<ul class="evs '+(one?'line':'full')+'">'+evs.map(e=>{
       const first=e.year!==prev; prev=e.year;
       const cs=(e.chars||[]).map(charById).filter(Boolean);
-      const d=dateLabel(e);
+      const d=dateLabel(e), per=typeof e.endYear==='number';
       return `<li class="ev wlp${first?' ystart':''}${openEv.has(e.id)?' open':''}" data-eid="${e.id}" tabindex="0">
         <div class="ey">${first?`<b>${yearLabel(tl,e.year)}</b>`:''}${d?`<span>${d}</span>`:''}</div>
-        <div class="eb"><div class="et">${esc(e.title)}</div>${cs.length?`<div class="ec">${cs.map(c=>{ const ag=ageLabel(ageAt(c,tl.id,e.year,e.month,e.day)); return `<span class="ecc">${avatar(c,'sm')}<span>${esc(c.name)}${ag?`<i class="eage">${ag}</i>`:''}</span></span>`; }).join('')}</div>`:''}${(e.detail||'').trim()?`<div class="edt">${esc(e.detail.trim())}</div>`:''}</div>
+        <div class="eb"><div class="et">${esc(e.title)}</div>${per?`<div class="erng">〜 ${esc(endLabel(tl,e))}</div>`:''}${cs.length?`<div class="ec">${cs.map(c=>{ const ag=evAgeLabel(c,tl.id,e); return `<span class="ecc">${avatar(c,'sm')}<span>${esc(c.name)}${ag?`<i class="eage">${ag}</i>`:''}</span></span>`; }).join('')}</div>`:''}${(e.detail||'').trim()?`<div class="edt">${esc(e.detail.trim())}</div>`:''}</div>
       </li>`;
     }).join('')+'</ul><div class="hint">'+(one?'タップで詳細、':'')+'長押しで編集・削除</div>';
     return;
@@ -2302,6 +2533,16 @@ function renderWorld(){
         <div class="fld"><label for="w_month">月（任意）</label><select id="w_month" data-w="month"><option value="">—</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${String(d.month)===String(i+1)?' selected':''}>${i+1}月</option>`).join('')}</select></div>
         <div class="fld"><label for="w_day">日（任意）</label><select id="w_day" data-w="day"><option value="">—</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${String(d.day)===String(i+1)?' selected':''}>${i+1}日</option>`).join('')}</select></div>
       </div>
+      <label class="chkrow"><input type="checkbox" id="w_period" ${d.period?'checked':''}><span>期間にする（終了日を入れる）</span></label>
+      <div class="endbox" id="w_endbox" ${d.period?'':'hidden'}>
+        <div class="fld"><span class="lbl">終了の年</span>
+          <div class="yrow"><div class="seg" role="group">${signs.map(([v,l])=>`<button type="button" data-esign="${v}" aria-pressed="${d.esign===v}">${l}</button>`).join('')}</div>
+          <input id="w_eyear" data-w="eyabs" type="text" inputmode="numeric" pattern="[0-9]*" value="${esc(d.eyabs)}" placeholder="${tl.mode==='ad'?'例：1990':'0で基準年'}"><span class="yu">年</span></div></div>
+        <div class="grid2">
+          <div class="fld"><label for="w_emonth">終了の月（任意）</label><select id="w_emonth" data-w="emonth"><option value="">—</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${String(d.emonth)===String(i+1)?' selected':''}>${i+1}月</option>`).join('')}</select></div>
+          <div class="fld"><label for="w_eday">終了の日（任意）</label><select id="w_eday" data-w="eday"><option value="">—</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${String(d.eday)===String(i+1)?' selected':''}>${i+1}日</option>`).join('')}</select></div>
+        </div>
+      </div>
       <div class="fld"><label for="w_title">タイトル<span class="req">必須</span></label><input id="w_title" data-w="title" type="text" value="${esc(d.title)}"></div>
       <div class="fld"><label for="w_detail">詳細</label><textarea id="w_detail" data-w="detail">${esc(d.detail)}</textarea></div>
       <div class="fld"><span class="lbl">関わったキャラ</span>
@@ -2348,7 +2589,7 @@ function toggleTlView(){
 $('#wAddBtn').addEventListener('click',()=>{
   if(wView==='tls') return newTimelineSheet();
   if(wView==='terms') return termSheet(null);
-  if(wView==='tl'){ evDraft={id:uid(),timelineId:tlId,sign:tlById(tlId).mode==='ad'?1:-1,yabs:'',month:'',day:'',title:'',detail:'',chars:[],createdAt:Date.now()}; wDirty=false; wView='ev'; render(); main.scrollTop=0; return; }
+  if(wView==='tl') return tlAddChooser();
   if(wView==='rchars' && relKind==='group') return groupSheet(null);
   if(wView==='rc'||wView==='rg'){ const kind=wView==='rg'?'group':'char'; relDraft={id:uid(),kind,a:kind==='group'?rgId:rcId,b:'',label:'',ab:'',ba:'',nab:'',nba:'',detail:'',createdAt:Date.now()}; wDirty=false; wView='rel'; render(); main.scrollTop=0; }
 });
@@ -2366,7 +2607,13 @@ $('#wSaveBtn').addEventListener('click',()=>{
     if(!/^\d+$/.test(yabs)){ toast('年を数字で入力してください'); const y=$('#w_year'); if(y) y.focus(); return; }
     if(!d.title.trim()){ toast('タイトルを入力してください'); const x=$('#w_title'); if(x) x.focus(); return; }
     const month=d.month?Number(d.month):null, day=month&&d.day?Number(d.day):null;
-    const rec={id:d.id,timelineId:d.timelineId,year:d.sign*Number(yabs),month,day,title:d.title.trim(),detail:d.detail,chars:d.chars.filter(id=>charById(id)),createdAt:d.createdAt,updatedAt:t};
+    const rec={id:d.id,timelineId:d.timelineId,year:d.sign*Number(yabs),month,day,title:d.title.trim(),detail:d.detail,chars:d.chars.filter(id=>charById(id)),createdAt:d.createdAt,updatedAt:t,endYear:null,endMonth:null,endDay:null};
+    if(d.period){
+      const ey=String(d.eyabs).trim();
+      if(!/^\d+$/.test(ey)){ toast('終了の年を数字で入力してください'); const y=$('#w_eyear'); if(y) y.focus(); return; }
+      rec.endYear=d.esign*Number(ey); rec.endMonth=d.emonth?Number(d.emonth):null; rec.endDay=rec.endMonth&&d.eday?Number(d.eday):null;
+      if(ymdKey(rec.endYear,rec.endMonth||12,rec.endDay||31) < ymdKey(rec.year,rec.month||1,rec.day||1)){ toast('終了は開始より後にしてください'); return; }
+    }
     const ex=db.events.find(e=>e.id===d.id);
     ex?Object.assign(ex,rec):db.events.push(rec);
     commit(); evDraft=null; wDirty=false; wView='tl';
@@ -2424,6 +2671,7 @@ function tlMenu(id){
         const t=Date.now();
         db.timelines=db.timelines.filter(x=>x.id!==id); db.deletedTimelines.push({id,deletedAt:t});
         db.events=db.events.filter(e=>{ if(e.timelineId===id){ db.deletedEvents.push({id:e.id,deletedAt:t}); return false; } return true; });
+        dropTmems(x=>x.timelineId===id,t);
         commit(); render(); toast('削除しました');
       });
     };
@@ -2431,7 +2679,9 @@ function tlMenu(id){
 }
 function editEvent(ev){
   const tl=tlById(ev.timelineId);
-  evDraft={id:ev.id,timelineId:ev.timelineId,sign:ev.year<0?-1:(tl.mode==='ad'?1:(ev.year===0?-1:1)),yabs:String(Math.abs(ev.year)),month:ev.month||'',day:ev.day||'',title:ev.title,detail:ev.detail||'',chars:[...(ev.chars||[])],createdAt:ev.createdAt};
+  const sgn=y=>y<0?-1:(tl.mode==='ad'?1:(y===0?-1:1)), per=typeof ev.endYear==='number';
+  evDraft={id:ev.id,timelineId:ev.timelineId,sign:sgn(ev.year),yabs:String(Math.abs(ev.year)),month:ev.month||'',day:ev.day||'',title:ev.title,detail:ev.detail||'',chars:[...(ev.chars||[])],createdAt:ev.createdAt,
+    period:per,esign:per?sgn(ev.endYear):sgn(ev.year),eyabs:per?String(Math.abs(ev.endYear)):'',emonth:per?(ev.endMonth||''):'',eday:per?(ev.endDay||''):''};
   wDirty=false; wView='ev'; render(); main.scrollTop=0;
 }
 function evMenu(id){
@@ -2508,7 +2758,7 @@ function deleteGroupConfirm(id){
   parts.push('所属していたキャラからも自動的に外れます');
   confirmSheet(`「${groupLabel(g)}」を削除しますか？`, parts.join('。')+'。元に戻せません。','削除',()=>{
     const t=Date.now();
-    db.groups=db.groups.filter(x=>x.id!==id); db.deletedGroups.push({id,deletedAt:t});
+    db.groups=db.groups.filter(x=>x.id!==id); db.deletedGroups.push({id,deletedAt:t}); dropTmems(x=>x.groupId===id,t);
     for(const k of kids){ k.parentId=null; k.updatedAt=t; }
     db.grels=db.grels.filter(r=>{ if(r.a===id||r.b===id){ db.deletedGrels.push({id:r.id,deletedAt:t}); return false; } return true; });
     for(const c of db.chars){ if((c.affilIds||[]).includes(id)){ c.affilIds=c.affilIds.filter(x=>x!==id); c.updatedAt=t; } }
@@ -2589,7 +2839,7 @@ function startEvFromChar(cid){
   const go=id=>{
     const tl=tlById(id); if(!tl) return;
     tab='world'; tlId=id;
-    evDraft={id:uid(),timelineId:id,sign:tl.mode==='ad'?1:-1,yabs:'',month:'',day:'',title:'',detail:'',chars:[cid],createdAt:Date.now()};
+    evDraft=newEvDraft(id,[cid]);
     wDirty=false; wView='ev'; wEditReturn=cid; render(); main.scrollTop=0;
   };
   const ts=tlsSorted();
@@ -2702,7 +2952,7 @@ function ageLabel(a){ return a===null ? '' : a<0 ? '誕生前' : a+'歳'; }
 function evDraftYear(d){ const y=String(d.yabs||'').trim(); return /^\d+$/.test(y) ? d.sign*Number(y) : null; }
 function evChipHtml(c,d){
   const a=ageAt(c,d.timelineId,evDraftYear(d),d.month,d.day), known=bornIn(c,d.timelineId)!==null;
-  return `<button type="button" class="pchip agechip" data-wa="setborn" data-cid="${c.id}">${avatar(c,'md')}${esc(c.name)}<span class="age${known?'':' unset'}">${known?(a===null?'年を入れると年齢表示':ageLabel(a)):'年齢を設定'}</span></button>`;
+  return `<button type="button" class="pchip agechip" data-wa="setborn" data-cid="${c.id}">${avatar(c,'md')}${esc(c.name)}<span class="age${known?'':' unset'}">${known?(a===null?'年を入れると年齢表示':ageLabel(a)):'年齢を設定'}</span>${memHintHtml(c,d.timelineId,evDraftYear(d),d.month)}</button>`;
 }
 function updEvAges(){
   if(!evDraft) return;
@@ -2779,6 +3029,7 @@ main.addEventListener('click',e=>{
     const tr2=t.closest('.tmrow'); if(tr2){ tr2.classList.toggle('open'); const id=tr2.dataset.tmid; tr2.classList.contains('open')?openTm.add(id):openTm.delete(id); const box=$('#tmList'), st=main.scrollTop; if(box){ box.innerHTML=termListHtml(); main.scrollTop=st; } return; }
   }
   const rr=t.closest('.rrow'); if(rr && (wView==='rc'||wView==='rg')){ rr.classList.toggle('open'); rr.classList.contains('open')?openRel.add(rr.dataset.rid):openRel.delete(rr.dataset.rid); return; }
+  const es=t.closest('[data-esign]'); if(es && evDraft){ evDraft.esign=Number(es.dataset.esign); wDirty=true; es.parentElement.querySelectorAll('[data-esign]').forEach(b=>b.setAttribute('aria-pressed',b===es)); return; }
   const sg=t.closest('[data-sign]'); if(sg && evDraft){ evDraft.sign=Number(sg.dataset.sign); wDirty=true; sg.parentElement.querySelectorAll('[data-sign]').forEach(b=>b.setAttribute('aria-pressed',b===sg)); updEvAges(); return; }
   const sb=t.closest('[data-wa="setborn"]'); if(sb && evDraft){ const c=charById(sb.dataset.cid), tl=tlById(evDraft.timelineId); if(c&&tl) bornSheet(c,tl,evDraftYear(evDraft),evDraft.month,evDraft.day); return; }
   const a=t.closest('[data-wa]'); if(!a) return;
@@ -2797,12 +3048,18 @@ main.addEventListener('input',e=>{
   if(tab!=='world') return;
   const t=e.target, k=t.dataset.w; if(!k) return;
   const d = wView==='ev'?evDraft : wView==='rel'?relDraft : null; if(!d) return;
-  if(k==='yabs'){ const v=t.value.replace(/[^0-9]/g,''); if(v!==t.value) t.value=v; d.yabs=v; }
+  if(k==='yabs'||k==='eyabs'){ const v=t.value.replace(/[^0-9]/g,''); if(v!==t.value) t.value=v; d[k]=v; }
   else d[k]=t.value;
   wDirty=true;
   if(wView==='ev' && (k==='yabs'||k==='month'||k==='day')) updEvAges();
 });
 main.addEventListener('submit',e=>{ if(e.target.id==='wForm') e.preventDefault(); });
+main.addEventListener('change',e=>{
+  if(tab!=='world'||!evDraft||e.target.id!=='w_period') return;
+  evDraft.period=e.target.checked; wDirty=true;
+  const box=$('#w_endbox'); if(box) box.hidden=!evDraft.period;
+  if(evDraft.period && !String(evDraft.eyabs).trim()){ evDraft.esign=evDraft.sign; evDraft.eyabs=evDraft.yabs; const st=main.scrollTop; renderWorld(); main.scrollTop=st; const y=$('#w_eyear'); if(y) y.focus(); }
+});
 
 
 /* ---------- wide screens: list in a side pane ---------- */
