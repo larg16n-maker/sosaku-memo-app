@@ -99,8 +99,6 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .endbox{display:flex;flex-direction:column;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
 .erng{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums;margin-top:1px}
 .agechip{height:auto;min-height:28px;flex-wrap:wrap;row-gap:3px;padding-block:3px}
-.mg{margin-left:4px;font-size:10px;line-height:1.5;padding:0 6px;border-radius:8px;background:var(--surface);border:1px solid var(--line);color:var(--ink)}
-.mg.out{border-style:dashed;color:var(--faint);background:transparent}
 .figbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
 .figbar .lbl{font-size:10px;color:var(--faint)}
 .ftg{height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--sub);font-size:11px;display:inline-flex;align-items:center;gap:5px}
@@ -129,6 +127,16 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 :root{--gc1:#8a6fb0;--gc2:#b8835f;--gc3:#c26a78;--gc4:#5f9ea3;--gc5:#9a8a3e;--gc6:#6f8fb8;--evc:#3f6f9e}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--gc1:#b39ad6;--gc2:#d09a74;--gc3:#df8a97;--gc4:#76b6ba;--gc5:#cbb967;--gc6:#86a6cf;--evc:#8ab4dd} }
 :root[data-theme="dark"]{--gc1:#b39ad6;--gc2:#d09a74;--gc3:#df8a97;--gc4:#76b6ba;--gc5:#cbb967;--gc6:#86a6cf;--evc:#8ab4dd}
+/* group colour + membership age */
+.swatches{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);flex:none}
+.sw[aria-pressed="true"],.sw.custom.on{box-shadow:0 0 0 2px var(--ink)}
+.sw.auto{width:auto;border-radius:15px;padding:0 10px;font-size:11px;color:var(--sub);background:var(--surface)}
+.sw.custom{width:auto;display:inline-flex;align-items:center;gap:6px;padding:0 10px 0 4px;border-radius:15px;background:var(--surface);font-size:11px;color:var(--sub);cursor:pointer}
+.sw.custom input{width:22px;height:22px;padding:0;border:0;border-radius:50%;background:none;flex:none}
+.sheet .sw.custom input{width:22px;height:22px;padding:0;border:0}
+.mmage{font-size:12px;color:var(--ink);padding:2px 4px;min-height:1em;font-variant-numeric:tabular-nums}
+.mmage .faint{color:var(--faint);font-size:11px}
 /* compare */
 .cmpentry{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub);text-align:left}
 .cmpentry svg{width:17px;height:17px;flex:none}
@@ -592,12 +600,12 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.19.0';
+const APP_VERSION='0.20.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-09-29';
+const APP_DATE='2026-09-30';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
@@ -833,7 +841,7 @@ function buildStoryBible(){
         if((e.detail||'').trim()) L.push('  '+e.detail.trim().replace(/\n/g,'\n  '));
       }
       const ms=tmemsOf(tl.id);
-      if(ms.length){ L.push('在籍期間:'); for(const m of ms){ const c=charById(m.charId), g=groupById(m.groupId); L.push(`- ${c.name}｜${groupLabel(g)}：${memRangeText(tl,m)}`); } }
+      if(ms.length){ L.push('在籍期間:'); for(const m of ms){ const c=charById(m.charId); L.push(`- ${c.name}｜${memName(m)}：${memRangeText(tl,m)}`); } }
       L.push('');
     }
   }
@@ -1811,19 +1819,18 @@ function evAgeLabel(c,tlid,e){
 }
 function newEvDraft(tlid,chars){ const tl=tlById(tlid), s=tl&&tl.mode==='ad'?1:-1; return {id:uid(),timelineId:tlid,sign:s,yabs:'',month:'',day:'',title:'',detail:'',chars:chars||[],createdAt:Date.now(),period:false,esign:s,eyabs:'',emonth:'',eday:''}; }
 function dropTmems(pred,t){ db.tmems=db.tmems.filter(x=>{ if(pred(x)){ db.deletedTmems.push({id:x.id,deletedAt:t}); return false; } return true; }); }
-function tmemsOf(tlid){ return db.tmems.filter(x=>x.timelineId===tlid && charById(x.charId) && groupById(x.groupId)).sort((a,b)=>ymS(a.y,a.m)-ymS(b.y,b.m)); }
+// A membership points at a real group (groupId) or, for things that aren't worth a group
+// ("◯◯の家に住んでいた"), just carries a free label and is drawn in a fixed grey.
+function memOk(x){ return x.groupId ? !!groupById(x.groupId) : !!(x.label||'').trim(); }
+function memName(m){ return m.groupId ? groupLabel(groupById(m.groupId)) : (m.label||'').trim(); }
+function memKey(m){ return m.groupId ? m.groupId : 'L:'+(m.label||'').trim(); }
+const MEM_GREY='#9b9c9f';
+function memColor(m){ return m.groupId ? groupColor(m.groupId) : MEM_GREY; }
+function tmemsOf(tlid){ return db.tmems.filter(x=>x.timelineId===tlid && charById(x.charId) && memOk(x)).sort((a,b)=>ymS(a.y,a.m)-ymS(b.y,b.m)); }
+function memLabelsUsed(){ return [...new Set(db.tmems.filter(x=>!x.groupId).map(x=>(x.label||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ja')); }
 function memRangeText(tl,m){ const f=(y,mm)=>yearLabel(tl,y)+(mm?` ${mm}月`:''); return `${f(m.y,m.m)} 〜 ${m.ey==null?'現在も在籍':f(m.ey,m.em)}`; }
-function groupColor(gid){ const i=groupsTreeSorted().findIndex(g=>g.id===gid); return `var(--gc${(i<0?0:i)%6+1})`; }
-// Groups the character belonged to at an event (solid) or had already left (dashed).
-function memHintHtml(c,tlid,year,month){
-  if(typeof year!=='number') return '';
-  const evS=month?ymS(year,month):ymS(year,1), evE=month?ymS(year,month):ymE(year,12);
-  const ms=db.tmems.filter(x=>x.timelineId===tlid&&x.charId===c.id&&groupById(x.groupId)); if(!ms.length) return '';
-  const inG=new Set(), past=new Set();
-  for(const x of ms){ const s=ymS(x.y,x.m), e=x.ey==null?Infinity:ymE(x.ey,x.em); if(s<=evE && e>=evS) inG.add(x.groupId); else if(e<evS) past.add(x.groupId); }
-  for(const g of inG) past.delete(g);
-  return [...inG].map(g=>`<span class="mg">${esc(groupById(g).name)}</span>`).join('')+[...past].map(g=>`<span class="mg out">${esc(groupById(g).name)}（脱退後）</span>`).join('');
-}
+function groupColor(gid){ const g=groupById(gid); if(g&&/^#[0-9a-f]{6}$/i.test(g.color||'')) return g.color; const i=groupsTreeSorted().findIndex(x=>x.id===gid); return `var(--gc${(i<0?0:i)%6+1})`; }
+const GROUP_SWATCHES=['#8a6fb0','#6f8fb8','#5f9ea3','#4f8a5b','#9a8a3e','#d08a3c','#b8835f','#c26a78'];
 function tlAddChooser(){
   const tl=tlById(tlId); if(!tl) return;
   openSheet(`<div class="title">${esc(tl.name)}に追加</div>
@@ -1836,7 +1843,6 @@ function tlAddChooser(){
 function memSheet(tl,rec,preset){
   const chars=charsSorted(), groups=groupsTreeSorted();
   if(!chars.length){ toast('先にキャラクターを登録してください'); return; }
-  if(!groups.length){ toast('先にグループを作ってください（世界観 › 関係性 › グループ）'); return; }
   const ad=tl.mode==='ad', signs=ad?[[1,'西暦'],[-1,'紀元前']]:[[-1,'前'],[1,'後']];
   const sgn=y=>y<0?-1:(ad?1:(y===0?-1:1));
   let ss=rec?sgn(rec.y):(ad?1:-1), es=rec&&rec.ey!=null?sgn(rec.ey):ss;
@@ -1844,19 +1850,40 @@ function memSheet(tl,rec,preset){
   const monthOpts=v=>'<option value="">—</option>'+Array.from({length:12},(_,i)=>`<option value="${i+1}"${String(v||'')===String(i+1)?' selected':''}>${i+1}月</option>`).join('');
   const segHtml=(nm,cur)=>`<div class="seg" role="group" data-seg="${nm}">${signs.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${cur===v}">${l}</button>`).join('')}</div>`;
   const cid=rec?rec.charId:(preset&&preset.charId)||'';
+  const isLabel=!!(rec && !rec.groupId);
   openSheet(`<div class="title">${rec?'在籍期間を編集':'在籍期間を追加'}</div>
     <div class="fld"><label for="mmChar">キャラ</label><select id="mmChar"><option value="">選んでください</option>${chars.map(c=>`<option value="${c.id}"${c.id===cid?' selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
-    <div class="fld"><label for="mmGroup">グループ</label><select id="mmGroup"><option value="">選んでください</option>${groups.map(g=>`<option value="${g.id}"${rec&&rec.groupId===g.id?' selected':''}>${g.parentId?'　':''}${esc(groupLabel(g))}</option>`).join('')}</select></div>
+    <div class="fld"><label for="mmGroup">グループ</label><select id="mmGroup"><option value="">選んでください</option>${groups.map(g=>`<option value="${g.id}"${rec&&rec.groupId===g.id?' selected':''}>${g.parentId?'　':''}${esc(groupLabel(g))}</option>`).join('')}<option value="__label"${isLabel?' selected':''}>グループ以外（名前を入力）</option></select>
+      <div id="mmLabelBox" ${isLabel?'':'hidden'} style="margin-top:6px"><input id="mmLabel" type="text" list="mmLabels" maxlength="40" placeholder="例：◯◯の家に住む" value="${esc(isLabel?rec.label:'')}" autocomplete="off"><datalist id="mmLabels">${memLabelsUsed().map(l=>`<option value="${esc(l)}"></option>`).join('')}</datalist>
+      <div class="small" style="padding:4px 2px 0">グループ一覧には出ず、この在籍期間だけで使う名前です。図では灰色で表示します。</div></div></div>
     <div class="fld"><span class="lbl">開始</span><div class="yrow">${segHtml('s',ss)}<input id="mmY" type="text" inputmode="numeric" value="${rec?Math.abs(rec.y):''}" placeholder="${ad?'例：2018':'0で基準年'}"><span class="yu">年</span></div>
       <select id="mmM" style="margin-top:6px">${monthOpts(rec&&rec.m)}</select></div>
     <label class="chkrow"><input type="checkbox" id="mmOn" ${ongoing?'checked':''}><span>今も在籍中（終了なし）</span></label>
     <div class="fld" id="mmEndBox" ${ongoing?'hidden':''}><span class="lbl">終了</span><div class="yrow">${segHtml('e',es)}<input id="mmEY" type="text" inputmode="numeric" value="${rec&&rec.ey!=null?Math.abs(rec.ey):''}" placeholder="${ad?'例：2021':'0で基準年'}"><span class="yu">年</span></div>
       <select id="mmEM" style="margin-top:6px">${monthOpts(rec&&rec.em)}</select></div>
+    <div class="mmage" id="mmAge"></div>
     <div class="row">${rec?'<button type="button" class="dangerbtn" data-a="del">削除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
     s.querySelectorAll('[data-seg]').forEach(sg=>sg.addEventListener('click',e=>{ const b=e.target.closest('[data-v]'); if(!b) return; const v=Number(b.dataset.v); if(sg.dataset.seg==='s') ss=v; else es=v; sg.querySelectorAll('[data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b)); }));
     const digits=el=>el.addEventListener('input',()=>{ const v=el.value.replace(/[^0-9]/g,''); if(v!==el.value) el.value=v; });
     digits(s.querySelector('#mmY')); digits(s.querySelector('#mmEY'));
-    const on=s.querySelector('#mmOn'); on.addEventListener('change',()=>{ s.querySelector('#mmEndBox').hidden=on.checked; });
+    const on=s.querySelector('#mmOn'), gSel=s.querySelector('#mmGroup'), lBox=s.querySelector('#mmLabelBox');
+    // Age at the start / end, once the character and the start year are in.
+    const ageBox=s.querySelector('#mmAge');
+    const updAge=()=>{
+      const c=charById(s.querySelector('#mmChar').value), y=s.querySelector('#mmY').value.trim(), ey=s.querySelector('#mmEY').value.trim();
+      if(!c||!/^\d+$/.test(y)){ ageBox.innerHTML=''; return; }
+      if(bornIn(c,tl.id)===null){ ageBox.innerHTML=`<span class="faint">${esc(c.name)}の誕生年がこの時系列で未設定なので、年齢は出せません（イベント入力画面でキャラをタップすると設定できます）</span>`; return; }
+      const m=Number(s.querySelector('#mmM').value)||null, a=ageAt(c,tl.id,ss*Number(y),m);
+      let t=`開始時 <b>${ageLabel(a)}</b>`;
+      if(on.checked) t+='（今も在籍中）';
+      else if(/^\d+$/.test(ey)){ const b=ageAt(c,tl.id,es*Number(ey),Number(s.querySelector('#mmEM').value)||null); t+=` → 終了時 <b>${ageLabel(b)}</b>`; }
+      ageBox.innerHTML=t;
+    };
+    ['#mmChar','#mmY','#mmM','#mmEY','#mmEM'].forEach(q=>{ const el=s.querySelector(q); el.addEventListener('input',updAge); el.addEventListener('change',updAge); });
+    s.querySelectorAll('[data-seg]').forEach(sg=>sg.addEventListener('click',()=>setTimeout(updAge)));
+    on.addEventListener('change',()=>{ s.querySelector('#mmEndBox').hidden=on.checked; updAge(); });
+    gSel.addEventListener('change',()=>{ lBox.hidden=gSel.value!=='__label'; if(!lBox.hidden) s.querySelector('#mmLabel').focus(); });
+    updAge();
     s.querySelector('[data-a=cancel]').onclick=closeSheet;
     const del=s.querySelector('[data-a=del]');
     if(del) del.onclick=()=>confirmSheet('この在籍期間を削除しますか？','元に戻せません。','削除',()=>{ dropTmems(x=>x.id===rec.id,Date.now()); commit(); const st=main.scrollTop; render(); main.scrollTop=st; toast('削除しました'); });
@@ -1864,6 +1891,8 @@ function memSheet(tl,rec,preset){
       const c=s.querySelector('#mmChar').value, g=s.querySelector('#mmGroup').value, y=s.querySelector('#mmY').value.trim(), ey=s.querySelector('#mmEY').value.trim();
       if(!c){ toast('キャラを選んでください'); return; }
       if(!g){ toast('グループを選んでください'); return; }
+      const label=g==='__label'?s.querySelector('#mmLabel').value.trim():'';
+      if(g==='__label' && !label){ toast('名前を入力してください'); s.querySelector('#mmLabel').focus(); return; }
       if(!/^\d+$/.test(y)){ toast('開始の年を数字で入力してください'); return; }
       const m=Number(s.querySelector('#mmM').value)||null, em=Number(s.querySelector('#mmEM').value)||null;
       const r={y:ss*Number(y), m, ey:null, em:null};
@@ -1873,8 +1902,9 @@ function memSheet(tl,rec,preset){
         if(ymE(r.ey,r.em)<ymS(r.y,r.m)){ toast('終了は開始より後にしてください'); return; }
       }
       const t=Date.now();
-      if(rec){ Object.assign(rec,{charId:c,groupId:g},r,{updatedAt:t}); }
-      else db.tmems.push({id:uid(),timelineId:tl.id,charId:c,groupId:g,...r,createdAt:t,updatedAt:t});
+      const who={charId:c,groupId:g==='__label'?null:g,label:g==='__label'?label:''};
+      if(rec){ Object.assign(rec,who,r,{updatedAt:t}); }
+      else db.tmems.push({id:uid(),timelineId:tl.id,...who,...r,createdAt:t,updatedAt:t});
       commit(); closeSheet(); const st=main.scrollTop; render(); main.scrollTop=st; toast('保存しました');
     };
   },'mem');
@@ -1938,7 +1968,7 @@ function renderTlFig(tl){
     const segs=list.map(m=>({m,s:ymS(m.y,m.m),e:m.ey==null?openEnd*12:ymE(m.ey,m.em)+1})).sort((a,b)=>a.s-b.s);
     segs.forEach(o=>{ let l=0; while(lanes[l]!==undefined&&lanes[l]>o.s) l++; lanes[l]=o.e; o.l=l; });
     const lw=(CW-6)/Math.max(1,lanes.length);
-    segs.forEach(o=>{ const x=x0+3+o.l*lw, y1=pos(o.s), y2=Math.max(y1+6,pos(o.e)), col=groupColor(o.m.groupId);
+    segs.forEach(o=>{ const x=x0+3+o.l*lw, y1=pos(o.s), y2=Math.max(y1+6,pos(o.e)), col=memColor(o.m);
       g+=`<g class="fhit" data-mem="${o.m.id}"><rect x="${x}" y="${y1}" width="${lw-2}" height="${y2-y1}" rx="3" fill="${col}" opacity=".28"/><rect x="${x}" y="${y1}" width="2.5" height="${y2-y1}" fill="${col}"/>${o.m.ey==null?`<text x="${x+(lw-2)/2}" y="${y2-3}" font-size="9" text-anchor="middle" fill="${col}">↓</text>`:''}</g>`; });
   });
   g+=`<line x1="${LINE}" x2="${LINE}" y1="${TOP}" y2="${H-14}" stroke="var(--faint)" stroke-width="1.5"/>`;
@@ -1957,7 +1987,7 @@ function renderTlFig(tl){
     else { const e=o.e, d=dateLabel(e); labs+=`<button type="button" class="flab" data-fev="${e.id}" style="top:${o.ly}px;left:${LX}px;right:6px"><b>${esc(e.title)}</b><small>${esc(yearLabel(tl,e.year)+(d?' '+d:'')+(typeof e.endYear==='number'?' 〜 '+endLabel(tl,e):''))}</small></button>`; }
   });
   const H2=Math.max(H,last+LH+10);
-  const legend = figPref.mem ? (pick.size ? [...new Set(colMems.flat().map(m=>m.groupId))].map(id=>`<span><i style="background:${groupColor(id)};opacity:.7"></i>${esc(groupLabel(groupById(id)))}</span>`).join('')+(colMems.flat().some(m=>m.ey==null)?'<span>↓ 今も在籍中</span>':'')+(colMems.flat().length?'':'<span>このキャラの在籍期間はまだありません（＋から追加）</span>')
+  const legend = figPref.mem ? (pick.size ? [...new Map(colMems.flat().map(m=>[memKey(m),m])).values()].map(m=>`<span><i style="background:${memColor(m)};opacity:.7"></i>${esc(memName(m))}</span>`).join('')+(colMems.flat().some(m=>m.ey==null)?'<span>↓ 今も在籍中</span>':'')+(colMems.flat().length?'':'<span>このキャラの在籍期間はまだありません（＋から追加）</span>')
     : '<span>キャラを選ぶと、在籍期間が左に並びます</span>') : '';
   const head=cols.length?`<div class="fhead">${cols.map((c,k)=>`<span style="left:${YW+k*CW-4}px;width:${CW+8}px">${esc(c.name.slice(0,3))}</span>`).join('')}</div>`:'';
   main.innerHTML=bar+(legend?`<div class="flegend">${legend}</div>`:'')+head+`<div class="tlfig" style="height:${H2}px"><svg width="${W}" height="${H2}" viewBox="0 0 ${W} ${H2}" aria-hidden="true">${g}</svg>${labs}</div><div class="hint">タイトルや帯をタップで詳細</div>`;
@@ -2099,6 +2129,7 @@ function rpTargets(){
   for(const t of db.terms){ plain('terms','単語帳',t,'word','単語'); plain('terms','単語帳',t,'yomi',`${t.word} › 読み`); plain('terms','単語帳',t,'desc',`${t.word} › 説明`); }
   for(const g of db.groups){ plain('groups','グループ',g,'name','グループ名'); plain('groups','グループ',g,'desc',`${g.name} › 説明`); }
   for(const f of db.folders) plain('folders','フォルダ',f,'name','フォルダ名');
+  for(const m of db.tmems) if(!m.groupId){ const tl=tlById(m.timelineId), c=charById(m.charId); plain('tmems','時系列',m,'label',`${tl?tl.name:'時系列'} › ${c?c.name:'?'}の在籍期間`); }
   return T;
 }
 const RP_AREAS=['メモ','キャラ','関係性','時系列','単語帳','グループ','フォルダ'];
@@ -2725,16 +2756,26 @@ function groupSheet(g){
       <select id="gParent"><option value="">なし（独立したグループ）</option>${parentOpts.map(p=>`<option value="${p.id}"${g&&g.parentId===p.id?' selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
       <div class="small" style="padding:2px 6px 0">支部・課のように、既存のグループの下に紐づけられます（1階層まで）。</div>`
       : `<div class="small" style="padding:8px 6px 0">このグループには支部があるため、他のグループの支部にはできません。</div>`}
-    <textarea id="gDesc" placeholder="説明（任意）" style="min-height:22vh;margin-top:10px">${g?esc(g.desc||''):''}</textarea>
+    <div class="fld" style="margin-top:10px"><span class="lbl">色（時系列の図の帯）</span>
+      <div class="swatches" id="gSw"><button type="button" class="sw auto" data-sw="" aria-label="自動" aria-pressed="${!(g&&g.color)}">自動</button>${GROUP_SWATCHES.map(c=>`<button type="button" class="sw" data-sw="${c}" style="background:${c}" aria-label="${c}" aria-pressed="${g&&g.color===c}"></button>`).join('')}
+        <label class="sw custom" aria-label="好きな色を選ぶ"><input type="color" id="gColor" value="${g&&g.color?g.color:'#8a6fb0'}"><span>他の色</span></label></div>
+      <div class="small" style="padding:4px 2px 0" id="gColTxt">${g&&g.color?'選択中：'+g.color:'自動で色が付きます'}</div></div>
+    <textarea id="gDesc" placeholder="説明（任意）" style="min-height:18vh;margin-top:10px">${g?esc(g.desc||''):''}</textarea>
     <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">${g?'保存':'作成'}</button></div>
     ${g?`<button class="act danger" data-a="del" style="margin-top:6px">${ICON.trash}グループを削除</button>`:''}`, s=>{
     const inp=s.querySelector('#gName'), ta=s.querySelector('#gDesc'), ok=s.querySelector('[data-a=ok]'), pEl=s.querySelector('#gParent');
+    let color=g&&g.color||'';
+    const swBox=s.querySelector('#gSw'), colTxt=s.querySelector('#gColTxt'), picker=s.querySelector('#gColor');
+    const setCol=c=>{ color=c; swBox.querySelectorAll('[data-sw]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sw===c)); swBox.querySelector('.custom').classList.toggle('on',!!c&&!GROUP_SWATCHES.includes(c)); colTxt.textContent=c?'選択中：'+c:'自動で色が付きます'; };
+    swBox.addEventListener('click',e=>{ const b=e.target.closest('[data-sw]'); if(b) setCol(b.dataset.sw); });
+    picker.addEventListener('input',()=>setCol(picker.value.toLowerCase()));
+    setCol(color);
     const upd=()=>ok.disabled=!inp.value.trim(); upd(); inp.addEventListener('input',upd);
     s.querySelector('[data-a=cancel]').onclick=closeSheet;
     ok.onclick=()=>{ const name=inp.value.trim(); if(!name) return; const t=Date.now();
       const parentId=pEl?(pEl.value||null):null;
-      if(g){ g.name=name; g.desc=ta.value; g.parentId=parentId; g.updatedAt=t; }
-      else{ const id=uid(), order=db.groups.reduce((m,x)=>Math.max(m,x.order??0),-1)+1; db.groups.push({id,name,desc:ta.value,parentId,order,createdAt:t,updatedAt:t}); rgId=id; relKind='group'; wView='rg'; }
+      if(g){ g.name=name; g.desc=ta.value; g.parentId=parentId; g.color=color||null; g.updatedAt=t; }
+      else{ const id=uid(), order=db.groups.reduce((m,x)=>Math.max(m,x.order??0),-1)+1; db.groups.push({id,name,desc:ta.value,parentId,color:color||null,order,createdAt:t,updatedAt:t}); rgId=id; relKind='group'; wView='rg'; }
       commit(); closeSheet(); render(); };
     const del=s.querySelector('[data-a=del]');
     if(del) del.onclick=()=>deleteGroupConfirm(g.id);
@@ -2952,7 +2993,7 @@ function ageLabel(a){ return a===null ? '' : a<0 ? '誕生前' : a+'歳'; }
 function evDraftYear(d){ const y=String(d.yabs||'').trim(); return /^\d+$/.test(y) ? d.sign*Number(y) : null; }
 function evChipHtml(c,d){
   const a=ageAt(c,d.timelineId,evDraftYear(d),d.month,d.day), known=bornIn(c,d.timelineId)!==null;
-  return `<button type="button" class="pchip agechip" data-wa="setborn" data-cid="${c.id}">${avatar(c,'md')}${esc(c.name)}<span class="age${known?'':' unset'}">${known?(a===null?'年を入れると年齢表示':ageLabel(a)):'年齢を設定'}</span>${memHintHtml(c,d.timelineId,evDraftYear(d),d.month)}</button>`;
+  return `<button type="button" class="pchip agechip" data-wa="setborn" data-cid="${c.id}">${avatar(c,'md')}${esc(c.name)}<span class="age${known?'':' unset'}">${known?(a===null?'年を入れると年齢表示':ageLabel(a)):'年齢を設定'}</span></button>`;
 }
 function updEvAges(){
   if(!evDraft) return;
