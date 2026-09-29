@@ -127,6 +127,18 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 :root{--gc1:#8a6fb0;--gc2:#b8835f;--gc3:#c26a78;--gc4:#5f9ea3;--gc5:#9a8a3e;--gc6:#6f8fb8;--evc:#3f6f9e}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--gc1:#b39ad6;--gc2:#d09a74;--gc3:#df8a97;--gc4:#76b6ba;--gc5:#cbb967;--gc6:#86a6cf;--evc:#8ab4dd} }
 :root[data-theme="dark"]{--gc1:#b39ad6;--gc2:#d09a74;--gc3:#df8a97;--gc4:#76b6ba;--gc5:#cbb967;--gc6:#86a6cf;--evc:#8ab4dd}
+/* timeline age bubble + birthday selects */
+.ybtn{position:absolute;left:0;height:16px;padding:0 6px 0 0;border-radius:8px;font-size:9px;color:var(--sub);text-align:right;text-decoration:underline dotted;text-underline-offset:2px;white-space:nowrap;overflow:hidden}
+.ybtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);text-decoration:none;font-weight:700;padding-right:6px}
+.agebub{position:absolute;z-index:4;min-width:92px;max-width:160px;background:var(--surface);border:1px solid var(--line);border-radius:7px;box-shadow:0 4px 12px rgba(0,0,0,.14);padding:4px 7px 5px;font-size:10px;line-height:1.4}
+.agebub::before{content:"";position:absolute;left:-6px;top:7px;width:10px;height:10px;background:var(--surface);border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+.agebub .brow{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
+.agebub .bn{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.agebub .ba{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+.agebub .ba i{font-style:normal;color:var(--faint);font-size:8.5px;font-weight:400;margin-left:3px}
+.agebub .bu{color:var(--faint);font-size:9px;white-space:normal;margin-top:2px}
+.bdsel{display:flex;gap:6px}
+.bdsel select{flex:1;min-width:0}
 /* group colour + membership age */
 .swatches{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);flex:none}
@@ -600,7 +612,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.20.0';
+const APP_VERSION='0.21.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -663,9 +675,31 @@ function migrateAffiliations(){
     c.updatedAt=Date.now();
     changed=true;
   }
-  if(changed) commit();
+  if(changed){ touch(); save(); }
 }
 migrateAffiliations();
+/* 誕生日 is now a fixed "MM/DD" (the year lives on each timeline). Old free-text values are
+   converted once; anything that can't be read as a date, or that carried extra words, is kept
+   in a 「誕生日メモ」 custom field so nothing typed earlier is lost. */
+const BD_RE=/^\d{2}\/(\d{2}|--)$/;
+function fmtBirthday(m,d){ return m ? String(m).padStart(2,'0')+'/'+(d?String(d).padStart(2,'0'):'--') : ''; }
+function migrateBirthdays(){
+  let changed=false;
+  for(const c of db.chars){
+    const raw=(c.birthday||'').trim(); if(!raw || BD_RE.test(raw)) continue;
+    const m=String(raw).match(/(\d{1,2})\s*(?:月|[\/／.\-])\s*(\d{1,2})?/);
+    const mm=m?+m[1]:0, dd=m&&m[2]?+m[2]:0;
+    const ok=mm>=1&&mm<=12&&(!dd||(dd>=1&&dd<=31));
+    const leftover=raw.replace(/[\d\s月日\/／.\-生まれ]/g,'');
+    if(!ok || leftover){ c.custom=c.custom||[]; c.custom.push({id:uid(),label:'誕生日メモ',value:raw}); }
+    c.birthday = ok ? fmtBirthday(mm,dd) : '';
+    c.updatedAt=Date.now(); changed=true;
+  }
+  // Runs during start-up, before the sync machinery exists: just save; the start-up sync
+  // (or the next edit) carries the change to GitHub.
+  if(changed){ touch(); save(); }
+}
+migrateBirthdays();
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){toast('保存できませんでした');} }
 function touch(){ db.meta.updatedAt=Date.now(); }
 function commit(){ touch(); save(); scheduleSync(); }
@@ -1475,7 +1509,7 @@ function renderChara(){
       <input type="file" id="iconFile" accept="image/*" hidden></div>
     ${inp('name','キャラ名','',true)}
     ${inp('alias','別名','あだ名・本名など')}
-    <div class="grid2">${inp('age','年齢')}${inp('birthday','誕生日')}</div>
+    <div class="grid2">${inp('age','年齢')}<div class="fld"><span class="lbl">誕生日</span>${bdSelects(d.birthday,'cf_bd')}</div></div>
     <div class="grid2">${inp('gender','性別')}${inp('bloodType','血液型')}</div>
     <div class="grid2">${inp('height','身長')}${inp('firstPerson','一人称')}</div>
     ${inp('secondPerson','二人称','例：君、あなた')}
@@ -1542,7 +1576,8 @@ $('#charSaveBtn').addEventListener('click',()=>{
 main.addEventListener('input',e=>{
   if(!inCharDraft()) return;
   const t=e.target;
-  if(t.dataset.k){ charDraft[t.dataset.k]=t.value; charDirty=true; if(t.classList.contains('song')) autoGrow(t); scheduleCharAutosave(); }
+  if(t.dataset.bd){ const box=t.closest('.bdsel'); charDraft.birthday=bdRead(box); charDirty=true; scheduleCharAutosave(); }
+  else if(t.dataset.k){ charDraft[t.dataset.k]=t.value; charDirty=true; if(t.classList.contains('song')) autoGrow(t); scheduleCharAutosave(); }
   else if(t.dataset.cf){
     const row=t.closest('.cf-row'); const f=charDraft.custom.find(x=>x.id===row.dataset.fid);
     if(f){ f[t.dataset.cf]=t.value; charDirty=true; scheduleCharAutosave(); }
@@ -1917,7 +1952,8 @@ try{ const p=JSON.parse(localStorage.getItem(FIG_PREF)||'null'); if(p) figPref={
 function saveFigPref(){ try{ localStorage.setItem(FIG_PREF,JSON.stringify(figPref)); }catch(_){} }
 function tlFigOn(id){ return !!figPref.on[id]; }
 const figPick={}; // timelineId -> Set of charIds (this session only)
-$('#figBtn').addEventListener('click',()=>{ if(tab!=='world'||wView!=='tl') return; figPref.on[tlId]=!figPref.on[tlId]; saveFigPref(); render(); main.scrollTop=0; });
+let figAgeY=null; // year whose age bubble is open
+$('#figBtn').addEventListener('click',()=>{ if(tab!=='world'||wView!=='tl') return; figAgeY=null; figPref.on[tlId]=!figPref.on[tlId]; saveFigPref(); render(); main.scrollTop=0; });
 
 function renderTlFig(tl){
   const evs=eventsOf(tl.id), mems=tmemsOf(tl.id);
@@ -1958,10 +1994,12 @@ function renderTlFig(tl){
   const YW=48, CW=30, PL=16, nPer=(()=>{ const lanes=[]; items.filter(o=>o.en!=null).sort((a,b)=>a.s-b.s).forEach(o=>{ let l=0; while(lanes[l]!==undefined&&lanes[l]>o.s) l++; lanes[l]=o.en; o.lane=l; }); return lanes.length; })();
   const LINE=YW+cols.length*CW+8+Math.max(1,nPer)*8+4;
   let g='';
-  const every=hi-lo>40?5:1;
+  const every=hi-lo>40?5:1; let yBtns='';
+  if(figAgeY!==null && (figAgeY<lo||figAgeY>hi)) figAgeY=null;
   for(const [y,top] of ys){ if(y>hi) break; const lab=(y%every===0)||cnt[y]||y===0;
     g+=`<line x1="${YW-4}" x2="${W}" y1="${top}" y2="${top}" stroke="${y===0&&tl.mode!=='ad'?'var(--sub)':'var(--line)'}"/>`;
-    if(lab) g+=`<text x="${YW-8}" y="${top+11}" font-size="9" text-anchor="end" fill="${cnt[y]?'var(--sub)':'var(--faint)'}">${esc(yearLabel(tl,y))}</text>`; }
+    if(y===figAgeY) g+=`<rect x="0" y="${top}" width="${W}" height="${yTop(y+1)-top}" fill="var(--press)"/>`;
+    if(lab) yBtns+=`<button type="button" class="ybtn" data-agey="${y}" style="top:${top+1}px;width:${YW-2}px" aria-pressed="${y===figAgeY}" aria-label="${esc(yearLabel(tl,y))}の年齢を見る">${esc(yearLabel(tl,y))}</button>`; }
   // membership columns
   cols.forEach((c,k)=>{ const x0=YW+k*CW, list=colMems[k], lanes=[];
     g+=`<line x1="${x0+CW/2}" x2="${x0+CW/2}" y1="${TOP}" y2="${H-14}" stroke="var(--line)" stroke-dasharray="2 3"/>`;
@@ -1990,7 +2028,16 @@ function renderTlFig(tl){
   const legend = figPref.mem ? (pick.size ? [...new Map(colMems.flat().map(m=>[memKey(m),m])).values()].map(m=>`<span><i style="background:${memColor(m)};opacity:.7"></i>${esc(memName(m))}</span>`).join('')+(colMems.flat().some(m=>m.ey==null)?'<span>↓ 今も在籍中</span>':'')+(colMems.flat().length?'':'<span>このキャラの在籍期間はまだありません（＋から追加）</span>')
     : '<span>キャラを選ぶと、在籍期間が左に並びます</span>') : '';
   const head=cols.length?`<div class="fhead">${cols.map((c,k)=>`<span style="left:${YW+k*CW-4}px;width:${CW+8}px">${esc(c.name.slice(0,3))}</span>`).join('')}</div>`:'';
-  main.innerHTML=bar+(legend?`<div class="flegend">${legend}</div>`:'')+head+`<div class="tlfig" style="height:${H2}px"><svg width="${W}" height="${H2}" viewBox="0 0 ${W} ${H2}" aria-hidden="true">${g}</svg>${labs}</div><div class="hint">タイトルや帯をタップで詳細</div>`;
+  // age bubble for the tapped year
+  let bub='';
+  if(figAgeY!==null){
+    const list=pick.size?who:who.filter(c=>bornIn(c,tl.id)!==null);
+    const rows=list.filter(c=>bornIn(c,tl.id)!==null).map(c=>{ const a=figAgeY-bornIn(c,tl.id), bd=parseBirthday(c.birthday);
+      return `<div class="brow"><span class="bn">${esc(c.name)}</span><span class="ba">${a<0?'誕生前':a+'歳'}${a>=0&&bd?`<i>${bd.m}/${bd.d||'?'}〜</i>`:''}</span></div>`; }).join('');
+    const unset=pick.size?list.filter(c=>bornIn(c,tl.id)===null):[];
+    bub=`<div class="agebub" style="top:${yTop(figAgeY)-3}px;left:${YW+2}px">${rows||(unset.length?'':'<div class="bu">年齢が設定されたキャラがいません</div>')}${unset.length?`<div class="bu">未設定：${unset.map(c=>esc(c.name)).join('、')}</div>`:''}</div>`;
+  }
+  main.innerHTML=bar+(legend?`<div class="flegend">${legend}</div>`:'')+head+`<div class="tlfig" style="height:${H2}px"><svg width="${W}" height="${H2}" viewBox="0 0 ${W} ${H2}" aria-hidden="true">${g}</svg>${yBtns}${labs}${bub}</div><div class="hint">年の数字をタップで年齢、タイトルや帯をタップで詳細</div>`;
 }
 function evInfoSheet(ev){
   const tl=tlById(ev.timelineId), d=dateLabel(ev), cs=(ev.chars||[]).map(charById).filter(Boolean);
@@ -2006,12 +2053,19 @@ main.addEventListener('click',e=>{
   if(tab!=='world'||wView!=='tl'||!tlFigOn(tlId)) return;
   const tl=tlById(tlId); if(!tl) return;
   const t=e.target;
+  const yb=t.closest('[data-agey]'); if(yb){ const y=Number(yb.dataset.agey); figAgeY = figAgeY===y ? null : y; const st=main.scrollTop; render(); main.scrollTop=st; return; }
+  if(figAgeY!==null && !t.closest('.agebub')){ figAgeY=null; const st=main.scrollTop; render(); main.scrollTop=st; if(!t.closest('[data-fev],[data-mem],[data-born],[data-fig],[data-fpick]')) return; }
   const tg=t.closest('[data-fig]'); if(tg){ figPref[tg.dataset.fig]=!figPref[tg.dataset.fig]; saveFigPref(); const st=main.scrollTop; render(); main.scrollTop=st; return; }
   const fp=t.closest('[data-fpick]'); if(fp){ const set=figPick[tl.id]||(figPick[tl.id]=new Set()), id=fp.dataset.fpick; if(!id) set.clear(); else set.has(id)?set.delete(id):set.add(id); const sx=main.querySelector('.fchips')?.scrollLeft||0, st=main.scrollTop; render(); main.scrollTop=st; const fc=main.querySelector('.fchips'); if(fc) fc.scrollLeft=sx; return; }
   const fe=t.closest('[data-fev]'); if(fe){ const ev=db.events.find(x=>x.id===fe.dataset.fev); if(ev) evInfoSheet(ev); return; }
   const fm=t.closest('[data-mem]'); if(fm){ const m=db.tmems.find(x=>x.id===fm.dataset.mem); if(m) memSheet(tl,m); return; }
   const fb=t.closest('[data-born]'); if(fb){ const c=charById(fb.dataset.born); if(c) bornSheet(c,tl); return; }
 });
+function bdSelects(v,idp){
+  const m=String(v||'').match(/^(\d{2})\/(\d{2}|--)$/), mm=m?+m[1]:0, dd=m&&m[2]!=='--'?+m[2]:0;
+  return `<div class="bdsel"><select id="${idp}_m" data-bd="m" aria-label="誕生月"><option value="">—月</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${mm===i+1?' selected':''}>${i+1}月</option>`).join('')}</select><select id="${idp}_d" data-bd="d" aria-label="誕生日"><option value="">—日</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${dd===i+1?' selected':''}>${i+1}日</option>`).join('')}</select></div>`;
+}
+function bdRead(box){ const m=Number(box.querySelector('[data-bd=m]').value)||0, d=Number(box.querySelector('[data-bd=d]').value)||0; return fmtBirthday(m,d); }
 /* ---------- compare (見比べ) ----------
    One item at a time (a basic field, a custom field label, or a Q&A template question) shown
    for every character side by side, so things like 一人称 or 身長 can be checked for overlap. */
@@ -2077,13 +2131,14 @@ function cmpEdit(c){
     const row=main.querySelector(`.cmprow[data-cid="${c.id}"]`); if(row) row.classList.add('flash'); if(isWide()) renderSide(); };
   if(key==='affil'){ pickGroupsSheet(c.affilIds||[], ids=>{ c.affilIds=ids; done(); }); return; }
   const multi = ['f:personality','f:history','f:memo','f:song'].includes(key) || key.startsWith('c:') || key.startsWith('q:');
+  const isBd = key==='f:birthday';
   const cur=cmpValue(c,key);
   openSheet(`<div class="title">${esc(c.name)}の${esc(label)}</div>
-    ${multi?`<textarea id="cmpIn" class="cmpta" aria-label="${esc(label)}">${esc(cur)}</textarea>`:`<input id="cmpIn" type="text" value="${esc(cur)}" aria-label="${esc(label)}" autocomplete="off">`}
+    ${isBd?`<div class="fld">${bdSelects(cur,'cmpbd')}</div>`:multi?`<textarea id="cmpIn" class="cmpta" aria-label="${esc(label)}">${esc(cur)}</textarea>`:`<input id="cmpIn" type="text" value="${esc(cur)}" aria-label="${esc(label)}" autocomplete="off">`}
     <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
     const inp=s.querySelector('#cmpIn');
     const save=()=>{
-      const v = multi ? inp.value.replace(/\s+$/,'') : inp.value.trim();
+      const v = isBd ? bdRead(s.querySelector('.bdsel')) : multi ? inp.value.replace(/\s+$/,'') : inp.value.trim();
       const k=key.slice(2);
       if(key.startsWith('f:')) c[k]=v;
       else if(key.startsWith('c:')){ c.custom=c.custom||[]; const x=c.custom.find(y=>(y.label||'').trim()===k); if(x) x.value=v; else if(v) c.custom.push({id:uid(),label:k,value:v}); }
@@ -2092,8 +2147,10 @@ function cmpEdit(c){
     };
     s.querySelector('[data-a=cancel]').onclick=closeSheet;
     s.querySelector('[data-a=ok]').onclick=save;
-    if(!multi) inp.addEventListener('keydown',e=>{ if(e.key==='Enter' && !e.isComposing){ e.preventDefault(); save(); } });
-    inp.focus(); const n=inp.value.length; try{ inp.setSelectionRange(n,n); }catch(_){}
+    if(inp){
+      if(!multi) inp.addEventListener('keydown',e=>{ if(e.key==='Enter' && !e.isComposing){ e.preventDefault(); save(); } });
+      inp.focus(); const n=inp.value.length; try{ inp.setSelectionRange(n,n); }catch(_){}
+    }
   },'cmpedit');
 }
 main.addEventListener('change',e=>{ if(tab==='chara' && charView==='cmp' && e.target.id==='cmpKey'){ cmpKey=e.target.value; saveCmpPref(); renderChara(); main.scrollTop=0; } });
@@ -2104,7 +2161,7 @@ main.addEventListener('change',e=>{ if(tab==='chara' && charView==='cmp' && e.ta
    right next to the match, e.g. "ユハ" inside "ユハナ") start unchecked. One undo is offered
    right after applying: the touched records are snapshotted and restored with a fresh
    updatedAt so the restore also wins in sync. */
-const CHAR_TEXT_FIELDS=[['name','名前'],['alias','別名'],['age','年齢'],['birthday','誕生日'],['gender','性別'],['bloodType','血液型'],['height','身長'],['firstPerson','一人称'],['secondPerson','二人称'],['song','イメージ曲'],['personality','性格'],['history','来歴'],['memo','詳細メモ']];
+const CHAR_TEXT_FIELDS=[['name','名前'],['alias','別名'],['age','年齢'],['gender','性別'],['bloodType','血液型'],['height','身長'],['firstPerson','一人称'],['secondPerson','二人称'],['song','イメージ曲'],['personality','性格'],['history','来歴'],['memo','詳細メモ']];
 function rpTargets(){
   const T=[], add=(coll,area,item,where,get,set)=>{ const v=get(); if(typeof v==='string'&&v) T.push({coll,area,id:item.id,where,get,set}); };
   const plain=(coll,area,item,key,where)=>add(coll,area,item,where,()=>item[key],v=>{item[key]=v;});
@@ -3011,7 +3068,7 @@ function bornSheet(c,tl,evYear,evMonth,evDay){
     <div class="fl" style="padding-top:12px">または、生まれた年</div>`:'<div class="fl">生まれた年</div>'}
     <div class="yrow"><div class="seg" role="group" id="bornSign">${signs.map(([v,l])=>`<button type="button" data-bs="${v}" aria-pressed="${sign===v}">${l}</button>`).join('')}</div>
       <input id="bornY" type="text" inputmode="numeric" class="plain" value="${cur===null?'':Math.abs(cur)}" placeholder="${ad?'例：1990':'0で基準年'}"><span class="yu">年</span></div>
-    <div class="small" style="padding-top:6px">誕生日（${esc((c.birthday||'').trim()||'未入力')}）が入っていれば、月日まで見て年齢を計算します。</div>
+    <div class="small" style="padding-top:6px">誕生日（${esc((c.birthday||'').trim()||'未入力')}）が入っていれば、月日まで見て年齢を計算します。キャラ詳細で月日を、ここで生まれた年を設定します。</div>
     ${(c.age||'').trim()?`<div class="small">参考：キャラ詳細の「年齢」欄は「${esc(c.age.trim())}」に設定されています</div>`:''}
     <div class="row">${cur!==null?'<button type="button" class="dangerbtn" data-a="clear">解除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
     const yi=s.querySelector('#bornY'), ai=s.querySelector('#bornAge'), ok=s.querySelector('[data-a=ok]');
