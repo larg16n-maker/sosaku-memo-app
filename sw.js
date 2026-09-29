@@ -1,4 +1,4 @@
-const CACHE = 'sosaku-memo-v39';
+const CACHE = 'sosaku-memo-v40';
 const SHELL = [
   './',
   './index.html',

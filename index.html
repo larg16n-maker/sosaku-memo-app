@@ -149,6 +149,10 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .sheet .sw.custom input{width:22px;height:22px;padding:0;border:0}
 .mmage{font-size:12px;color:var(--ink);padding:2px 4px;min-height:1em;font-variant-numeric:tabular-nums}
 .mmage .faint{color:var(--faint);font-size:11px}
+/* groups in the character tab */
+.ckseg{padding:10px 14px 8px;border-bottom:1px solid var(--line)}
+.glink{display:flex;align-items:center;gap:8px;width:100%;margin-top:6px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;color:var(--ink);text-align:left}
+.glink span{margin-left:auto;color:var(--faint)}
 /* compare */
 .cmpentry{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub);text-align:left}
 .cmpentry svg{width:17px;height:17px;flex:none}
@@ -299,6 +303,7 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .av.gav.sm{font-size:9px;border-radius:4px}
 .av.gav.md{font-size:11px;border-radius:5px}
 .av.gav.rm{font-size:18px;border-radius:11px}
+.av.gav.lg{font-size:26px;border-radius:16px}
 .relseg{padding:8px 14px;border-bottom:1px solid var(--line)}
 .relseg .seg button{height:30px}
 .gmeta{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
@@ -612,7 +617,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.21.0';
+const APP_VERSION='0.22.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -810,6 +815,10 @@ function buildStoryBible(){
     L.push('## グループ');
     const pushGroup=(g,sub)=>{
       L.push(`${sub?'####':'###'} ${g.name}${sub?'（'+groupParent(g).name+'の支部）':''}`);
+      const ld=charById(g.leaderId); if(ld) L.push(`代表: ${ld.name}`);
+      if((g.purpose||'').trim()){ L.push('目的:'); L.push(g.purpose.trim()); }
+      if((g.song||'').trim()) L.push(`イメージ曲: ${g.song.trim()}`);
+      for(const f of (g.custom||[])) if((f.value||'').trim()){ L.push(`${(f.label||'').trim()||'項目'}:`); L.push(f.value.trim()); }
       if((g.desc||'').trim()) L.push(g.desc.trim());
       const ms=membersOf(g); if(ms.length) L.push('所属キャラ: '+ms.map(c=>c.name).join('、'));
       L.push('');
@@ -1103,7 +1112,7 @@ function toBottom(){ main.scrollTop=main.scrollHeight; }
 /* ---------- navigation ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
   if(tab===b.dataset.tab && tab==='talk'){closeFolder();}
-  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa'){charView='list'; cmpReturn=false; reorderMode=false; selectMode=false; selected.clear();}
+  if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa' && charView!=='gedit'){charView='list'; cmpReturn=false; gdReturn=null; reorderMode=false; selectMode=false; selected.clear();}
   if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub'; grpReorderMode=false;}
   if(b.dataset.tab==='world') wReturn=null;
   if(tab==='chara' && charView==='qtpl' && b.dataset.tab!=='chara'){ charView=(qtplBack&&qtplBack.cv)||'list'; qtplBack=null; }
@@ -1114,6 +1123,9 @@ $('#backBtn').addEventListener('click',()=>{
     if(charView==='qa'){ finishQa(); return; }
     if(charView==='qtpl'){ leaveQtpl(); return; }
     if(charView==='detail' && cmpReturn){ cmpReturn=false; charView='cmp'; render(); main.scrollTop=cmpScroll; return; }
+    if(charView==='detail' && gdReturn && groupById(gdReturn)){ gId=gdReturn; gdReturn=null; charView='gdetail'; render(); return; }
+    if(charView==='gdetail' && gBackChar && charById(gBackChar)){ charId=gBackChar; gBackChar=null; charView='detail'; render(); return; }
+    gdReturn=null; gBackChar=null;
     cmpReturn=false; charView='list'; render(); return;
   }
   if(tab==='world'){ worldBack(); return; }
@@ -1450,6 +1462,10 @@ function renderChara(){
   if(charView==='qa'){ if(charDraft){ renderQa(); return; } charView=charById(charId)?'detail':'list'; }
   if(charView==='qtpl'){ renderQtpl(); return; }
   if(charView==='cmp'){ renderCmp(); return; }
+  if(charView==='gdetail' && !groupById(gId)) charView='list';
+  if(charView==='gdetail'){ renderGroupDetail(); return; }
+  if(charView==='gedit'){ if(gDraft){ renderGroupEdit(); return; } charView='list'; }
+  if(charView==='list' && charKind==='group' && !reorderMode && !selectMode){ renderGroupList(); return; }
   if(charView==='list'){
     $('#title').textContent = reorderMode ? '並べ替え' : selectMode ? (selected.size?selected.size+'人を選択中':'キャラを選択') : 'キャラクター';
     if(reorderMode){ $('#settingsBtn').hidden=true; $('#charDoneBtn').hidden=false; }
@@ -1461,12 +1477,13 @@ function renderChara(){
     else{
       $('#charSelectBtn').hidden=!db.chars.length;
       $('#charGroupBtn').hidden=false; $('#charReorderBtn').hidden=false; $('#charAddBtn').hidden=false;
+      $('#charAddBtn').innerHTML=CHAR_ADD_HTML; $('#charAddBtn').setAttribute('aria-label','キャラクターを追加');
       $('#charGroupBtn').innerHTML = charGroup ? CI.group : CI.flat;
       $('#charGroupBtn').classList.toggle('on',charGroup);
       $('#charGroupBtn').setAttribute('aria-label', charGroup?'所属別表示中。まとめて表示に切り替え':'まとめて表示中。所属別表示に切り替え');
     }
     const list=charsSorted();
-    if(!list.length){ main.innerHTML='<div class="empty"><strong>キャラクターがいません</strong>右上の人型ボタンから追加できます。</div>'; return; }
+    if(!list.length){ main.innerHTML=CK_SEG()+'<div class="empty"><strong>キャラクターがいません</strong>右上の人型ボタンから追加できます。</div>'; return; }
     const row=c=>`<li class="crow${selectMode&&selected.has(c.id)?' sel':''}" data-cid="${c.id}" tabindex="0" ${selectMode?`role="checkbox" aria-checked="${selected.has(c.id)}"`:''}>${selectMode?`<span class="ck">${CI.check}</span>`:''}${avatar(c)}<span class="cn">${esc(c.name)}</span>${reorderMode?`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`:''}</li>`;
     if(charGroup){
       main.innerHTML=groupsOf(list).map(([g,cs,gid])=>{
@@ -1477,6 +1494,7 @@ function renderChara(){
       main.innerHTML=`<ul class="clist">${list.map(row).join('')}</ul>`;
     }
     if(!reorderMode && !selectMode && list.length>1) main.insertAdjacentHTML('afterbegin',CMP_ENTRY);
+    if(!reorderMode && !selectMode) main.insertAdjacentHTML('afterbegin',CK_SEG());
     if(reorderMode) main.insertAdjacentHTML('beforeend','<div class="hint">右のつまみをドラッグして並べ替え'+(charGroup?'（同じ所属の中で移動）':'')+'</div>');
     return;
   }
@@ -1536,14 +1554,23 @@ function newDraft(){
     color:AV_COLORS[Math.floor(Math.random()*AV_COLORS.length)],createdAt:t,updatedAt:t};
 }
 function startEdit(c){ charDraft=c?JSON.parse(JSON.stringify(c)):newDraft(); charDirty=false; charView='edit'; render(); main.scrollTop=0; }
+let charEditReturn=null; // character id when the editor was opened from the world tab's relationship view
+function backToWorldFromCharEdit(){
+  if(!charEditReturn) return false;
+  const cid=charEditReturn; charEditReturn=null;
+  charDraft=null; charDirty=false; charView=charById(cid)?'detail':'list';
+  tab='world'; if(charById(cid)){ rcId=cid; relKind='char'; wView='rc'; } else wView='rchars';
+  render(); return true;
+}
 function leaveEdit(){
+  if(backToWorldFromCharEdit()) return;
   const back=charById(charDraft.id)?'detail':'list';
   charId=charById(charDraft.id)?charDraft.id:charId;
   charDraft=null; charDirty=false; charView=back; render();
 }
 
-$('#charAddBtn').addEventListener('click',()=>startEdit(null));
-$('#charEditBtn').addEventListener('click',()=>{ const c=charById(charId); if(c) startEdit(c); });
+$('#charAddBtn').addEventListener('click',()=>{ if(charKind==='group') return openGroupEdit(null,false); startEdit(null); });
+$('#charEditBtn').addEventListener('click',()=>{ if(charView==='gdetail'){ const g=groupById(gId); if(g) openGroupEdit(g,false); return; } const c=charById(charId); if(c) startEdit(c); });
 $('#charReorderBtn').addEventListener('click',()=>{ reorderMode=true; selectMode=false; render(); });
 $('#charDoneBtn').addEventListener('click',()=>{ if(charView==='qa'){ finishQa(); return; } reorderMode=false; render(); });
 $('#qAddBtn').addEventListener('click',()=>questionSheet(null));
@@ -1563,12 +1590,15 @@ $('#charDelSelBtn').addEventListener('click',()=>{
 });
 $('#charCancelBtn').addEventListener('click',()=>{
   if(selectMode){ selectMode=false; selected.clear(); render(); return; }
+  if(charView==='gedit'){ closeGroupEdit(); return; }
   clearTimeout(charAutosaveTimer); commitCharDraft(); leaveEdit();
 });
 $('#charSaveBtn').addEventListener('click',()=>{
+  if(charView==='gedit'){ saveGroupEdit(); return; }
   clearTimeout(charAutosaveTimer);
   if(!charDraft) return;
   if(!commitCharDraft()){ toast('キャラ名を入力してください'); const n=$('#f_name'); if(n) n.focus(); return; }
+  if(backToWorldFromCharEdit()){ toast('保存しました'); return; }
   charDraft=null; charView='detail'; render(); toast('保存しました');
 });
 
@@ -1605,6 +1635,8 @@ main.addEventListener('click',e=>{
   if(charView==='qa'){ qaClick(e); return; }
   if(charView==='qtpl'){ qtplClick(e); return; }
   if(charView==='cmp'){ cmpClick(e); return; }
+  const ck=e.target.closest('[data-ck]'); if(ck && charView==='list'){ setCharKind(ck.dataset.ck); return; }
+  if(charView==='gdetail'||charView==='gedit'||(charView==='list'&&charKind==='group')){ groupClick(e); return; }
   if(charView==='list' && !reorderMode && !selectMode && e.target.closest('[data-a=cmp]')){ openCmp(); return; }
   const a=e.target.closest('[data-a]');
   if(charView==='edit' && a){
@@ -2066,6 +2098,124 @@ function bdSelects(v,idp){
   return `<div class="bdsel"><select id="${idp}_m" data-bd="m" aria-label="誕生月"><option value="">—月</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${mm===i+1?' selected':''}>${i+1}月</option>`).join('')}</select><select id="${idp}_d" data-bd="d" aria-label="誕生日"><option value="">—日</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${dd===i+1?' selected':''}>${i+1}日</option>`).join('')}</select></div>`;
 }
 function bdRead(box){ const m=Number(box.querySelector('[data-bd=m]').value)||0, d=Number(box.querySelector('[data-bd=d]').value)||0; return fmtBirthday(m,d); }
+/* ---------- groups in the character tab: list, detail, editor ----------
+   The character tab switches between キャラ and グループ. Groups get a detail page like
+   characters (leader, purpose, image songs, free fields, members) and a full-page editor,
+   which is also what the world tab's 編集 opens (returning to the world tab afterwards). */
+const CK_PREF='sosaku-charkind';
+const CHAR_ADD_HTML=$('#charAddBtn').innerHTML;
+let charKind=(()=>{ try{ return localStorage.getItem(CK_PREF)==='group'?'group':'char'; }catch(_){ return 'char'; } })();
+let gId=null, gDraft=null, gDirty=false, gEditReturn=null, gdReturn=null, gBackChar=null;
+function setCharKind(k){ charKind=k==='group'?'group':'char'; try{ localStorage.setItem(CK_PREF,charKind); }catch(_){} reorderMode=false; selectMode=false; charView='list'; render(); main.scrollTop=0; }
+function CK_SEG(){ return `<div class="ckseg"><div class="seg" role="group" aria-label="表示の切り替え"><button type="button" data-ck="char" aria-pressed="${charKind==='char'}">キャラ</button><button type="button" data-ck="group" aria-pressed="${charKind==='group'}">グループ</button></div></div>`; }
+function renderGroupList(){
+  $('#title').textContent='グループ';
+  if(isWide()){ main.innerHTML='<div class="pick-ph">'+(db.groups.length?'左の一覧からグループを選んでください':'左上の＋からグループを作れます')+'</div>'; return; }
+  $('#charAddBtn').hidden=false; $('#charAddBtn').setAttribute('aria-label','グループを作る'); $('#charAddBtn').innerHTML=SV.plus;
+  const gs=groupsTreeSorted();
+  main.innerHTML=CK_SEG()+(gs.length
+    ? gs.map(g=>`<div class="wrow${g.parentId?' wsub':''}" data-gopen="${g.id}" tabindex="0">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span><span class="wc">${membersOf(g).length?membersOf(g).length+'人':''}</span></div>`).join('')+'<div class="hint">タップで詳細</div>'
+    : '<div class="empty"><strong>グループがありません</strong>右上の＋から「学園」「王国」などのグループを作れます。</div>');
+}
+function renderGroupDetail(){
+  const g=groupById(gId);
+  $('#title').textContent=g.name;
+  $('#settingsBtn').hidden=!isWide(); $('#backBtn').hidden=isWide(); $('#charEditBtn').hidden=false;
+  const p=groupParent(g), kids=childGroupsOf(g.id), ld=charById(g.leaderId);
+  const subline = p ? `${esc(p.name)}の支部` : kids.length ? '支部：'+kids.map(k=>esc(k.name)).join('・') : '';
+  const rows=[];
+  if(ld) rows.push(`<dt>代表</dt><dd><span class="pchip link" data-jumpchar="${ld.id}">${avatar(ld,'md')}${esc(ld.name)}</span></dd>`);
+  if((g.purpose||'').trim()) rows.push(`<dt>目的</dt><dd>${esc(g.purpose.trim())}</dd>`);
+  if((g.song||'').trim()) rows.push(`<dt>イメージ曲</dt><dd>${esc(g.song.trim())}</dd>`);
+  for(const x of (g.custom||[])) if((x.value||'').trim()) rows.push(`<dt>${esc((x.label||'').trim()||'（項目名なし）')}</dt><dd>${esc(x.value.trim())}</dd>`);
+  const ms=membersOf(g);
+  main.innerHTML=`<div class="cdetail">
+    <div class="chead">${gavatar(g,'lg')}<div><div class="cname">${esc(g.name)}</div>${subline?`<div class="calias">${subline}</div>`:''}</div></div>
+    ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
+    ${(g.desc||'').trim()?`<div class="cblock"><div class="clabel">説明</div><div class="ctext">${esc(g.desc.trim())}</div></div>`:''}
+    <div class="cblock"><div class="clabel">所属キャラ</div>${ms.length?`<div class="chips">${ms.map(c=>`<span class="pchip link" data-jumpchar="${c.id}">${avatar(c,'md')}${esc(c.name)}</span>`).join('')}</div>`:'<div class="small" style="padding:0">キャラの編集画面の「所属」でこのグループを選ぶと、ここに並びます。</div>'}</div>
+    <button type="button" class="glink" data-a="grels">関係性を見る（世界観タブ）<span>›</span></button>
+  </div>`;
+}
+function openGroupEdit(g,fromWorld){
+  gDraft = g ? JSON.parse(JSON.stringify(g)) : {id:uid(),name:'',desc:'',parentId:null,color:null,leaderId:'',purpose:'',song:'',custom:[]};
+  gDraft.custom=gDraft.custom||[];
+  gEditReturn = fromWorld ? {rgId:g?g.id:null} : null;
+  gDirty=false; tab='chara'; charView='gedit'; render(); main.scrollTop=0;
+}
+function renderGroupEdit(){
+  const d=gDraft, isNew=!groupById(d.id);
+  $('#title').textContent=isNew?'新しいグループ':'グループを編集';
+  $('#settingsBtn').hidden=true; $('#charCancelBtn').hidden=false; $('#charCancelBtn').textContent='閉じる'; $('#charSaveBtn').hidden=false;
+  const canParent=!groupHasChildren(d.id), parents=parentGroupCandidates(isNew?null:d);
+  const chars=charsSorted();
+  main.innerHTML=`<form class="cedit" id="grpForm" autocomplete="off">
+    <div class="fld"><label for="g_name">グループ名<span class="req">必須</span></label><input id="g_name" data-g="name" type="text" maxlength="40" value="${esc(d.name)}" placeholder="例：星見学園、北方王国"></div>
+    ${canParent?`<div class="fld"><label for="g_parent">親グループ（任意）</label><select id="g_parent" data-g="parentId"><option value="">なし（独立したグループ）</option>${parents.map(p=>`<option value="${p.id}"${d.parentId===p.id?' selected':''}>${esc(p.name)}</option>`).join('')}</select>
+      <div class="small" style="padding:4px 2px 0">支部・課のように、既存のグループの下に紐づけられます（1階層まで）。</div></div>`
+      :`<div class="small" style="padding:0 2px">このグループには支部があるため、他のグループの支部にはできません。</div>`}
+    <div class="fld"><span class="lbl">色（アイコンと時系列の図）</span>
+      <div class="swatches" id="gSw"><button type="button" class="sw auto" data-sw="" aria-label="自動" aria-pressed="${!d.color}">自動</button>${GROUP_SWATCHES.map(c=>`<button type="button" class="sw" data-sw="${c}" style="background:${c}" aria-label="${c}" aria-pressed="${d.color===c}"></button>`).join('')}
+        <label class="sw custom${d.color&&!GROUP_SWATCHES.includes(d.color)?' on':''}" aria-label="好きな色を選ぶ"><input type="color" id="gColor" value="${d.color||'#8a6fb0'}"><span>他の色</span></label></div></div>
+    <div class="fld"><label for="g_leader">代表</label><select id="g_leader" data-g="leaderId"><option value="">なし</option>${chars.map(c=>`<option value="${c.id}"${d.leaderId===c.id?' selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div class="fld"><label for="g_purpose">目的</label><textarea id="g_purpose" data-g="purpose" class="mid" placeholder="例：失われた技術の回収">${esc(d.purpose||'')}</textarea></div>
+    <div class="fld"><label for="g_song">イメージ曲</label><textarea id="g_song" data-g="song" rows="1" class="song" placeholder="1行に1曲ずつ">${esc(d.song||'')}</textarea></div>
+    <div class="fld"><label for="g_desc">説明</label><textarea id="g_desc" data-g="desc">${esc(d.desc||'')}</textarea></div>
+    <div class="fld"><span class="lbl">追加項目</span>
+      <div class="cf-list">${d.custom.map(x=>`<div class="cf-row" data-gfid="${x.id}"><input type="text" data-gcf="label" value="${esc(x.label||'')}" placeholder="項目名"><textarea rows="1" data-gcf="value" placeholder="内容">${esc(x.value||'')}</textarea><button type="button" class="del" data-ga="rmfld" aria-label="この項目を削除">${CI.x}</button></div>`).join('')}</div>
+    </div>
+    <button type="button" class="addfld" data-ga="addfld">${CI.plus}項目を追加</button>
+    ${isNew?'':'<button type="button" class="delchar" data-ga="delgroup">このグループを削除</button>'}
+  </form>`;
+  main.querySelectorAll('#grpForm .cf-row textarea, #grpForm textarea.song').forEach(autoGrow);
+}
+function leaveGroupEdit(savedId){
+  const ret=gEditReturn, wasNew=gDraft&&!groupById(gDraft.id);
+  gDraft=null; gDirty=false; gEditReturn=null;
+  if(ret){ tab='world'; relKind='group'; const id=savedId||ret.rgId; if(id&&groupById(id)){ rgId=id; wView='rg'; } else wView='rchars'; charView='list'; render(); return; }
+  const id=savedId||(!wasNew&&gId);
+  if(id&&groupById(id)){ gId=id; charView='gdetail'; } else charView='list';
+  render(); main.scrollTop=0;
+}
+function closeGroupEdit(){ if(!gDirty) return leaveGroupEdit(); confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',()=>leaveGroupEdit()); }
+function saveGroupEdit(){
+  const d=gDraft; if(!d) return;
+  const name=(d.name||'').trim(); if(!name){ toast('グループ名を入力してください'); const n=$('#g_name'); if(n) n.focus(); return; }
+  const t=Date.now();
+  const rec={name,desc:d.desc||'',parentId:d.parentId||null,color:d.color||null,leaderId:d.leaderId||'',purpose:d.purpose||'',song:d.song||'',
+    custom:(d.custom||[]).filter(x=>(x.label||'').trim()||(x.value||'').trim()).map(x=>({...x})),updatedAt:t};
+  if(rec.parentId && (rec.parentId===d.id || groupHasChildren(d.id))) rec.parentId=null;
+  const ex=groupById(d.id);
+  if(ex) Object.assign(ex,rec);
+  else db.groups.push({id:d.id,...rec,order:db.groups.reduce((m,x)=>Math.max(m,x.order??0),-1)+1,createdAt:t});
+  commit(); toast('保存しました'); leaveGroupEdit(d.id);
+}
+function groupClick(e){
+  const t=e.target;
+  if(charView==='list'){ const r=t.closest('[data-gopen]'); if(r){ gId=r.dataset.gopen; gdReturn=null; gBackChar=null; charView='gdetail'; render(); main.scrollTop=0; } return; }
+  if(charView==='gdetail'){
+    const j=t.closest('[data-jumpchar]'); if(j){ gdReturn=gId; charId=j.dataset.jumpchar; charView='detail'; render(); main.scrollTop=0; return; }
+    if(t.closest('[data-a=grels]')){ tab='world'; relKind='group'; rgId=gId; wView='rg'; wReturn=null; render(); main.scrollTop=0; }
+    return;
+  }
+  if(charView==='gedit'){
+    const sw=t.closest('[data-sw]'); if(sw){ gDraft.color=sw.dataset.sw||null; gDirty=true; const st=main.scrollTop; renderGroupEdit(); main.scrollTop=st; return; }
+    const a=t.closest('[data-ga]'); if(!a) return;
+    if(a.dataset.ga==='addfld'){ const f={id:uid(),label:'',value:''}; gDraft.custom.push(f); gDirty=true; const st=main.scrollTop; renderGroupEdit(); main.scrollTop=st; const el=main.querySelector(`[data-gfid="${f.id}"] input`); if(el) el.focus(); }
+    else if(a.dataset.ga==='rmfld'){ const id=a.closest('.cf-row').dataset.gfid; gDraft.custom=gDraft.custom.filter(x=>x.id!==id); gDirty=true; const st=main.scrollTop; renderGroupEdit(); main.scrollTop=st; }
+    else if(a.dataset.ga==='delgroup'){ const id=gDraft.id; deleteGroupConfirm(id,()=>{ const ret=gEditReturn; gDraft=null; gDirty=false; gEditReturn=null; if(ret){ tab='world'; relKind='group'; wView='rchars'; } charView='list'; }); }
+  }
+}
+main.addEventListener('input',e=>{
+  if(tab!=='chara'||charView!=='gedit'||!gDraft) return;
+  const t=e.target;
+  if(t.id==='gColor'){ gDraft.color=t.value.toLowerCase(); gDirty=true; main.querySelectorAll('#gSw [data-sw]').forEach(b=>b.setAttribute('aria-pressed','false')); t.closest('.custom').classList.add('on'); return; }
+  if(t.dataset.g){ gDraft[t.dataset.g]=t.value; gDirty=true; if(t.classList.contains('song')) autoGrow(t); return; }
+  if(t.dataset.gcf){ const row=t.closest('.cf-row'), f=gDraft.custom.find(x=>x.id===row.dataset.gfid); if(f){ f[t.dataset.gcf]=t.value; gDirty=true; } if(t.tagName==='TEXTAREA') autoGrow(t); }
+});
+main.addEventListener('change',e=>{ if(tab==='chara'&&charView==='gedit'&&gDraft&&e.target.dataset.g){ gDraft[e.target.dataset.g]=e.target.value; gDirty=true; } });
+main.addEventListener('submit',e=>{ if(e.target.id==='grpForm') e.preventDefault(); });
+main.addEventListener('keydown',e=>{ if(tab==='chara'&&charView==='list'&&charKind==='group'&&e.key==='Enter'){ const r=e.target.closest('[data-gopen]'); if(r) r.click(); } });
 /* ---------- compare (見比べ) ----------
    One item at a time (a basic field, a custom field label, or a Q&A template question) shown
    for every character side by side, so things like 一人称 or 身長 can be checked for overlap. */
@@ -2184,7 +2334,8 @@ function rpTargets(){
   for(const t of db.timelines) plain('timelines','時系列',t,'name','時系列の名前');
   for(const e of db.events){ const tl=tlById(e.timelineId), w=tl?`${tl.name} › ${yearLabel(tl,e.year)}`:'イベント'; plain('events','時系列',e,'title',w); plain('events','時系列',e,'detail',`${w} › 詳細`); }
   for(const t of db.terms){ plain('terms','単語帳',t,'word','単語'); plain('terms','単語帳',t,'yomi',`${t.word} › 読み`); plain('terms','単語帳',t,'desc',`${t.word} › 説明`); }
-  for(const g of db.groups){ plain('groups','グループ',g,'name','グループ名'); plain('groups','グループ',g,'desc',`${g.name} › 説明`); }
+  for(const g of db.groups){ plain('groups','グループ',g,'name','グループ名'); plain('groups','グループ',g,'desc',`${g.name} › 説明`); plain('groups','グループ',g,'purpose',`${g.name} › 目的`); plain('groups','グループ',g,'song',`${g.name} › イメージ曲`);
+    for(const x of (g.custom||[])){ add('groups','グループ',g,`${g.name} › 項目名`,()=>x.label,v=>{x.label=v;}); add('groups','グループ',g,`${g.name} › ${(x.label||'').trim()||'追加項目'}`,()=>x.value,v=>{x.value=v;}); } }
   for(const f of db.folders) plain('folders','フォルダ',f,'name','フォルダ名');
   for(const m of db.tmems) if(!m.groupId){ const tl=tlById(m.timelineId), c=charById(m.charId); plain('tmems','時系列',m,'label',`${tl?tl.name:'時系列'} › ${c?c.name:'?'}の在籍期間`); }
   return T;
@@ -2474,7 +2625,7 @@ function applyGroupOrder(newIds){
   all.forEach((id,i)=>{ const g=groupById(id); if(g && g.order!==i){ g.order=i; g.updatedAt=t; changed=true; } });
   if(changed) commit();
 }
-function gavatar(g,cls){ return `<span class="av gav${cls?' '+cls:''}">${esc(((g&&g.name)||'?').trim().charAt(0)||'?')}</span>`; }
+function gavatar(g,cls){ return `<span class="av gav${cls?' '+cls:''}"${g&&g.id?` style="background:${groupColor(g.id)};color:#fff"`:''}>${esc(((g&&g.name)||'?').trim().charAt(0)||'?')}</span>`; }
 function membersOf(g){ return charsSorted().filter(c=>(c.affilIds||[]).includes(g.id)); }
 // Groups support one level of nesting (支部・課など). A group with children of its own
 // cannot itself be made a child (that would make a second level).
@@ -2582,7 +2733,7 @@ function renderWorld(){
   if(wView==='rc'||wView==='rg'){
     const kind=wView==='rg'?'group':'char', K=RK[kind], id=kind==='group'?rgId:rcId, me=K.get(id);
     $('#title').textContent='関係性'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','関係を追加');
-    if(kind==='group') $('#wEditBtn').hidden=false;
+    $('#wEditBtn').hidden=false;
     const rs=relsOfK(kind,id);
     const nm=x=>kind==='group'?groupLabel(x):x.name;
     const affilNames = kind==='char' ? (me.affilIds||[]).map(id=>groupById(id)).filter(Boolean).map(g=>groupLabel(g)).join('・') : '';
@@ -2678,10 +2829,12 @@ $('#wAddBtn').addEventListener('click',()=>{
   if(wView==='tls') return newTimelineSheet();
   if(wView==='terms') return termSheet(null);
   if(wView==='tl') return tlAddChooser();
-  if(wView==='rchars' && relKind==='group') return groupSheet(null);
+  if(wView==='rchars' && relKind==='group') return openGroupEdit(null,true);
   if(wView==='rc'||wView==='rg'){ const kind=wView==='rg'?'group':'char'; relDraft={id:uid(),kind,a:kind==='group'?rgId:rcId,b:'',label:'',ab:'',ba:'',nab:'',nba:'',detail:'',createdAt:Date.now()}; wDirty=false; wView='rel'; render(); main.scrollTop=0; }
 });
-$('#wEditBtn').addEventListener('click',()=>{ const g=groupById(rgId); if(g) groupSheet(g);
+$('#wEditBtn').addEventListener('click',()=>{
+  if(wView==='rg'){ const g=groupById(rgId); if(g) openGroupEdit(g,true); return; }
+  if(wView==='rc'){ const c=charById(rcId); if(!c) return; charEditReturn=c.id; tab='chara'; charId=c.id; startEdit(c); }
 });
 function leaveWorldEdit(){ const back = wView==='ev'?'tl' : (relDraft&&relDraft.kind==='group')?'rg':'rc'; evDraft=null; relDraft=null; wDirty=false; wView=back; if(backToCharFromWorld()) return; render(); }
 $('#wCancelBtn').addEventListener('click',()=>{
@@ -2803,52 +2956,16 @@ function deleteRel(rid,kind){
   db[K.coll]=db[K.coll].filter(r=>r.id!==rid); db[K.del].push({id:rid,deletedAt:Date.now()});
   commit(); relDraft=null; wDirty=false; wView=K.view; render(); toast('削除しました');
 }
-function groupSheet(g){
-  const canPickParent = !g || !groupHasChildren(g.id);
-  const parentOpts = parentGroupCandidates(g);
-  openSheet(`<div class="title">${g?'グループを編集':'新しいグループ'}</div>
-    <input id="gName" type="text" maxlength="40" placeholder="例：星見学園、北方王国" value="${g?esc(g.name):''}">
-    <div class="small" style="padding:2px 6px 4px">キャラ編集画面の「所属」でこのグループを選ぶと、ここに所属キャラとして表示されます。</div>
-    ${canPickParent ? `<div class="fld" style="margin-top:10px"><label for="gParent">親グループ（任意）</label>
-      <select id="gParent"><option value="">なし（独立したグループ）</option>${parentOpts.map(p=>`<option value="${p.id}"${g&&g.parentId===p.id?' selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
-      <div class="small" style="padding:2px 6px 0">支部・課のように、既存のグループの下に紐づけられます（1階層まで）。</div>`
-      : `<div class="small" style="padding:8px 6px 0">このグループには支部があるため、他のグループの支部にはできません。</div>`}
-    <div class="fld" style="margin-top:10px"><span class="lbl">色（時系列の図の帯）</span>
-      <div class="swatches" id="gSw"><button type="button" class="sw auto" data-sw="" aria-label="自動" aria-pressed="${!(g&&g.color)}">自動</button>${GROUP_SWATCHES.map(c=>`<button type="button" class="sw" data-sw="${c}" style="background:${c}" aria-label="${c}" aria-pressed="${g&&g.color===c}"></button>`).join('')}
-        <label class="sw custom" aria-label="好きな色を選ぶ"><input type="color" id="gColor" value="${g&&g.color?g.color:'#8a6fb0'}"><span>他の色</span></label></div>
-      <div class="small" style="padding:4px 2px 0" id="gColTxt">${g&&g.color?'選択中：'+g.color:'自動で色が付きます'}</div></div>
-    <textarea id="gDesc" placeholder="説明（任意）" style="min-height:18vh;margin-top:10px">${g?esc(g.desc||''):''}</textarea>
-    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">${g?'保存':'作成'}</button></div>
-    ${g?`<button class="act danger" data-a="del" style="margin-top:6px">${ICON.trash}グループを削除</button>`:''}`, s=>{
-    const inp=s.querySelector('#gName'), ta=s.querySelector('#gDesc'), ok=s.querySelector('[data-a=ok]'), pEl=s.querySelector('#gParent');
-    let color=g&&g.color||'';
-    const swBox=s.querySelector('#gSw'), colTxt=s.querySelector('#gColTxt'), picker=s.querySelector('#gColor');
-    const setCol=c=>{ color=c; swBox.querySelectorAll('[data-sw]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sw===c)); swBox.querySelector('.custom').classList.toggle('on',!!c&&!GROUP_SWATCHES.includes(c)); colTxt.textContent=c?'選択中：'+c:'自動で色が付きます'; };
-    swBox.addEventListener('click',e=>{ const b=e.target.closest('[data-sw]'); if(b) setCol(b.dataset.sw); });
-    picker.addEventListener('input',()=>setCol(picker.value.toLowerCase()));
-    setCol(color);
-    const upd=()=>ok.disabled=!inp.value.trim(); upd(); inp.addEventListener('input',upd);
-    s.querySelector('[data-a=cancel]').onclick=closeSheet;
-    ok.onclick=()=>{ const name=inp.value.trim(); if(!name) return; const t=Date.now();
-      const parentId=pEl?(pEl.value||null):null;
-      if(g){ g.name=name; g.desc=ta.value; g.parentId=parentId; g.color=color||null; g.updatedAt=t; }
-      else{ const id=uid(), order=db.groups.reduce((m,x)=>Math.max(m,x.order??0),-1)+1; db.groups.push({id,name,desc:ta.value,parentId,color:color||null,order,createdAt:t,updatedAt:t}); rgId=id; relKind='group'; wView='rg'; }
-      commit(); closeSheet(); render(); };
-    const del=s.querySelector('[data-a=del]');
-    if(del) del.onclick=()=>deleteGroupConfirm(g.id);
-    if(!g) inp.focus();
-  },'group');
-}
 function groupMenu(id){
   const g=groupById(id); if(!g) return;
   openSheet(`<div class="title">${esc(groupLabel(g))}</div>
     <button class="act" data-a="edit">${ICON.edit}編集</button>
     <button class="act danger" data-a="del">${ICON.trash}グループを削除</button>`, s=>{
-    s.querySelector('[data-a=edit]').onclick=()=>groupSheet(g);
+    s.querySelector('[data-a=edit]').onclick=()=>{ closeSheet(); openGroupEdit(g,tab==='world'); };
     s.querySelector('[data-a=del]').onclick=()=>deleteGroupConfirm(id);
   },'groupmenu');
 }
-function deleteGroupConfirm(id){
+function deleteGroupConfirm(id,after){
   const g=groupById(id); if(!g) return; const n=relsOfK('group',id).length, kids=childGroupsOf(id);
   const parts=[];
   if(n) parts.push(`このグループの関係${n}件も削除されます`);
@@ -2861,7 +2978,7 @@ function deleteGroupConfirm(id){
     db.grels=db.grels.filter(r=>{ if(r.a===id||r.b===id){ db.deletedGrels.push({id:r.id,deletedAt:t}); return false; } return true; });
     for(const c of db.chars){ if((c.affilIds||[]).includes(id)){ c.affilIds=c.affilIds.filter(x=>x!==id); c.updatedAt=t; } }
     if(rgId===id){ rgId=null; if(wView==='rg') wView='rchars'; }
-    commit(); render(); toast('削除しました');
+    commit(); if(typeof after==='function') after(); render(); toast('削除しました');
   });
 }
 
@@ -2953,7 +3070,7 @@ function startEvFromChar(cid){
 function jumpFromChar(j){
   const cid=charId;
   if(j.dataset.jump==='rel'){ wReturn=cid; tab='world'; rcId=cid; wView='rc'; openRel.add(j.dataset.rid); render(); flashEl(`[data-rid="${j.dataset.rid}"]`); }
-  else if(j.dataset.jump==='grp'){ const g=groupById(j.dataset.gid); if(!g) return; wReturn=cid; tab='world'; relKind='group'; rgId=g.id; wView='rg'; render(); }
+  else if(j.dataset.jump==='grp'){ const g=groupById(j.dataset.gid); if(!g) return; gId=g.id; gBackChar=cid; charView='gdetail'; render(); main.scrollTop=0; }
   else{ const ev=db.events.find(e=>e.id===j.dataset.eid); if(!ev) return; wReturn=cid; tab='world'; tlId=ev.timelineId; wView='tl'; openEv.add(ev.id); render(); flashEl(`[data-eid="${ev.id}"]`); }
 }
 
@@ -3183,7 +3300,14 @@ function renderSide(){
       const n=memosOf(f.id).length;
       return `<div class="wrow${folderId===f.id?' active':''}" data-id="${f.id}" tabindex="0">${ICON.folder}<span class="wn">${esc(f.name)}</span><span class="wc">${n||''}</span></div>`;
     }).join('') : '<div class="pick-ph">まだフォルダがありません</div>';
+  }else if(tab==='chara' && charKind==='group'){
+    head=`<span class="stitle">グループ</span><span class="sbtns"><button class="hbtn" data-sa="gadd" aria-label="グループを作る">${SV.plus}</button></span>`;
+    sub=`<div class="ssub"><div class="seg" role="group"><button type="button" data-sck="char" aria-pressed="false">キャラ</button><button type="button" data-sck="group" aria-pressed="true">グループ</button></div></div>`;
+    const gs=groupsTreeSorted();
+    body = gs.length ? gs.map(g=>`<div class="wrow${g.parentId?' wsub':''}${((charView==='gdetail'&&gId===g.id)||(charView==='gedit'&&gDraft&&gDraft.id===g.id))?' active':''}" data-sgid="${g.id}" tabindex="0">${gavatar(g,'md')}<span class="wn">${esc(g.name)}</span><span class="wc">${membersOf(g).length||''}</span></div>`).join('')
+      : '<div class="pick-ph">まだグループがありません</div>';
   }else if(tab==='chara'){
+    sub=`<div class="ssub"><div class="seg" role="group"><button type="button" data-sck="char" aria-pressed="true">キャラ</button><button type="button" data-sck="group" aria-pressed="false">グループ</button></div></div>`;
     head=`<span class="stitle">キャラクター</span><span class="sbtns">
       <button class="hbtn${charGroup?' on':''}" data-sa="group" aria-label="所属別表示の切り替え">${charGroup?CI.group:CI.flat}</button>
       <button class="hbtn" data-sa="reorder" aria-label="並べ替え">${SV.reorder}</button>
@@ -3226,9 +3350,9 @@ function renderSide(){
   side.innerHTML=`<div class="shead">${head}</div>${sub}<div class="slist">${body}</div>`;
   side.querySelector('.slist').scrollTop=st;
 }
-function editing(){ return (tab==='chara'&&(charView==='edit'||charView==='qa')&&charDirty) || (tab==='world'&&(wView==='ev'||wView==='rel')&&wDirty); }
+function editing(){ return (tab==='chara'&&charView==='gedit'&&gDirty) || (tab==='chara'&&(charView==='edit'||charView==='qa')&&charDirty) || (tab==='world'&&(wView==='ev'||wView==='rel')&&wDirty); }
 function guardLeave(fn){
-  const go=()=>{ charDraft=null; charDirty=false; evDraft=null; relDraft=null; wDirty=false; wEditReturn=null; fn(); };
+  const go=()=>{ charDraft=null; charDirty=false; gDraft=null; gDirty=false; gEditReturn=null; charEditReturn=null; evDraft=null; relDraft=null; wDirty=false; wEditReturn=null; fn(); };
   editing() ? confirmSheet('変更を破棄しますか？','入力した内容は保存されません。','破棄',go) : go();
 }
 side.addEventListener('click',e=>{
@@ -3241,8 +3365,9 @@ side.addEventListener('click',e=>{
     if(a==='reorder') return guardLeave(()=>{ reorderMode=true; selectMode=false; charView='list'; render(); });
     if(a==='cmp') return guardLeave(()=>{ reorderMode=false; selectMode=false; openCmp(); });
     if(a==='select') return guardLeave(()=>{ selectMode=true; reorderMode=false; selected.clear(); charView='list'; render(); });
+    if(a==='gadd') return guardLeave(()=>openGroupEdit(null,false));
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
-    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : groupSheet(null); }
+    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : openGroupEdit(null,true); }
     if(a==='addfolder') return newFolderSheet();
     if(a==='grpreorder'){
       if(grpReorderMode){ grpReorderMode=false; render(); return; }
@@ -3250,6 +3375,8 @@ side.addEventListener('click',e=>{
     }
   }
   if((el=q('.ghead[data-gkey]'))){ toggleGroupCollapse(el.dataset.gkey); render(); return; }
+  if((el=q('[data-sck]'))) return guardLeave(()=>setCharKind(el.dataset.sck));
+  if((el=q('[data-sgid]'))) return guardLeave(()=>{ gId=el.dataset.sgid; gdReturn=null; gBackChar=null; charView='gdetail'; render(); main.scrollTop=0; });
   if((el=q('[data-scid]'))) return guardLeave(()=>{ reorderMode=false; selectMode=false; cmpReturn=false; charId=el.dataset.scid; charView='detail'; render(); main.scrollTop=0; });
   if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='term' ? 'terms' : el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; if(relKind!=='group') grpReorderMode=false; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
