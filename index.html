@@ -617,7 +617,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.23.0';
+const APP_VERSION='0.24.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -840,7 +840,10 @@ function buildStoryBible(){
       const gs=(c.affilIds||[]).map(groupById).filter(Boolean); if(gs.length) meta.push('所属: '+gs.map(g=>groupLabel(g)).join('、'));
       if(meta.length) L.push(meta.join(' / '));
       if((c.song||'').trim()) L.push(`イメージ曲: ${c.song.trim()}`);
+      if((c.looks||'').trim()){ L.push('見た目:'); L.push(c.looks.trim()); }
       if((c.personality||'').trim()){ L.push('性格:'); L.push(c.personality.trim()); }
+      if((c.goal||'').trim()){ L.push('目的:'); L.push(c.goal.trim()); }
+      if((c.skills||'').trim()){ L.push('スキル・武器など:'); L.push(c.skills.trim()); }
       if((c.history||'').trim()){ L.push('来歴:'); L.push(c.history.trim()); }
       if((c.memo||'').trim()){ L.push('詳細メモ:'); L.push(c.memo.trim()); }
       for(const f of (c.custom||[])) if((f.value||'').trim()){ L.push(`${(f.label||'').trim()||'項目'}:`); L.push(f.value.trim()); }
@@ -1508,7 +1511,7 @@ function renderChara(){
       <div class="chead">${avatar(c,'lg')}<div><div class="cname">${esc(c.name)}</div>${(c.alias||'').trim()?`<div class="calias">${esc(c.alias.trim())}</div>`:''}</div></div>
       ${affilChipsHtml(c)}
       ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
-      ${[['personality','性格'],['history','来歴'],['memo','詳細メモ']].filter(([k])=>(c[k]||'').trim()).map(([k,l])=>`<div class="cblock"><div class="clabel">${l}</div><div class="ctext">${esc(c[k].trim())}</div></div>`).join('')}
+      ${[['looks','見た目'],['personality','性格'],['goal','目的'],['skills','スキル・武器など'],['history','来歴'],['memo','詳細メモ']].filter(([k])=>(c[k]||'').trim()).map(([k,l])=>`<div class="cblock"><div class="clabel">${l}</div><div class="ctext">${esc(c[k].trim())}</div></div>`).join('')}
       ${qaBlockHtml(c)}
       ${charLinksHtml(c)}
     </div>`;
@@ -1535,7 +1538,10 @@ function renderChara(){
       <div class="chips">${affilGs.map(g=>`<span class="pchip">${gavatar(g,'sm')}${esc(groupLabel(g))}</span>`).join('')}<button type="button" class="chip" data-a="pickgroups">${affilGs.length?'変更':'グループを選ぶ'}</button></div>
     </div>
     <div class="fld"><label for="f_song">イメージ曲</label><textarea id="f_song" data-k="song" rows="1" class="song" placeholder="1行に1曲ずつ">${esc(d.song||'')}</textarea></div>
+    <div class="fld"><label for="f_looks">見た目</label><textarea id="f_looks" data-k="looks" class="mid" placeholder="例：黒髪のショート、左目の下にほくろ、いつも白衣">${esc(d.looks||'')}</textarea></div>
     <div class="fld"><label for="f_personality">性格</label><textarea id="f_personality" data-k="personality" class="mid" placeholder="例：面倒見がいいが、自分のことは後回し">${esc(d.personality||'')}</textarea></div>
+    <div class="fld"><label for="f_goal">目的</label><textarea id="f_goal" data-k="goal" class="mid" placeholder="例：妹を取り戻す、研究所の真相を暴く">${esc(d.goal||'')}</textarea></div>
+    <div class="fld"><label for="f_skills">スキル・武器など</label><textarea id="f_skills" data-k="skills" class="mid" placeholder="例：ハッキング、改造拳銃">${esc(d.skills||'')}</textarea></div>
     <div class="fld"><label for="f_history">来歴</label><textarea id="f_history" data-k="history" class="mid" placeholder="生い立ち・これまでの経緯など">${esc(d.history||'')}</textarea></div>
     <div class="fld"><label for="f_memo">詳細メモ</label><textarea id="f_memo" data-k="memo">${esc(d.memo||'')}</textarea></div>
     <div class="fld"><span class="lbl">追加項目</span>
@@ -1550,7 +1556,7 @@ function autoGrow(t){ t.style.height='auto'; t.style.height=t.scrollHeight+2+'px
 
 function newDraft(){
   const t=Date.now();
-  return {id:uid(),name:'',alias:'',age:'',affilIds:[],birthday:'',gender:'',bloodType:'',height:'',firstPerson:'',secondPerson:'',song:'',personality:'',history:'',memo:'',custom:[],icon:'',
+  return {id:uid(),name:'',alias:'',age:'',affilIds:[],birthday:'',gender:'',bloodType:'',height:'',firstPerson:'',secondPerson:'',song:'',looks:'',personality:'',goal:'',skills:'',history:'',memo:'',custom:[],icon:'',
     color:AV_COLORS[Math.floor(Math.random()*AV_COLORS.length)],createdAt:t,updatedAt:t};
 }
 function startEdit(c){ charDraft=c?JSON.parse(JSON.stringify(c)):newDraft(); charDirty=false; charView='edit'; render(); main.scrollTop=0; }
@@ -2254,7 +2260,7 @@ let cmpKey='f:firstPerson', cmpSort='order', cmpReturn=false, cmpScroll=0;
 try{ const p=JSON.parse(localStorage.getItem(CMP_PREF)||'null'); if(p){ cmpKey=p.k||cmpKey; cmpSort=p.s||cmpSort; } }catch(_){}
 function saveCmpPref(){ try{ localStorage.setItem(CMP_PREF,JSON.stringify({k:cmpKey,s:cmpSort})); }catch(_){} }
 function cmpOptions(){
-  const basic=[['f:alias','別名'],...FIELDS.map(f=>['f:'+f.k,f.label]),['affil','所属'],['f:personality','性格'],['f:history','来歴']];
+  const basic=[['f:alias','別名'],...FIELDS.map(f=>['f:'+f.k,f.label]),['affil','所属'],['f:looks','見た目'],['f:personality','性格'],['f:goal','目的'],['f:skills','スキル・武器など'],['f:history','来歴']];
   const seen=new Set(), custom=[];
   for(const c of charsSorted()) for(const x of (c.custom||[])){ const l=(x.label||'').trim(); if(l && !seen.has(l)){ seen.add(l); custom.push(['c:'+l,l]); } }
   const qs=questionsSorted().map(q=>['q:'+q.id,q.text]);
@@ -2308,7 +2314,7 @@ function cmpEdit(c){
   const done=()=>{ c.updatedAt=Date.now(); commit(); closeSheet(); const st=main.scrollTop; renderChara(); main.scrollTop=st;
     const row=main.querySelector(`.cmprow[data-cid="${c.id}"]`); if(row) row.classList.add('flash'); if(isWide()) renderSide(); };
   if(key==='affil'){ pickGroupsSheet(c.affilIds||[], ids=>{ c.affilIds=ids; done(); }); return; }
-  const multi = ['f:personality','f:history','f:memo','f:song'].includes(key) || key.startsWith('c:') || key.startsWith('q:');
+  const multi = ['f:looks','f:personality','f:goal','f:skills','f:history','f:memo','f:song'].includes(key) || key.startsWith('c:') || key.startsWith('q:');
   const isBd = key==='f:birthday';
   const cur=cmpValue(c,key);
   openSheet(`<div class="title">${esc(c.name)}の${esc(label)}</div>
@@ -2339,7 +2345,7 @@ main.addEventListener('change',e=>{ if(tab==='chara' && charView==='cmp' && e.ta
    right next to the match, e.g. "ユハ" inside "ユハナ") start unchecked. One undo is offered
    right after applying: the touched records are snapshotted and restored with a fresh
    updatedAt so the restore also wins in sync. */
-const CHAR_TEXT_FIELDS=[['name','名前'],['alias','別名'],['age','年齢'],['gender','性別'],['bloodType','血液型'],['height','身長'],['firstPerson','一人称'],['secondPerson','二人称'],['song','イメージ曲'],['personality','性格'],['history','来歴'],['memo','詳細メモ']];
+const CHAR_TEXT_FIELDS=[['name','名前'],['alias','別名'],['age','年齢'],['gender','性別'],['bloodType','血液型'],['height','身長'],['firstPerson','一人称'],['secondPerson','二人称'],['song','イメージ曲'],['looks','見た目'],['personality','性格'],['goal','目的'],['skills','スキル・武器など'],['history','来歴'],['memo','詳細メモ']];
 function rpTargets(){
   const T=[], add=(coll,area,item,where,get,set)=>{ const v=get(); if(typeof v==='string'&&v) T.push({coll,area,id:item.id,where,get,set}); };
   const plain=(coll,area,item,key,where)=>add(coll,area,item,where,()=>item[key],v=>{item[key]=v;});
