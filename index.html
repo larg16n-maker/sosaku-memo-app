@@ -617,12 +617,12 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.24.0';
+const APP_VERSION='0.25.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-09-30';
+const APP_DATE='2026-10-01';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
@@ -1203,10 +1203,12 @@ function memoMenu(id){
     ${cs.length?`<div class="mtags" style="padding:0 6px 8px">${cs.map(c=>tagChip(c,false)).join('')}</div>`:''}
     <button class="act" data-a="edit">${ICON.edit}編集</button>
     <button class="act" data-a="tag">${SV.plus}タグを編集</button>
+    <button class="act" data-a="move">${ICON.folder}別のフォルダへ移動</button>
     <button class="act" data-a="copy">${ICON.copy}コピー</button>
     <button class="act danger" data-a="del">${ICON.trash}削除</button>`, s=>{
     s.querySelector('[data-a=edit]').onclick=()=>editMemo(m);
     s.querySelector('[data-a=tag]').onclick=()=>{ closeSheet(); pickCharsSheet(m.tags||[], ids=>{ m.tags=ids; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; render(); main.scrollTop=st; }, 'このメモのキャラをタグ付け'); };
+    s.querySelector('[data-a=move]').onclick=()=>moveMemoSheet(m);
     s.querySelector('[data-a=copy]').onclick=()=>copyText(m.text);
     s.querySelector('[data-a=del]').onclick=()=>confirmSheet('このメモを削除しますか？','元に戻せません。','削除',()=>{
       db.memos=db.memos.filter(x=>x.id!==id);
@@ -1214,6 +1216,19 @@ function memoMenu(id){
       commit(); render(); toast('削除しました');
     });
   },'memo');
+}
+function moveMemoSheet(m){
+  const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt).filter(f=>f.id!==m.folderId);
+  if(!fs.length){ closeSheet(); toast('ほかのフォルダがありません'); return; }
+  openSheet(`<div class="title">移動先のフォルダ</div>
+    ${fs.map(f=>`<button class="act" data-fid="${f.id}">${ICON.folder}${esc(f.name)}<span class="small" style="margin-left:auto">${memosOf(f.id).length}</span></button>`).join('')}`, s=>{
+    s.querySelectorAll('[data-fid]').forEach(b=>b.onclick=()=>{
+      const to=folderById(b.dataset.fid); if(!to) return;
+      m.folderId=to.id; m.updatedAt=Date.now(); commit(); closeSheet();
+      const st=main.scrollTop; render(); main.scrollTop=st;
+      toastAction(`「${to.name}」へ移動しました`,'開く',()=>openFolder(to.id));
+    });
+  },'move');
 }
 function editMemo(m){
   const cs=(m.tags||[]).map(charById).filter(Boolean);
