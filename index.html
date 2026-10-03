@@ -617,12 +617,12 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.25.0';
+const APP_VERSION='0.25.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-10-01';
+const APP_DATE='2026-10-03';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
@@ -2771,7 +2771,7 @@ function renderWorld(){
   if(wView==='rc'||wView==='rg'){
     const kind=wView==='rg'?'group':'char', K=RK[kind], id=kind==='group'?rgId:rcId, me=K.get(id);
     $('#title').textContent='関係性'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','関係を追加');
-    $('#wEditBtn').hidden=false;
+
     const rs=relsOfK(kind,id);
     const nm=x=>kind==='group'?groupLabel(x):x.name;
     const affilNames = kind==='char' ? (me.affilIds||[]).map(id=>groupById(id)).filter(Boolean).map(g=>groupLabel(g)).join('・') : '';
