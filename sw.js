@@ -1,4 +1,4 @@
-const CACHE = 'sosaku-memo-v44';
+const CACHE = 'sosaku-memo-v45';
 const SHELL = [
   './',
   './index.html',
@@ -13,9 +13,10 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
+// Only old app-shell caches are cleared; other caches (e.g. downloaded character images) are kept.
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('sosaku-memo-') && k !== CACHE).map(k => caches.delete(k))))
   );
   self.clients.claim();
 });

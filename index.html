@@ -153,6 +153,35 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .gblk{background:var(--bg)}
 .gblk.dragging,.wrow.dragging{box-shadow:0 4px 14px rgba(0,0,0,.14);position:relative;z-index:2;background:var(--surface)}
 .ckseg{padding:10px 14px 8px;border-bottom:1px solid var(--line)}
+/* full-body images */
+.imgedit{display:flex;flex-wrap:wrap;gap:10px}
+.imgcard{position:relative;width:104px;display:flex;flex-direction:column;gap:4px}
+.imgth{width:104px;height:150px;border-radius:8px;overflow:hidden;background:var(--press);display:grid;place-items:center}
+.imgth img{width:100%;height:100%;object-fit:contain}
+.imgcard input{font-size:11px!important;padding:4px 6px!important;border-radius:6px!important}
+.imgrm{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:12px;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center}
+.imgrm svg{width:13px;height:13px}
+.imgadd{width:104px;height:150px;border-radius:8px;border:1px dashed var(--line);color:var(--sub);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.imgadd svg{width:18px;height:18px}
+.imgph{font-size:10px;color:var(--faint);padding:6px;text-align:center;line-height:1.5}
+.imgstrip{display:flex;gap:10px;overflow-x:auto;padding:2px 0 4px;-webkit-overflow-scrolling:touch}
+.imgshot{flex:none;display:flex;flex-direction:column;gap:4px;align-items:center;max-width:70vw}
+.imgshot img,.imgshot .imgph{height:260px;max-width:70vw;width:auto;object-fit:contain;border-radius:8px;background:var(--press);display:grid;place-items:center}
+.imgshot .imgph{width:160px}
+.imgshot span{font-size:11px;color:var(--sub)}
+.imgviewer{position:fixed;inset:0;z-index:40;background:rgba(10,10,12,.94);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.ivbar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;color:#eee;font-size:13px}
+.ivbar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivx{width:34px;height:34px;border-radius:17px;background:rgba(255,255,255,.12);color:#fff;display:grid;place-items:center}
+.ivx svg{width:16px;height:16px}
+.ivbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;-webkit-overflow-scrolling:touch}
+.ivbody img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in}
+.imgviewer.full .ivbody{display:block}
+.imgviewer.full .ivbody img{max-width:none;max-height:none;cursor:zoom-out}
+.ivbody .imgph{color:#aaa;font-size:12px}
+.ivnav{position:absolute;top:50%;width:40px;height:56px;margin-top:-28px;background:rgba(255,255,255,.12);color:#fff;font-size:26px;border-radius:10px}
+.ivnav.prev{left:8px}.ivnav.next{right:8px}
+.ivhint{flex:none;text-align:center;color:#888;font-size:10px;padding:6px 0 calc(8px + env(safe-area-inset-bottom,0px))}
 /* compare */
 .cmpentry{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub);text-align:left}
 .cmpentry svg{width:17px;height:17px;flex:none}
@@ -617,7 +646,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.25.1';
+const APP_VERSION='0.26.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -840,6 +869,7 @@ function buildStoryBible(){
       const gs=(c.affilIds||[]).map(groupById).filter(Boolean); if(gs.length) meta.push('所属: '+gs.map(g=>groupLabel(g)).join('、'));
       if(meta.length) L.push(meta.join(' / '));
       if((c.song||'').trim()) L.push(`イメージ曲: ${c.song.trim()}`);
+      if((c.images||[]).length) L.push('全身画像（同じリポジトリ内）: '+c.images.map(im=>im.path+((im.caption||'').trim()?`（${im.caption.trim()}）`:'')).join('、'));
       if((c.looks||'').trim()){ L.push('見た目:'); L.push(c.looks.trim()); }
       if((c.personality||'').trim()){ L.push('性格:'); L.push(c.personality.trim()); }
       if((c.goal||'').trim()){ L.push('目的:'); L.push(c.goal.trim()); }
@@ -1525,6 +1555,7 @@ function renderChara(){
     main.innerHTML=`<div class="cdetail">
       <div class="chead">${avatar(c,'lg')}<div><div class="cname">${esc(c.name)}</div>${(c.alias||'').trim()?`<div class="calias">${esc(c.alias.trim())}</div>`:''}</div></div>
       ${affilChipsHtml(c)}
+      ${(c.images||[]).length?`<div class="imgstrip">${c.images.map((im,i)=>`<button type="button" class="imgshot" data-imgview="${i}">${imgTag(im)}${(im.caption||'').trim()?`<span>${esc(im.caption.trim())}</span>`:''}</button>`).join('')}</div>`:''}
       ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
       ${[['looks','見た目'],['personality','性格'],['goal','目的'],['skills','スキル・武器など'],['history','来歴'],['memo','詳細メモ']].filter(([k])=>(c[k]||'').trim()).map(([k,l])=>`<div class="cblock"><div class="clabel">${l}</div><div class="ctext">${esc(c[k].trim())}</div></div>`).join('')}
       ${qaBlockHtml(c)}
@@ -1543,6 +1574,11 @@ function renderChara(){
     <div class="small" style="padding:0 2px">入力すると自動的に保存されます（キャラ名は必須です）</div>
     <div class="avrow">${avatar(d,'lg')}<div class="avbtns"><button type="button" class="chip" data-a="pick">画像を選ぶ</button>${d.icon?'<button type="button" class="chip danger" data-a="rmicon">画像を外す</button>':''}</div>
       <input type="file" id="iconFile" accept="image/*" hidden></div>
+    <div class="fld"><span class="lbl">全身画像</span>
+      <div class="imgedit">${(d.images||[]).map(im=>`<div class="imgcard" data-imgid="${im.id}"><div class="imgth">${imgTag(im)}</div><input type="text" data-imgcap="${im.id}" value="${esc(im.caption||'')}" placeholder="メモ（例：通常衣装）" maxlength="40"><button type="button" class="imgrm" data-a="rmimg" aria-label="この画像を外す">${CI.x}</button></div>`).join('')}
+        <button type="button" class="imgadd" data-a="addimg">${CI.plus}<span>画像を追加</span></button></div>
+      <input type="file" id="fullImgFile" accept="image/*" multiple hidden>
+      <div class="small" style="padding:4px 2px 0">元の画質のまま同期先のリポジトリに保存します（同期の設定とネット接続が必要です）</div></div>
     ${inp('name','キャラ名','',true)}
     ${inp('alias','別名','あだ名・本名など')}
     <div class="grid2">${inp('age','年齢')}<div class="fld"><span class="lbl">誕生日</span>${bdSelects(d.birthday,'cf_bd')}</div></div>
@@ -1604,7 +1640,8 @@ $('#charDelSelBtn').addEventListener('click',()=>{
   const n=selected.size; if(!n) return;
   confirmSheet(`${n}人のキャラクターを削除しますか？`,'元に戻せません。','削除',()=>{
     const t=Date.now();
-    db.chars=db.chars.filter(c=>{ if(selected.has(c.id)){ db.deletedChars.push({id:c.id,deletedAt:t}); return false; } return true; });
+    const gone=[]; db.chars=db.chars.filter(c=>{ if(selected.has(c.id)){ db.deletedChars.push({id:c.id,deletedAt:t}); gone.push(...(c.images||[]).map(x=>x.path)); return false; } return true; });
+    removeRepoFiles(gone);
     dropRelsOf(new Set(selected),t); dropTmems(x=>selected.has(x.charId),t);
     selected.clear(); selectMode=false; commit(); render(); toast(n+'人を削除しました');
   });
@@ -1627,7 +1664,8 @@ $('#charSaveBtn').addEventListener('click',()=>{
 main.addEventListener('input',e=>{
   if(!inCharDraft()) return;
   const t=e.target;
-  if(t.dataset.bd){ const box=t.closest('.bdsel'); charDraft.birthday=bdRead(box); charDirty=true; scheduleCharAutosave(); }
+  if(t.dataset.imgcap){ const im=(charDraft.images||[]).find(x=>x.id===t.dataset.imgcap); if(im){ im.caption=t.value; charDirty=true; scheduleCharAutosave(); } }
+  else if(t.dataset.bd){ const box=t.closest('.bdsel'); charDraft.birthday=bdRead(box); charDirty=true; scheduleCharAutosave(); }
   else if(t.dataset.k){ charDraft[t.dataset.k]=t.value; charDirty=true; if(t.classList.contains('song')) autoGrow(t); scheduleCharAutosave(); }
   else if(t.dataset.cf){
     const row=t.closest('.cf-row'); const f=charDraft.custom.find(x=>x.id===row.dataset.fid);
@@ -1644,6 +1682,7 @@ main.addEventListener('input',e=>{
 main.addEventListener('click',e=>{
   if(tab!=='chara') return;
   if(charView==='detail'){
+    const iv=e.target.closest('[data-imgview]'); if(iv){ const c=charById(charId); if(c) openImgViewer(c.images||[],Number(iv.dataset.imgview)); return; }
     const j=e.target.closest('[data-jump]'); if(j){ jumpFromChar(j); return; }
     const qf=e.target.closest('[data-qfocus]'); if(qf){ startQa(charById(charId),qf.dataset.qfocus); return; }
     const qb=e.target.closest('[data-a]'); if(!qb) return;
@@ -1670,12 +1709,15 @@ main.addEventListener('click',e=>{
       const id=a.closest('.cf-row').dataset.fid; charDraft.custom=charDraft.custom.filter(x=>x.id!==id); charDirty=true; scheduleCharAutosave();
       const st=main.scrollTop; renderChara(); main.scrollTop=st;
     }else if(act==='pick'){ $('#iconFile').click(); }
+    else if(act==='addimg'){ if(!(charDraft.name||'').trim()){ toast('先にキャラ名を入れてください'); return; } if(!getToken()){ toast('全身画像には同期の設定（設定の「アクセストークン」）が必要です'); return; } $('#fullImgFile').click(); }
+    else if(act==='rmimg'){ const id=a.closest('[data-imgid]').dataset.imgid, im=(charDraft.images||[]).find(x=>x.id===id); if(!im) return;
+      confirmSheet('この画像を外しますか？','同期先のリポジトリからも削除します。','外す',()=>{ charDraft.images=charDraft.images.filter(x=>x.id!==id); charDirty=true; clearTimeout(charAutosaveTimer); commitCharDraft(); removeRepoFiles([im.path]); const st=main.scrollTop; renderChara(); main.scrollTop=st; }); }
     else if(act==='pickgroups'){ pickGroupsSheet(charDraft.affilIds||[], ids=>{ charDraft.affilIds=ids; charDirty=true; scheduleCharAutosave(); const st=main.scrollTop; renderChara(); main.scrollTop=st; }); }
     else if(act==='rmicon'){ charDraft.icon=''; charDirty=true; scheduleCharAutosave(); const st=main.scrollTop; renderChara(); main.scrollTop=st; }
     else if(act==='delchar'){
       const c=charById(charDraft.id); if(!c) return;
       confirmSheet(`「${c.name}」を削除しますか？`,'元に戻せません。','削除',()=>{
-        const t=Date.now(); db.chars=db.chars.filter(x=>x.id!==c.id); db.deletedChars.push({id:c.id,deletedAt:t}); dropRelsOf(new Set([c.id]),t); dropTmems(x=>x.charId===c.id,t);
+        const t=Date.now(); db.chars=db.chars.filter(x=>x.id!==c.id); db.deletedChars.push({id:c.id,deletedAt:t}); dropRelsOf(new Set([c.id]),t); dropTmems(x=>x.charId===c.id,t); removeRepoFiles((c.images||[]).map(x=>x.path));
         commit(); charDraft=null; charDirty=false; charView='list'; render(); toast('削除しました');
       });
     }
@@ -1703,6 +1745,7 @@ main.addEventListener('keydown',e=>{
   const r=e.target.closest('.crow'); if(r){ charId=r.dataset.cid; charView='detail'; render(); }
 });
 main.addEventListener('change',e=>{
+  if(e.target.id==='fullImgFile'){ const files=[...(e.target.files||[])]; e.target.value=''; if(files.length) addFullImages(files); return; }
   if(e.target.id!=='iconFile') return;
   const file=e.target.files&&e.target.files[0]; e.target.value='';
   if(file) openCropper(file);
@@ -2265,6 +2308,100 @@ main.addEventListener('input',e=>{
 main.addEventListener('change',e=>{ if(tab==='chara'&&charView==='gedit'&&gDraft&&e.target.dataset.g){ gDraft[e.target.dataset.g]=e.target.value; gDirty=true; } });
 main.addEventListener('submit',e=>{ if(e.target.id==='grpForm') e.preventDefault(); });
 main.addEventListener('keydown',e=>{ if(tab==='chara'&&charView==='list'&&charKind==='group'&&e.key==='Enter'){ const r=e.target.closest('[data-gopen]'); if(r) r.click(); } });
+/* ---------- full-body images (stored as files in the sync repo) ----------
+   The image file itself goes to images/<charId>/… in the private repo, untouched (no resizing
+   or re-encoding), and the character only keeps {id, path, w, h, caption}. Because the repo is
+   private, images are fetched through the API with the sync token, then kept in the browser's
+   Cache Storage so each device downloads an image once and can show it offline afterwards. */
+const IMG_CACHE='boxox-images-v1', IMG_MAX=25*1024*1024;
+const imgUrls=new Map(); // path -> object URL (this session)
+const imgLoading=new Map();
+function repoFileUrl(path){ return `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}`; }
+function imgKey(path){ return new Request('https://boxox.invalid/'+encodeURI(path)); }
+function imgTag(im){ const u=imgUrls.get(im.path); setTimeout(()=>loadRepoImage(im.path),0);
+  return u?`<img src="${u}" alt="" data-imgpath="${esc(im.path)}">`:`<span class="imgph" data-imgpath="${esc(im.path)}">${getToken()?'読み込み中…':'同期の設定をすると表示されます'}</span>`; }
+async function loadRepoImage(path){
+  if(imgUrls.has(path)) return imgUrls.get(path);
+  if(imgLoading.has(path)) return imgLoading.get(path);
+  const job=(async()=>{
+    let blob=null;
+    try{ if('caches' in window){ const c=await caches.open(IMG_CACHE); const r=await c.match(imgKey(path)); if(r) blob=await r.blob(); } }catch(_){}
+    if(!blob){
+      const token=getToken(); if(!token) return null;
+      const res=await fetch(repoFileUrl(path)+`?ref=${GH.branch}`,{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.raw'}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      blob=await res.blob();
+      try{ if('caches' in window){ const c=await caches.open(IMG_CACHE); await c.put(imgKey(path),new Response(blob)); } }catch(_){}
+    }
+    const u=URL.createObjectURL(blob); imgUrls.set(path,u); return u;
+  })();
+  imgLoading.set(path,job);
+  try{
+    const u=await job;
+    if(u) document.querySelectorAll(`[data-imgpath="${CSS.escape(path)}"]`).forEach(el=>{ if(el.tagName==='IMG') return; const img=document.createElement('img'); img.src=u; img.alt=''; img.dataset.imgpath=path; el.replaceWith(img); });
+    return u;
+  }catch(e){
+    document.querySelectorAll(`.imgph[data-imgpath="${CSS.escape(path)}"]`).forEach(el=>el.textContent='読み込めませんでした');
+    return null;
+  }finally{ imgLoading.delete(path); }
+}
+function fileToB64(file){ return new Promise((ok,ng)=>{ const r=new FileReader(); r.onload=()=>ok(String(r.result).split(',')[1]||''); r.onerror=()=>ng(r.error); r.readAsDataURL(file); }); }
+function imgSize(file){ return new Promise(ok=>{ const u=URL.createObjectURL(file), im=new Image(); im.onload=()=>{ ok({w:im.naturalWidth,h:im.naturalHeight}); URL.revokeObjectURL(u); }; im.onerror=()=>{ ok({w:0,h:0}); URL.revokeObjectURL(u); }; im.src=u; }); }
+async function addFullImages(files){
+  const d=charDraft; if(!d) return;
+  const token=getToken(); if(!token){ toast('全身画像には同期の設定が必要です'); return; }
+  if(!navigator.onLine){ toast('オフラインです。ネットにつながってから追加してください'); return; }
+  d.images=d.images||[];
+  let ok=0;
+  for(const f of files){
+    if(f.size>IMG_MAX){ toast(`「${f.name}」は大きすぎます（25MBまで）`); continue; }
+    toast(`アップロード中…（${ok+1}/${files.length}）`);
+    const ext=((f.name.match(/\.([a-z0-9]{2,5})$/i)||[])[1]||(f.type.split('/')[1])||'png').toLowerCase();
+    const path=`images/${d.id}/${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}.${ext}`;
+    try{
+      const [b64,size]=await Promise.all([fileToB64(f),imgSize(f)]);
+      const res=await fetch(repoFileUrl(path),{method:'PUT',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+        body:JSON.stringify({message:'image: '+path,content:b64,branch:GH.branch})});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      try{ if('caches' in window){ const c=await caches.open(IMG_CACHE); await c.put(imgKey(path),new Response(f)); } }catch(_){}
+      imgUrls.set(path,URL.createObjectURL(f));
+      if(charDraft!==d) { /* editor was closed meanwhile; attach to the saved character */ const c=charById(d.id); if(c){ c.images=[...(c.images||[]),{id:uid(),path,w:size.w,h:size.h,caption:''}]; c.updatedAt=Date.now(); commit(); } }
+      else d.images.push({id:uid(),path,w:size.w,h:size.h,caption:''});
+      ok++;
+    }catch(e){ toast('アップロードに失敗しました（'+e.message+'）'); }
+  }
+  if(charDraft===d){ charDirty=true; clearTimeout(charAutosaveTimer); commitCharDraft(); if(tab==='chara'&&charView==='edit'){ const st=main.scrollTop; renderChara(); main.scrollTop=st; } }
+  if(ok) toast(ok+'枚追加しました');
+}
+async function removeRepoFiles(paths){
+  const token=getToken(); if(!token||!paths||!paths.length) return;
+  for(const path of paths){
+    try{
+      try{ if('caches' in window){ const c=await caches.open(IMG_CACHE); await c.delete(imgKey(path)); } }catch(_){}
+      const u=imgUrls.get(path); if(u){ URL.revokeObjectURL(u); imgUrls.delete(path); }
+      const r0=await fetch(repoFileUrl(path)+`?ref=${GH.branch}&t=${Date.now()}`,{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}});
+      if(!r0.ok) continue;
+      const {sha}=await r0.json();
+      await fetch(repoFileUrl(path),{method:'DELETE',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'remove image: '+path,sha,branch:GH.branch})});
+    }catch(_){}
+  }
+}
+// Full-screen viewer: fits the screen; tap the image to see it at its real size (scroll to pan).
+function openImgViewer(list,i){
+  if(!list.length) return;
+  const ov=document.createElement('div'); ov.className='imgviewer';
+  const draw=()=>{ const im=list[i]; ov.innerHTML=`<div class="ivbar"><span>${esc((im.caption||'').trim())}${list.length>1?`　${i+1} / ${list.length}`:''}</span><button type="button" class="ivx" aria-label="閉じる">${CI.x}</button></div>
+    <div class="ivbody">${imgTag(im)}</div>
+    ${list.length>1?`<button type="button" class="ivnav prev" aria-label="前の画像">‹</button><button type="button" class="ivnav next" aria-label="次の画像">›</button>`:''}
+    <div class="ivhint">画像をタップで原寸／画面に合わせる</div>`; };
+  draw(); document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{
+    if(e.target.closest('.ivx')){ ov.remove(); return; }
+    if(e.target.closest('.prev')){ i=(i-1+list.length)%list.length; draw(); return; }
+    if(e.target.closest('.next')){ i=(i+1)%list.length; draw(); return; }
+    if(e.target.closest('.ivbody img')){ ov.classList.toggle('full'); return; }
+  });
+}
 /* ---------- compare (見比べ) ----------
    One item at a time (a basic field, a custom field label, or a Q&A template question) shown
    for every character side by side, so things like 一人称 or 身長 can be checked for overlap. */
