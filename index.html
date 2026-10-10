@@ -504,6 +504,9 @@ body.kbopen .cedit{padding-bottom:120px}
 .qrow{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:13px;background:var(--bg);cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .qrow:active{background:var(--press)}
 .qrow .qt{flex:1;min-width:0;line-height:1.5}
+.qrow .qn{flex:none;font-size:11px;color:var(--sub);background:var(--press);border-radius:9px;padding:1px 7px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sheet .qans{font-size:12px;color:var(--sub);line-height:1.6;padding:8px 6px 0}
+.sheet .qans b{color:var(--ink);font-weight:600}
 .qrow .handle{flex:none;width:36px;height:28px;margin-right:-8px;display:grid;place-items:center;color:var(--faint);touch-action:none;cursor:grab}
 .qrow .handle svg{width:18px;height:18px}
 .qrow.dragging{position:relative;z-index:5;background:var(--surface);box-shadow:0 4px 14px rgba(0,0,0,.18)}
@@ -648,7 +651,7 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.26.2';
+const APP_VERSION='0.26.3';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1872,14 +1875,16 @@ function leaveQtpl(){
   if(b.qa && charById(charId)){ tab='chara'; startQa(charById(charId)); return; }
   charView=(b.cv==='detail'&&!charById(charId))?'list':b.cv; render();
 }
+// Characters (in list order) that have a non-empty answer to template question qid.
+function qAnswered(qid){ return charsSorted().filter(c=>((c.qa||{})[qid]||'').trim()); }
 function renderQtpl(){
   $('#title').textContent='質問テンプレ';
   $('#settingsBtn').hidden=true; $('#backBtn').hidden=false; $('#qAddBtn').hidden=false;
   const qs=questionsSorted(), cats=qCats();
-  const head=`<div class="qtplbar"><span class="small">全キャラ共通の質問リスト（${qs.length}問）。タップで編集、右のつまみで並べ替え。</span><button type="button" class="chip" data-a="qbulk">まとめて追加</button></div>`;
+  const head=`<div class="qtplbar"><span class="small">全キャラ共通の質問リスト（${qs.length}問）。タップで編集、右のつまみで並べ替え。右の「◯人」は回答済みのキャラ数です。</span><button type="button" class="chip" data-a="qbulk">まとめて追加</button></div>`;
   main.innerHTML=`<div class="qtpl">${head}${!qs.length
     ? '<div class="empty"><strong>まだ質問がありません</strong>右上の＋で1問ずつ、「まとめて追加」で貼り付けて一気に登録できます。</div>'
-    : cats.map(c=>`<div class="qcat">${esc(catLabel(c))}</div><ul class="qtlist">${qs.filter(q=>(q.cat||'').trim()===c).map(q=>`<li class="qrow" data-qid="${q.id}" tabindex="0"><span class="qt">${esc(q.text)}</span><span class="handle" aria-label="ドラッグで移動">${CI.grip}</span></li>`).join('')}</ul>`).join('')}</div>`;
+    : cats.map(c=>`<div class="qcat">${esc(catLabel(c))}</div><ul class="qtlist">${qs.filter(q=>(q.cat||'').trim()===c).map(q=>`<li class="qrow" data-qid="${q.id}" tabindex="0"><span class="qt">${esc(q.text)}</span>${(n=>n?`<span class="qn" title="${n}人が回答済み">${n}人</span>`:'')(qAnswered(q.id).length)}<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span></li>`).join('')}</ul>`).join('')}</div>`;
 }
 function qtplClick(e){
   if(e.target.closest('.handle')) return;
@@ -1901,7 +1906,7 @@ function questionSheet(q){
     <div class="fl">カテゴリ</div>
     <input id="qCat" type="text" class="plain" maxlength="20" placeholder="例：性格（空欄でもOK）" value="${esc(q?(q.cat||''):lastQCat)}" autocomplete="off">
     ${cats.length?`<div class="chips qcchips">${cats.map(c=>`<button type="button" class="chip" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:''}
-    ${q?'<div class="small" style="padding-top:8px">削除しても、各キャラの答えは消えません（表示されなくなるだけです）。</div>':''}
+    ${q?(()=>{ const a=qAnswered(q.id); return `<div class="qans">${a.length?`<b>${a.length}人が回答済み</b>：${a.map(c=>esc(c.name)).join('、')}`:'まだ誰も答えていません'}</div><div class="small" style="padding-top:4px">削除しても、各キャラの答えは消えません（表示されなくなるだけです）。</div>`; })():''}
     <div class="row">${q?'<button type="button" class="dangerbtn" data-a="del">削除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">${q?'保存':'追加'}</button></div>`, s=>{
     const tx=s.querySelector('#qText'), ct=s.querySelector('#qCat'), ok=s.querySelector('[data-a=ok]');
     const upd=()=>ok.disabled=!tx.value.trim(); upd(); tx.addEventListener('input',upd);
