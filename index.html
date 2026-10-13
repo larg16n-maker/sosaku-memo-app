@@ -548,6 +548,65 @@ body.kbopen .cedit{padding-bottom:120px}
 /* world: glossary */
 .tmview{padding-bottom:20px}
 .srch{z-index:3}
+/* cross charts (十字グラフ) */
+.xcv{display:flex;flex-direction:column;padding:10px 12px 28px;max-width:600px;margin:0 auto;width:100%}
+.xc-mode{align-self:stretch;display:flex}
+.xc-mode button{flex:1}
+.xc-name{align-self:center;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;padding:10px 8px 0;color:var(--ink)}
+.xc-name svg{width:14px;height:14px;color:var(--faint)}
+.xc-frame{margin-top:10px;background:#151515;border-radius:6px;padding:10px 10px 12px}
+.xc-frame.img{padding:8px}
+.xc-title{display:block;width:100%;color:#fff;font-weight:800;font-size:15px;text-align:center;padding:2px 4px 8px;letter-spacing:.04em;line-height:1.4}
+.xc-board{position:relative;aspect-ratio:1/1;width:100%;background:#fff;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overflow:hidden}
+.xc-board.img{background:#000}
+.xc-axis{position:absolute;background:#151515}
+.xc-axis.v{left:50%;top:9%;bottom:9%;width:2px;transform:translateX(-1px)}
+.xc-axis.h{top:50%;left:9%;right:9%;height:2px;transform:translateY(-1px)}
+.xc-lab{position:absolute;font-weight:800;color:#151515;font-size:13px;line-height:1.15;padding:2px;cursor:text;text-align:center}
+.xc-lab.top{top:2%;left:50%;transform:translateX(-50%);white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis}
+.xc-lab.bottom{bottom:2%;left:50%;transform:translateX(-50%);white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis}
+.xc-lab.left,.xc-lab.right{top:9%;bottom:9%;writing-mode:vertical-rl;text-orientation:upright;line-height:1.05}
+.xc-lab.left{left:1.5%}.xc-lab.right{right:1.5%}
+.xc-lab.empty{color:#b5b5b5;font-weight:600;font-size:11px}
+.xc-bg{position:absolute;max-width:none;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.xc-bgph{position:absolute;inset:0;display:grid;place-items:center;color:#aaa;font-size:12px;text-align:center;padding:20px}
+.xc-board.adjusting{cursor:move;outline:2px dashed var(--brass);outline-offset:-2px}
+.xc-board.adjusting .xc-pin{opacity:.3;pointer-events:none}
+.xc-pin{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;box-shadow:0 0 0 2px #fff,0 2px 6px rgba(0,0,0,.28);cursor:grab;touch-action:none;background:var(--pc)}
+.xc-pin>img{width:100%;height:100%;border-radius:50%;object-fit:cover;pointer-events:none}
+.xc-pin.lift{opacity:.25}
+.xc-pin .nm{position:absolute;top:100%;margin-top:3px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#151515;background:rgba(255,255,255,.88);padding:0 4px;border-radius:4px;white-space:nowrap;pointer-events:none}
+.xc-board.noname .xc-pin .nm{display:none}
+.xc-pin .say{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:7px;max-width:9.5em;width:max-content;font-size:10px;font-weight:600;line-height:1.35;color:#151515;background:#fff;border:1.5px solid #151515;border-radius:8px;padding:3px 6px;pointer-events:none;text-align:left;white-space:pre-wrap;word-break:break-word}
+.xc-pin .say::after{content:"";position:absolute;top:100%;left:50%;margin-left:-4px;border:4px solid transparent;border-top-color:#151515}
+.xc-board:not(.sayall) .xc-pin .say{display:none}
+.xc-pin .badge{position:absolute;right:-3px;top:-3px;width:11px;height:11px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 2px #fff}
+.xc-board.sayall .xc-pin .badge{display:none}
+.xc-ghost{position:fixed;pointer-events:none;z-index:90;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.3);background:var(--pc);overflow:hidden}
+.xc-ghost img{width:100%;height:100%;object-fit:cover}
+.xc-pop{position:absolute;z-index:20;width:min(80%,260px);background:#fff;color:#151515;border:1.5px solid #151515;border-radius:10px;padding:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:12px;touch-action:auto;user-select:text;-webkit-user-select:text}
+.xc-pop .who{font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.xc-pop .who button{margin-left:auto;color:#666;padding:0 2px;font-size:16px;line-height:1}
+.xc-pop textarea{width:100%;min-height:52px;resize:none;border:1px solid #ccc;border-radius:6px;padding:6px;font:inherit;font-size:16px;color:#151515;background:#fff}
+.xc-pop .row{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+.xc-pop .row button{border-radius:12px;padding:5px 12px;font-size:12px;background:#eee;color:#151515}
+.xc-pop .row .ok{background:#151515;color:#fff}
+.xc-adj{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:10px}
+.xc-adj label{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:8px;flex:1;min-width:170px}
+.xc-adj input[type=range]{flex:1;accent-color:var(--brass)}
+.xc-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:10px}
+.xc-tools .sp{flex:1}
+.xchip{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--sub);font-size:12px;padding:5px 11px;border-radius:14px;white-space:nowrap}
+.xchip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.xchip.on{background:var(--brass);border-color:var(--brass);color:#fff}
+.xc-trayh{font-size:11px;color:var(--faint);padding:14px 2px 4px;letter-spacing:.04em}
+.xc-tray{display:flex;flex-wrap:wrap;gap:10px 12px;padding:4px 2px 6px;min-height:48px}
+.xc-tchar{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--sub);cursor:grab;touch-action:none;width:44px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.xc-tchar .xc-dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;background:var(--pc);overflow:hidden}
+.xc-tchar .xc-dot img{width:100%;height:100%;object-fit:cover;pointer-events:none}
+.xc-tchar .tn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xc-tray .none{font-size:12px;color:var(--faint);align-self:center}
+.xcv .hint{padding:6px 2px 0;text-align:left}
 .srcount{font-size:11px;color:var(--faint);padding:6px 14px 2px}
 .srlist{list-style:none;margin:0;padding:0}
 .srrow{padding:9px 14px;border-bottom:1px solid var(--line);font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word;cursor:pointer}
@@ -668,7 +727,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.27.1';
+const APP_VERSION='0.28.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -699,7 +758,7 @@ function b64enc(str){ return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2}
 function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
 
 /* ---------- data model ---------- */
-const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms'],['tmems','deletedTmems']];
+const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms'],['tmems','deletedTmems'],['xcharts','deletedXcharts']];
 function emptyDb(){ const d={meta:{updatedAt:0}}; for(const [a,b] of COLLS){ d[a]=[]; d[b]=[]; } return d; }
 function normalize(d){
   const e=emptyDb();
@@ -948,6 +1007,19 @@ function buildStoryBible(){
     for(const t of termsSorted()) L.push(`- ${t.word}${(t.yomi||'').trim()?`（${t.yomi.trim()}）`:''}${(t.desc||'').trim()?`：${t.desc.trim().replace(/\n/g,' ')}`:''}`);
     L.push('');
   }
+  const xcs=xchartsSorted().filter(x=>Object.keys(x.pins||{}).some(id=>charById(id)));
+  if(xcs.length){
+    L.push('## 十字グラフ');
+    L.push('（キャラを2つの軸の上に置いたもの。位置は 横:-1=左端〜+1=右端、縦:-1=下端〜+1=上端）');
+    for(const x of xcs){
+      L.push(`### ${(x.title||'').trim()||'（名前なし）'}`);
+      if(x.mode!=='img'||!x.bg) L.push(`上:${x.top||'-'}／下:${x.bottom||'-'}／左:${x.left||'-'}／右:${x.right||'-'}`);
+      else L.push('（画像のテンプレートを使用）');
+      for(const c of charsSorted()){ const p=(x.pins||{})[c.id]; if(!p) continue;
+        L.push(`- ${c.name}：横${(p.x*2-1).toFixed(1)} 縦${(1-p.y*2).toFixed(1)}${(p.note||'').trim()?`「${p.note.trim().replace(/\n/g,' ')}」`:''}`); }
+      L.push('');
+    }
+  }
   const foldersWithMemos=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt).filter(f=>memosOf(f.id).length);
   if(foldersWithMemos.length){
     L.push('## メモ');
@@ -1029,6 +1101,7 @@ async function syncNow(){
 }
 
 function safeRerender(){
+  if(tab==='world' && wView==='xc' && xcBusy()) return;
   if(tab==='chara' && (charView==='edit'||charView==='qa')) return;
   if(tab==='world' && (wView==='ev'||wView==='rel')) return;
   if(document.activeElement && SEARCH_BOXES[document.activeElement.id] && main.contains(document.activeElement)){ refreshSearch(document.activeElement.id); renderSide(); return; }
@@ -2915,7 +2988,8 @@ const WI={
   tl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="7" r="2" fill="currentColor"/><circle cx="6" cy="17" r="2" fill="currentColor"/><path d="M11 7h9M11 17h9M11 12h6"/></svg>',
   rel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2.5 19c.6-3 2.4-4.5 4.5-4.5s3.9 1.5 4.5 4.5M12.5 19c.6-3 2.4-4.5 4.5-4.5s3.9 1.5 4.5 4.5"/></svg>',
   line:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="12" r="2" fill="currentColor"/><path d="M11 12h9"/></svg>',
-  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 016.5 3H19v15H6.5A1.5 1.5 0 005 19.5z"/><path d="M5 19.5A1.5 1.5 0 006.5 21H19v-3"/><path d="M9 7.5h6M9 11h4"/></svg>'
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 016.5 3H19v15H6.5A1.5 1.5 0 005 19.5z"/><path d="M5 19.5A1.5 1.5 0 006.5 21H19v-3"/><path d="M9 7.5h6M9 11h4"/></svg>',
+  cross:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><circle cx="16.5" cy="7.5" r="2" fill="currentColor" stroke="none"/><circle cx="7.5" cy="15.5" r="2" fill="currentColor" stroke="none"/></svg>'
 };
 let wView='hub', tlId=null, rcId=null, rgId=null, relKind='char', evDraft=null, relDraft=null, wDirty=false, wReturn=null;
 let grpReorderMode=false;
@@ -2979,7 +3053,24 @@ function renderWorld(){
       <div class="wrow" data-go="tls">${WI.tl}<span class="wn">時系列</span><span class="wc">${db.timelines.length}</span></div>
       <div class="wrow" data-go="rchars">${WI.rel}<span class="wn">関係性</span><span class="wc">${relsOfAllCount()}</span></div>
       <div class="wrow" data-go="terms">${WI.book}<span class="wn">単語帳</span><span class="wc">${db.terms.length}</span></div>
+      <div class="wrow" data-go="xcs">${WI.cross}<span class="wn">十字グラフ</span><span class="wc">${db.xcharts.length}</span></div>
     </div>`;
+    return;
+  }
+  if(wView==='xc' && !xcById(xcId)) wView='xcs';
+  if(wView==='xcs'){
+    $('#title').textContent='十字グラフ'; hdrBack();
+    const xs=xchartsSorted();
+    if(wide){ main.innerHTML='<div class="pick-ph">'+(xs.length?'左の一覧からグラフを選んでください':'左上の＋からグラフを作れます')+'</div>'; return; }
+    $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','十字グラフを作る');
+    main.innerHTML = xs.length
+      ? xs.map(x=>`<div class="wrow" data-xcid="${x.id}" tabindex="0">${WI.cross}<span class="wn">${esc((x.title||'').trim()||'（名前なし）')}</span><span class="wc">${Object.keys(x.pins||{}).filter(id=>charById(id)).length||''}</span></div>`).join('')
+      : '<div class="empty"><strong>十字グラフがありません</strong>右上の＋から作れます。2つの軸の上にキャラを置いて、立ち位置を見比べられます。</div>';
+    return;
+  }
+  if(wView==='xc'){
+    $('#title').textContent='十字グラフ'; hdrBack();
+    renderXc(xcById(xcId));
     return;
   }
   if(wView==='terms'){
@@ -3121,7 +3212,8 @@ function worldBack(){
   if(wReturnG && wView==='rg' && groupById(wReturnG)){ const g=wReturnG; wReturnG=null; tab='chara'; gId=g; charView='gdetail'; render(); return; }
   wReturnG=null;
   if(wReturn && (wView==='tl'||wView==='rc')){ const cid=wReturn; wReturn=null; tab='chara'; charView='detail'; charId=cid; render(); return; }
-  wView = wView==='tl'?'tls' : (wView==='rc'||wView==='rg')?'rchars' : 'hub';
+  if(wView==='xc'){ closeXcPop(); xcAdjust=false; }
+  wView = wView==='tl'?'tls' : (wView==='rc'||wView==='rg')?'rchars' : wView==='xc'?'xcs' : 'hub';
   render();
 }
 function toggleTlView(){
@@ -3135,6 +3227,7 @@ function toggleTlView(){
 $('#wAddBtn').addEventListener('click',()=>{
   if(wView==='tls') return newTimelineSheet();
   if(wView==='terms') return termSheet(null);
+  if(wView==='xcs') return newXchart();
   if(wView==='tl') return tlAddChooser();
   if(wView==='rc'||wView==='rg'){ const kind=wView==='rg'?'group':'char'; relDraft={id:uid(),kind,a:kind==='group'?rgId:rcId,b:'',label:'',ab:'',ba:'',nab:'',nba:'',detail:'',createdAt:Date.now()}; wDirty=false; wView='rel'; render(); main.scrollTop=0; }
 });
@@ -3541,6 +3634,8 @@ main.addEventListener('click',e=>{
   if(suppressClick){ suppressClick=false; return; }
   const t=e.target;
   const go=t.closest('[data-go]'); if(go){ wView=go.dataset.go; render(); return; }
+  const xr=t.closest('[data-xcid]'); if(xr && wView==='xcs'){ openXchart(xr.dataset.xcid); return; }
+  if(wView==='xc'){ xcClick(e); return; }
   const tr=t.closest('[data-tl]'); if(tr && wView==='tls'){ tlId=tr.dataset.tl; wView='tl'; render(); return; }
   const rc=t.closest('[data-rcid]'); if(rc){ rcId=rc.dataset.rcid; wView='rc'; render(); return; }
   const gr=t.closest('[data-gid]'); if(gr){ rgId=gr.dataset.gid; wView='rg'; render(); return; }
@@ -3564,7 +3659,7 @@ main.addEventListener('click',e=>{
 });
 main.addEventListener('keydown',e=>{
   if(tab!=='world'||e.key!=='Enter') return;
-  const el=e.target.closest('[data-go],[data-tl],[data-rcid],[data-gid],.ev,.rrow,.tmrow'); if(el && !e.target.matches('input,textarea,select,button')) el.click();
+  const el=e.target.closest('[data-go],[data-tl],[data-rcid],[data-gid],[data-xcid],.ev,.rrow,.tmrow,.xc-lab'); if(el && !e.target.matches('input,textarea,select,button')) el.click();
 });
 main.addEventListener('input',e=>{
   if(tab!=='world') return;
@@ -3584,6 +3679,216 @@ main.addEventListener('change',e=>{
 });
 
 
+/* ---------- cross charts (十字グラフ) ----------
+   A chart is either drawn from text (title + 4 axis words) or uses an uploaded template image
+   (stored in the sync repo like full-body images, shown with a saved pan/zoom). Characters are
+   placed as pins at x/y given as 0..1 fractions of the square board, so the layout is the same
+   at any screen size. Each pin can carry a one-line comment. */
+let xcId=null, xcAdjust=false, xcDrag=null, xcPending=null, xcPan=null;
+const xcPts=new Map();
+function xchartsSorted(){ return [...db.xcharts].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); }
+function xcById(id){ return db.xcharts.find(x=>x.id===id); }
+function xcBusy(){ const a=document.activeElement; return !!(xcDrag||xcPending||xcPan||xcAdjust||document.querySelector('.xc-pop')||(a&&main.contains(a)&&a.matches('input,textarea'))); }
+function xcTouch(x){ x.updatedAt=Date.now(); commit(); }
+function openXchart(id){ xcId=id; xcAdjust=false; wView='xc'; render(); main.scrollTop=0; }
+function newXchart(){
+  const t=Date.now(), x={id:uid(),title:'',top:'',bottom:'',left:'',right:'',mode:'text',bg:null,pins:{},showName:true,sayAll:true,createdAt:t,updatedAt:t};
+  db.xcharts.push(x); commit(); openXchart(x.id);
+  xcTextSheet(x,'title');
+}
+const XC_LABELS={title:'タイトル',top:'上の言葉',bottom:'下の言葉',left:'左の言葉',right:'右の言葉'};
+function xcTextSheet(x,k){
+  openSheet(`<div class="title">${XC_LABELS[k]}</div>
+    <input id="xcIn" type="text" class="plain" maxlength="60" value="${esc(x[k]||'')}" placeholder="${k==='title'?'例：食べ物を綺麗にはんぶんこできなかった！':'例：迷わず'}" autocomplete="off">
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
+    const i=s.querySelector('#xcIn');
+    const ok=()=>{ x[k]=i.value.trim(); closeSheet(); xcTouch(x); render(); };
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    s.querySelector('[data-a=ok]').onclick=ok;
+    i.addEventListener('keydown',e=>{ if(e.key==='Enter' && !e.isComposing){ e.preventDefault(); ok(); } });
+    i.focus(); i.select();
+  },'xc');
+}
+function xcFace(c){ return c.icon?`<img src="${c.icon}" alt="">`:esc([...(c.name||'？')][0]||'？'); }
+function xcColor(c){ return c.color||AV_COLORS[0]; }
+function renderXc(x){
+  const img=x.mode==='img', board=[];
+  if(img){
+    board.push(x.bg ? `<img class="xc-bg" id="xcBg" alt="">` : `<div class="xc-bgph">下の「画像を選ぶ」からテンプレート画像を選んでください</div>`);
+  }else{
+    board.push('<div class="xc-axis v"></div><div class="xc-axis h"></div>');
+    for(const k of ['top','bottom','left','right']) board.push(`<div class="xc-lab ${k}${x[k]?'':' empty'}" data-xa="lab" data-k="${k}" role="button" tabindex="0">${esc(x[k]||XC_LABELS[k]+'をタップで入力')}</div>`);
+  }
+  const placed=[], rest=[];
+  for(const c of charsSorted()){ const p=(x.pins||{})[c.id]; (p?placed:rest).push([c,p]); }
+  for(const [c,p] of placed){
+    const note=(p.note||'').trim();
+    board.push(`<div class="xc-pin" data-pcid="${c.id}" style="left:${p.x*100}%;top:${p.y*100}%;--pc:${xcColor(c)}">${xcFace(c)}<span class="nm">${esc(c.name)}</span>${note?`<span class="say">${esc(note)}</span><span class="badge"></span>`:''}</div>`);
+  }
+  main.innerHTML=`<div class="xcv">
+    <div class="seg xc-mode" role="group" aria-label="グラフの作り方"><button type="button" data-xa="mtext" aria-pressed="${!img}">文字で作る</button><button type="button" data-xa="mimg" aria-pressed="${img}">画像を使う</button></div>
+    ${img?`<button type="button" class="xc-name" data-xa="title" data-k="title">${esc(x.title||'（名前をタップで入力）')}${ICON.edit}</button>`:''}
+    <div class="xc-frame${img?' img':''}">
+      ${img?'':`<button type="button" class="xc-title" data-xa="title" data-k="title">${esc(x.title||'タイトルをタップで入力')}</button>`}
+      <div class="xc-board${img?' img':''}${xcAdjust?' adjusting':''}${x.showName===false?' noname':''}${x.sayAll===false?'':' sayall'}" id="xcBoard">${board.join('')}</div>
+    </div>
+    ${img?`<div class="xc-adj">
+      ${x.bg?`<button type="button" class="xchip${xcAdjust?' on':''}" data-xa="adjust">${xcAdjust?'調整を終える':'画像の位置を調整'}</button>`:''}
+      ${xcAdjust?`<label>大きさ<input type="range" id="xcZoom" min="50" max="300" step="1" value="${Math.round((x.bg.zoom||1)*100)}"></label><button type="button" class="xchip" data-xa="fit">横幅に合わせる</button>`:''}
+      <button type="button" class="xchip" data-xa="pickbg">${x.bg?'画像を変える':'画像を選ぶ'}</button>
+      <input type="file" id="xcFile" accept="image/*" hidden>
+    </div>`:''}
+    <div class="xc-tools">
+      <button type="button" class="xchip" data-xa="names" aria-pressed="${x.showName!==false}">名前を表示</button>
+      <button type="button" class="xchip" data-xa="says" aria-pressed="${x.sayAll!==false}">コメントを表示</button>
+      <span class="sp"></span>
+      ${placed.length?'<button type="button" class="xchip" data-xa="clear">ぜんぶ外す</button>':''}
+    </div>
+    <div class="xc-trayh">まだ置いていないキャラ</div>
+    <div class="xc-tray" id="xcTray">${rest.length?rest.map(([c])=>`<div class="xc-tchar" data-tcid="${c.id}" style="--pc:${xcColor(c)}"><span class="xc-dot">${xcFace(c)}</span><span class="tn">${esc(c.name)}</span></div>`).join(''):`<span class="none">${db.chars.length?'全員置きました':'キャラクタータブでキャラを登録すると、ここに並びます'}</span>`}</div>
+    <div class="hint">キャラをグラフの上へドラッグして置きます。置いたキャラはドラッグで動かせて、グラフの外へ出すと外れます。置いたキャラをタップすると一言コメントを書けます。${img?'':'軸の言葉とタイトルはタップで書き換えられます。'}</div>
+    <button type="button" class="delchar" data-xa="del">このグラフを削除</button>
+  </div>`;
+  if(img && x.bg){
+    xcPlaceBg(x);
+    loadRepoImage(x.bg.path).then(u=>{ const im=$('#xcBg'); if(im && u) im.src=u; else if(im && !u) im.replaceWith(Object.assign(document.createElement('div'),{className:'xc-bgph',textContent:getToken()?'画像を読み込めませんでした':'同期の設定をすると画像が表示されます'})); })
+      .catch(()=>{});
+  }
+}
+function xcPlaceBg(x){ const im=$('#xcBg'); if(!im||!x.bg) return; const b=x.bg; im.style.width=(b.zoom*100)+'%'; im.style.left=(b.ox*100)+'%'; im.style.top=(b.oy*100)+'%'; }
+function xcFitBg(x){ const b=x.bg; b.zoom=1; b.ox=0; b.oy=(1-(b.h&&b.w?b.h/b.w:1))/2; }
+function xcSetZoom(x,z,cx,cy){ const b=x.bg; z=Math.min(3,Math.max(.5,z)); cx=cx??.5; cy=cy??.5;
+  b.ox=cx-(cx-b.ox)*z/b.zoom; b.oy=cy-(cy-b.oy)*z/b.zoom; b.zoom=z; xcPlaceBg(x); const r=$('#xcZoom'); if(r) r.value=Math.round(z*100); }
+function closeXcPop(){ const p=document.querySelector('.xc-pop'); if(p) p.remove(); }
+function xcOpenPop(x,cid){
+  closeXcPop();
+  const c=charById(cid), p=x.pins[cid], board=$('#xcBoard'); if(!c||!p||!board) return;
+  const pop=document.createElement('div'); pop.className='xc-pop';
+  pop.innerHTML=`<div class="who">${esc(c.name)}の一言<button type="button" data-pa="close" aria-label="閉じる">×</button></div><textarea id="xcNote" maxlength="60" placeholder="このキャラへの一言">${esc(p.note||'')}</textarea><div class="row">${p.note?'<button type="button" data-pa="del">消す</button>':''}<button type="button" class="ok" data-pa="ok">決定</button></div>`;
+  board.appendChild(pop);
+  const bw=board.clientWidth, bh=board.clientHeight, pw=pop.offsetWidth, ph=pop.offsetHeight, px=p.x*bw, py=p.y*bh;
+  pop.style.left=Math.min(bw-pw-6,Math.max(6,px-pw/2))+'px';
+  pop.style.top=(py>bh/2?Math.max(6,py-ph-26):Math.min(bh-ph-6,py+26))+'px';
+  // keep the textarea focused while a button is pressed (iOS: a blur here shifts the layout and the tap misses)
+  pop.querySelectorAll('button').forEach(b=>b.addEventListener('pointerdown',e=>e.preventDefault()));
+  pop.addEventListener('pointerdown',e=>e.stopPropagation());
+  pop.addEventListener('click',e=>{
+    e.stopPropagation();
+    const a=e.target.closest('[data-pa]'); if(!a) return;
+    if(a.dataset.pa==='close'){ closeXcPop(); return; }
+    const v=a.dataset.pa==='ok'?pop.querySelector('textarea').value.trim():'';
+    const cur=x.pins[cid]; if(cur){ if(v) cur.note=v; else delete cur.note; }
+    closeXcPop(); xcTouch(x); const st=main.scrollTop; render(); main.scrollTop=st;
+  });
+  const ta=pop.querySelector('textarea'); ta.focus({preventScroll:true});
+}
+function xcClick(e){
+  const x=xcById(xcId); if(!x) return;
+  const a=e.target.closest('[data-xa]'); if(!a) return;
+  const act=a.dataset.xa, st=main.scrollTop, re=()=>{ render(); main.scrollTop=st; };
+  if(act==='lab'||act==='title'){ if(!xcAdjust) xcTextSheet(x,a.dataset.k); return; }
+  if(act==='mtext'){ if(x.mode!=='text'){ x.mode='text'; xcAdjust=false; xcTouch(x); re(); } return; }
+  if(act==='mimg'){ if(x.mode!=='img'){ x.mode='img'; xcTouch(x); re(); if(!x.bg) $('#xcFile')&&$('#xcFile').click(); } return; }
+  if(act==='pickbg'){ const f=$('#xcFile'); if(f) f.click(); return; }
+  if(act==='adjust'){ xcAdjust=!xcAdjust; if(!xcAdjust){ xcTouch(x); toast('画像の位置を決めました'); } re(); return; }
+  if(act==='fit'){ xcFitBg(x); xcPlaceBg(x); const r=$('#xcZoom'); if(r) r.value=100; return; }
+  if(act==='names'){ x.showName=x.showName===false; xcTouch(x); re(); return; }
+  if(act==='says'){ x.sayAll=x.sayAll===false; xcTouch(x); re(); return; }
+  if(act==='clear'){ confirmSheet('ぜんぶ外しますか？','置いたキャラとコメントがすべて外れます。','外す',()=>{ x.pins={}; xcTouch(x); re(); }); return; }
+  if(act==='del'){ confirmSheet('このグラフを削除しますか？','元に戻せません。','削除',()=>{
+    const t=Date.now(); db.xcharts=db.xcharts.filter(y=>y.id!==x.id); db.deletedXcharts.push({id:x.id,deletedAt:t});
+    if(x.bg) removeRepoFiles([x.bg.path]);
+    commit(); xcAdjust=false; wView='xcs'; render(); toast('削除しました'); }); return; }
+}
+main.addEventListener('change',async e=>{
+  if(e.target.id!=='xcFile') return;
+  const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
+  const x=xcById(xcId); if(!x) return;
+  const token=getToken(); if(!token){ toast('画像を使うには同期の設定が必要です'); return; }
+  if(!navigator.onLine){ toast('オフラインです。ネットにつながってから選んでください'); return; }
+  if(f.size>IMG_MAX){ toast('画像が大きすぎます（25MBまで）'); return; }
+  toast('アップロード中…');
+  const ext=((f.name.match(/\.([a-z0-9]{2,5})$/i)||[])[1]||(f.type.split('/')[1])||'png').toLowerCase();
+  const path=`images/xchart/${x.id}/${Date.now().toString(36)}.${ext}`;
+  try{
+    const [b64,size]=await Promise.all([fileToB64(f),imgSize(f)]);
+    const res=await fetch(repoFileUrl(path),{method:'PUT',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify({message:'image: '+path,content:b64,branch:GH.branch})});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    try{ if('caches' in window){ const c=await caches.open(IMG_CACHE); await c.put(imgKey(path),new Response(f)); } }catch(_){}
+    imgUrls.set(path,URL.createObjectURL(f));
+    const old=x.bg&&x.bg.path;
+    x.bg={path,w:size.w,h:size.h,zoom:1,ox:0,oy:0}; xcFitBg(x); x.mode='img';
+    xcTouch(x); if(old) removeRepoFiles([old]);
+    if(tab==='world'&&wView==='xc'&&xcId===x.id){ xcAdjust=true; render(); }
+    toast('ドラッグで位置、つまみで大きさを合わせてください');
+  }catch(err){ toast('アップロードに失敗しました（'+err.message+'）'); }
+});
+main.addEventListener('input',e=>{
+  if(e.target.id!=='xcZoom') return;
+  const x=xcById(xcId); if(x&&x.bg) xcSetZoom(x,e.target.value/100);
+});
+// drag & tap on pins / tray, pan & pinch while adjusting the background
+function xcStartDrag(e,cid){
+  const c=charById(cid); if(!c) return;
+  const g=document.createElement('div'); g.className='xc-ghost'; g.style.setProperty('--pc',xcColor(c)); g.innerHTML=xcFace(c);
+  document.body.appendChild(g);
+  xcDrag={cid,g};
+  const pin=document.querySelector(`.xc-pin[data-pcid="${cid}"]`); if(pin) pin.classList.add('lift');
+  g.style.left=e.clientX+'px'; g.style.top=e.clientY+'px';
+}
+main.addEventListener('pointerdown',e=>{
+  if(tab!=='world'||wView!=='xc') return;
+  const x=xcById(xcId); if(!x) return;
+  if(e.target.closest('.xc-pop')) return;
+  const board=e.target.closest('#xcBoard');
+  if(xcAdjust && board && x.bg){
+    e.preventDefault(); try{ board.setPointerCapture(e.pointerId); }catch(_){}
+    xcPts.set(e.pointerId,{x:e.clientX,y:e.clientY}); xcStartPan(x); return;
+  }
+  const pin=e.target.closest('.xc-pin'), tc=e.target.closest('.xc-tchar');
+  if(pin){ e.preventDefault(); xcPending={cid:pin.dataset.pcid,x:e.clientX,y:e.clientY,tap:true}; return; }
+  if(tc){ e.preventDefault(); xcPending={cid:tc.dataset.tcid,x:e.clientX,y:e.clientY,tap:false}; return; }
+  if(board) closeXcPop();
+});
+function xcStartPan(x){ const board=$('#xcBoard'); if(!board) return; const a=[...xcPts.values()], b=x.bg;
+  xcPan={r:board.getBoundingClientRect(),ox:b.ox,oy:b.oy,zoom:b.zoom,cx:a.reduce((s,p)=>s+p.x,0)/a.length,cy:a.reduce((s,p)=>s+p.y,0)/a.length,d:a.length>1?Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y):0}; }
+window.addEventListener('pointermove',e=>{
+  if(xcPan && xcPts.has(e.pointerId)){
+    const x=xcById(xcId); if(!x||!x.bg) return;
+    xcPts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const a=[...xcPts.values()], b=x.bg, r=xcPan.r;
+    const cx=a.reduce((s,p)=>s+p.x,0)/a.length, cy=a.reduce((s,p)=>s+p.y,0)/a.length;
+    b.ox=xcPan.ox+(cx-xcPan.cx)/r.width; b.oy=xcPan.oy+(cy-xcPan.cy)/r.width;
+    if(a.length>1 && xcPan.d){ b.zoom=xcPan.zoom; xcSetZoom(x,xcPan.zoom*Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)/xcPan.d,(cx-r.left)/r.width,(cy-r.top)/r.height); }
+    xcPlaceBg(x); return;
+  }
+  if(xcPending && Math.hypot(e.clientX-xcPending.x,e.clientY-xcPending.y)>6){ const c=xcPending.cid; xcPending=null; closeXcPop(); xcStartDrag(e,c); }
+  if(xcDrag){ xcDrag.g.style.left=e.clientX+'px'; xcDrag.g.style.top=e.clientY+'px'; }
+});
+const xcPanEnd=e=>{ if(!xcPts.has(e.pointerId)) return; xcPts.delete(e.pointerId); const x=xcById(xcId); if(xcPts.size&&x) xcStartPan(x); else xcPan=null; };
+window.addEventListener('pointerup',e=>{
+  if(xcPts.has(e.pointerId)){ xcPanEnd(e); return; }
+  if(xcPending){ const p=xcPending; xcPending=null; const x=xcById(xcId); if(p.tap&&x) xcOpenPop(x,p.cid); return; }
+  if(!xcDrag) return;
+  const d=xcDrag; xcDrag=null; d.g.remove();
+  const x=xcById(xcId), board=$('#xcBoard'); if(!x||!board){ return; }
+  const r=board.getBoundingClientRect(), fx=(e.clientX-r.left)/r.width, fy=(e.clientY-r.top)/r.height;
+  const st=main.scrollTop;
+  if(fx>=0&&fx<=1&&fy>=0&&fy<=1){ x.pins[d.cid]={...(x.pins[d.cid]||{}),x:Math.min(.96,Math.max(.04,fx)),y:Math.min(.96,Math.max(.04,fy))}; xcTouch(x); }
+  else if(x.pins[d.cid]){ delete x.pins[d.cid]; xcTouch(x); toast('外しました'); }
+  render(); main.scrollTop=st;
+});
+window.addEventListener('pointercancel',e=>{
+  if(xcPts.has(e.pointerId)){ xcPanEnd(e); return; }
+  xcPending=null; if(xcDrag){ xcDrag.g.remove(); xcDrag=null; const st=main.scrollTop; render(); main.scrollTop=st; }
+});
+main.addEventListener('wheel',e=>{
+  if(!(tab==='world'&&wView==='xc'&&xcAdjust)) return; const board=e.target.closest('#xcBoard'); if(!board) return;
+  const x=xcById(xcId); if(!x||!x.bg) return; e.preventDefault();
+  const r=board.getBoundingClientRect(); xcSetZoom(x,x.bg.zoom*(e.deltaY<0?1.08:1/1.08),(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
+},{passive:false});
+
 /* ---------- wide screens: list in a side pane ---------- */
 const side=$('#side');
 const WIDE_MQ=window.matchMedia('(min-width: 800px)');
@@ -3593,7 +3898,7 @@ const SV={
   addp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.8-3.6 3.5-5.5 7-5.5 1.4 0 2.6.3 3.7.8M18 14v6M15 17h6"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
 };
-function worldSec(){ return wView==='terms' ? 'term' : ['rchars','rc','rg'].includes(wView)||(wView==='rel') ? 'rel' : 'tl'; }
+function worldSec(){ return wView==='terms' ? 'term' : (wView==='xcs'||wView==='xc') ? 'xc' : ['rchars','rc','rg'].includes(wView)||(wView==='rel') ? 'rel' : 'tl'; }
 function renderSide(){
   const on=isWide() && (tab==='chara'||tab==='world'||tab==='talk');
   side.hidden=!on; $('#app').toggleAttribute('data-split',on);
@@ -3631,9 +3936,13 @@ function renderSide(){
       : `<ul class="clist">${list.map(row).join('')}</ul>`;
   }else{
     const sec=worldSec();
-    head=`<div class="seg" role="group"><button type="button" data-ssec="tl" aria-pressed="${sec==='tl'}">時系列</button><button type="button" data-ssec="rel" aria-pressed="${sec==='rel'}">関係性</button><button type="button" data-ssec="term" aria-pressed="${sec==='term'}">単語帳</button></div>
-      <span class="sbtns">${(sec==='tl'||sec==='term')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':'単語を追加'}">${SV.plus}</button>`:''}</span>`;
-    if(sec==='term'){
+    head=`<div class="seg" role="group"><button type="button" data-ssec="tl" aria-pressed="${sec==='tl'}">時系列</button><button type="button" data-ssec="rel" aria-pressed="${sec==='rel'}">関係性</button><button type="button" data-ssec="term" aria-pressed="${sec==='term'}">単語帳</button><button type="button" data-ssec="xc" aria-pressed="${sec==='xc'}">グラフ</button></div>
+      <span class="sbtns">${(sec==='tl'||sec==='term'||sec==='xc')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':sec==='xc'?'十字グラフを作る':'単語を追加'}">${SV.plus}</button>`:''}</span>`;
+    if(sec==='xc'){
+      const xs=xchartsSorted();
+      body = xs.length ? xs.map(x=>`<div class="wrow${(wView==='xc'&&xcId===x.id)?' active':''}" data-sxcid="${x.id}" tabindex="0">${WI.cross}<span class="wn">${esc((x.title||'').trim()||'（名前なし）')}</span><span class="wc">${Object.keys(x.pins||{}).filter(id=>charById(id)).length||''}</span></div>`).join('')
+        : '<div class="pick-ph">まだグラフがありません</div>';
+    }else if(sec==='term'){
       const ts=termsSorted();
       body = ts.length ? termsGrouped(ts).map(([h,list])=>`<div class="tmhead">${h==='他'?'英数・その他':h}</div>`+list.map(t=>`<div class="wrow wlp${openTm.has(t.id)?' active':''}" data-tmid="${t.id}" tabindex="0"><span class="wn">${esc(t.word)}${(t.yomi||'').trim()?`<span class="ws">${esc(t.yomi.trim())}</span>`:''}</span></div>`).join('')).join('')
         : '<div class="pick-ph">まだ単語がありません</div>';
@@ -3674,7 +3983,7 @@ side.addEventListener('click',e=>{
     if(a==='select') return guardLeave(()=>{ selectMode=true; reorderMode=false; selected.clear(); charView='list'; render(); });
     if(a==='gadd') return guardLeave(()=>{ grpReorderMode=false; openGroupEdit(null,false); });
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
-    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : null; }
+    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : sec==='xc' ? newXchart() : null; }
     if(a==='addfolder') return newFolderSheet();
     if(a==='greorder') return guardLeave(()=>{ grpReorderMode=!grpReorderMode; charView='list'; render(); });
   }
@@ -3682,7 +3991,8 @@ side.addEventListener('click',e=>{
   if((el=q('[data-sck]'))) return guardLeave(()=>setCharKind(el.dataset.sck));
   if((el=q('[data-sgid]'))) return guardLeave(()=>{ gId=el.dataset.sgid; gdReturn=null; gBackChar=null; charView='gdetail'; render(); main.scrollTop=0; });
   if((el=q('[data-scid]'))) return guardLeave(()=>{ reorderMode=false; selectMode=false; cmpReturn=false; charId=el.dataset.scid; charView='detail'; render(); main.scrollTop=0; });
-  if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='term' ? 'terms' : el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
+  if((el=q('[data-sxcid]'))) return guardLeave(()=>openXchart(el.dataset.sxcid));
+  if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='xc' ? (xcById(xcId)?'xc':'xcs') : el.dataset.ssec==='term' ? 'terms' : el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-tl]'))) return guardLeave(()=>{ tlId=el.dataset.tl; wView='tl'; wReturn=null; render(); main.scrollTop=0; });
   if((el=q('[data-src]'))) return guardLeave(()=>{ rcId=el.dataset.src; wView='rc'; wReturn=null; render(); main.scrollTop=0; });
@@ -3690,7 +4000,7 @@ side.addEventListener('click',e=>{
   if((el=q('[data-tmid]'))) return guardLeave(()=>{ const id=el.dataset.tmid; wView='terms'; openTm.add(id);
     if(!termMatches(termById(id)||{},termQ)) termQ=''; render(); flashEl(`.tmrow[data-tmid="${id}"]`); });
 });
-side.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const el=e.target.closest('[data-scid],[data-tl],[data-src],[data-gid],[data-tmid],.ghead[data-gkey]'); if(el) el.click(); });
+side.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const el=e.target.closest('[data-scid],[data-sxcid],[data-tl],[data-src],[data-gid],[data-tmid],.ghead[data-gkey]'); if(el) el.click(); });
 const onWideChange=()=>render();
 if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change',onWideChange); else if(WIDE_MQ.addListener) WIDE_MQ.addListener(onWideChange);
 
