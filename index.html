@@ -1891,8 +1891,9 @@ function questionsSorted(){ return [...db.questions].sort((a,b)=>(a.order??0)-(b
 function questionsByCat(){ const all=questionsSorted(); return qCats().flatMap(c=>all.filter(q=>(q.cat||'').trim()===c)); }
 function qById(id){ return db.questions.find(q=>q.id===id); }
 function nextQOrder(){ return db.questions.reduce((m,q)=>Math.max(m,q.order??0),-1)+1; }
-// Categories in order of first appearance, except that names starting with ★ always come first.
-function qCats(){ const seen=[]; for(const q of questionsSorted()){ const c=(q.cat||'').trim(); if(!seen.includes(c)) seen.push(c); } return [...seen.filter(c=>c.startsWith('★')),...seen.filter(c=>!c.startsWith('★'))]; }
+// Categories in order of first appearance, except that 「重要」 and names starting with ★ always come first.
+const pinnedCat=c=>c==='重要'||c.startsWith('★');
+function qCats(){ const seen=[]; for(const q of questionsSorted()){ const c=(q.cat||'').trim(); if(!seen.includes(c)) seen.push(c); } return [...seen.filter(pinnedCat),...seen.filter(c=>!pinnedCat(c))]; }
 function catLabel(c){ return c||'カテゴリなし'; }
 function qaStats(c){
   const qa=c.qa||{}, qx=c.qx||[];
