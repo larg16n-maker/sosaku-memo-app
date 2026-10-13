@@ -547,6 +547,20 @@ body.kbopen .cedit{padding-bottom:120px}
 .callrow input{flex:1;min-width:0}
 /* world: glossary */
 .tmview{padding-bottom:20px}
+.srch{z-index:3}
+.srcount{font-size:11px;color:var(--faint);padding:6px 14px 2px}
+.srlist{list-style:none;margin:0;padding:0}
+.srrow{padding:9px 14px;border-bottom:1px solid var(--line);font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word;cursor:pointer}
+.srrow:active{background:var(--press)}
+.tmhead .srn{margin-left:6px;color:var(--faint)}
+.tmhead svg{width:13px;height:13px;vertical-align:-2px;margin-right:4px}
+.srchar{white-space:normal}
+.srname{display:flex;align-items:center;gap:10px;font-weight:600}
+.srfld{display:flex;gap:8px;padding:3px 0 0 42px;font-size:12px;line-height:1.5}
+.srl{flex:none;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--faint);font-size:11px;padding-top:1px}
+.srt{min-width:0;color:var(--sub);word-break:break-word}
+.srmore{padding:2px 0 0 42px;font-size:11px;color:var(--faint)}
+mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;border-radius:2px;padding:0 1px}
 .tmsearch{padding:10px 14px 4px;position:sticky;top:0;background:var(--bg);z-index:2}
 .tmsearch input{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:8px 12px;-webkit-appearance:none;appearance:none}
 .tmhead{font-size:11px;color:var(--faint);padding:14px 14px 4px;letter-spacing:.04em}
@@ -592,6 +606,9 @@ body.kbopen .cedit{padding-bottom:120px}
     <span class="hgroup right">
       <button class="hbtn" id="figBtn" hidden aria-label="図と一覧を切り替え"></button>
       <button class="hbtn" id="viewBtn" hidden aria-label="表示を切り替え"></button>
+      <button class="hbtn" id="memoSearchBtn" hidden aria-label="このフォルダ内を検索">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+      </button>
       <button class="hbtn" id="tagFilterBtn" hidden aria-label="キャラで絞り込み">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8l8 8-8 8-8-8z"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/></svg>
       </button>
@@ -651,12 +668,12 @@ body.kbopen .cedit{padding-bottom:120px}
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.26.3';
+const APP_VERSION='0.27.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-10-10';
+const APP_DATE='2026-10-13';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
@@ -1014,6 +1031,7 @@ async function syncNow(){
 function safeRerender(){
   if(tab==='chara' && (charView==='edit'||charView==='qa')) return;
   if(tab==='world' && (wView==='ev'||wView==='rel')) return;
+  if(document.activeElement && SEARCH_BOXES[document.activeElement.id] && main.contains(document.activeElement)){ refreshSearch(document.activeElement.id); renderSide(); return; }
   if(tab==='world' && wView==='terms' && document.activeElement && document.activeElement.id==='tmQ'){ const box=$('#tmList'); if(box) box.innerHTML=termListHtml(); renderSide(); return; }
   const st=main.scrollTop;
   render();
@@ -1049,8 +1067,8 @@ function folderById(id){return db.folders.find(f=>f.id===id);}
 // (m.tags = [charId, ...]) and are never surfaced on the character's own page — this is a
 // memo-tab-only label, not a world-building link like relationships/events.
 let composerTags=[], tagFilter=[];
-function openFolder(id){ folderId=id; composerTags=[]; tagFilter=[]; render(); toBottom(); }
-function closeFolder(){ folderId=null; composerTags=[]; tagFilter=[]; }
+function openFolder(id){ folderId=id; composerTags=[]; tagFilter=[]; folderQ=''; folderSearchOpen=false; render(); toBottom(); }
+function closeFolder(){ folderId=null; composerTags=[]; tagFilter=[]; folderQ=''; folderSearchOpen=false; }
 function tagChip(c,removable,ds){ return `<span class="mtagchip"${ds?` data-cid="${c.id}"`:''}>${esc(c.name)}${removable?`<button type="button" class="mtagx" data-untag="${c.id}" aria-label="${esc(c.name)}のタグを外す">${CI.x}</button>`:''}</span>`; }
 function renderComposerTags(){
   const bar=$('#composerTagBar'); if(!bar) return;
@@ -1096,6 +1114,86 @@ function tagFilterBarHtml(){
 }
 
 
+/* ---------- search ---------- */
+// Plain substring search; case- and hiragana/katakana-insensitive (same normalisation as the 単語帳).
+let memoQ='', folderQ='', folderSearchOpen=false, charQ='', qtplQ='';
+const nrm=s=>toHira((s||'').toLowerCase());
+function qHit(text,q){ const n=nrm((q||'').trim()); return !!n && nrm(text).includes(n); }
+// Escaped text with <mark> around every hit. With max, only a window of about max chars
+// around the first hit is shown (…-trimmed).
+function hlText(text,q,max){
+  text=text||''; const nq=nrm((q||'').trim()), nt=nrm(text);
+  if(!nq || nt.length!==text.length) return esc(max&&text.length>max?text.slice(0,max)+'…':text);
+  let s=0,e=text.length;
+  if(max && text.length>max){ const i=Math.max(0,nt.indexOf(nq)); s=Math.max(0,i-Math.floor(max/3)); e=Math.min(text.length,s+max); }
+  let out='',p=s,i=nt.indexOf(nq,s);
+  while(i>=0 && i<e){ const j=Math.min(i+nq.length,e); out+=esc(text.slice(p,i))+'<mark>'+esc(text.slice(i,j))+'</mark>'; p=j; i=nt.indexOf(nq,j); }
+  out+=esc(text.slice(p,e));
+  return (s>0?'…':'')+out+(e<text.length?'…':'');
+}
+function searchBox(id,val,ph){ return `<div class="tmsearch srch"><input type="search" id="${id}" class="qsearch" placeholder="${ph}" value="${esc(val)}" autocomplete="off" enterkeyhint="search"></div>`; }
+// Re-draws only the results under a search box, so the box keeps focus while typing.
+const SEARCH_BOXES={
+  memoQ:{set:v=>memoQ=v, box:'#memoHome', html:()=>memoHomeHtml()},
+  folderQ:{set:v=>folderQ=v, box:'#memoList', html:()=>folderMemosHtml()},
+  charQ:{set:v=>charQ=v, box:'#charHome', html:()=>charHomeHtml()},
+  qtplQ:{set:v=>qtplQ=v, box:'#qtplList', html:()=>qtplListHtml()},
+};
+function refreshSearch(id){ const d=SEARCH_BOXES[id]; const el=d&&$(d.box); if(el) el.innerHTML=d.html(); }
+function memoResultsHtml(){
+  const q=memoQ.trim();
+  const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
+  let total=0;
+  const html=fs.map(f=>{
+    const ms=memosOf(f.id).filter(m=>qHit(m.text,q)); total+=ms.length; if(!ms.length) return '';
+    return `<div class="tmhead">${ICON.folder}${esc(f.name)}<span class="srn">${ms.length}</span></div><ul class="srlist">${ms.map(m=>`<li class="srrow" data-sfid="${f.id}" data-smid="${m.id}" tabindex="0">${hlText(m.text,q,120)}</li>`).join('')}</ul>`;
+  }).join('');
+  return total?`<div class="srcount">${total}件見つかりました（タップでそのメモへ）</div>`+html:'<div class="empty">見つかりませんでした</div>';
+}
+function memoHomeHtml(){
+  if(memoQ.trim()) return memoResultsHtml();
+  if(isWide()) return '<div class="pick-ph">左のリストからフォルダを選んでください</div>';
+  const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
+  return '<ul class="folders">'+fs.map(f=>{
+    const n=memosOf(f.id).length;
+    return `<li class="folder" data-id="${f.id}" tabindex="0">${ICON.folder}<div class="fmeta"><span class="fname">${esc(f.name)}</span></div><span class="fcount">${n}</span></li>`;
+  }).join('')+'</ul><div class="hint">長押しで名前変更・削除</div>';
+}
+function folderMemosHtml(){
+  const f=folderById(folderId); if(!f) return '';
+  const q=folderSearchOpen?folderQ.trim():'';
+  const one=f.view==='line' && !q;
+  const all=memosOf(folderId), ms=visibleMemos(folderId).filter(m=>!q||qHit(m.text,q));
+  const fbar=tagFilterBarHtml();
+  if(!all.length) return fbar+'<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>';
+  return fbar + (q?`<div class="srcount">${ms.length}件</div>`:'') + (ms.length
+    ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
+        if(!one) return `<li class="memo" data-id="${m.id}" tabindex="0">${q?hlText(m.text,q):esc(m.text)}${memoTagsHtml(m)}</li>`;
+        const lines=m.text.split('\n'), n=lines.length-1;
+        return `<li class="memo" data-id="${m.id}" tabindex="0"><span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
+      }).join('')+'</ul>'
+    : '<div class="empty"><strong>あてはまるメモがありません</strong></div>');
+}
+// Every searchable text of a character, as [label, text].
+function charSearchFields(c){
+  const out=[['名前',c.name],['別名',c.alias]];
+  for(const f of FIELDS) out.push([f.label,f.k==='birthday'?fmtBirthday(c.birthday):c[f.k]]);
+  for(const [k,l] of [['looks','見た目'],['personality','性格'],['goal','目的'],['skills','スキル・武器など'],['history','来歴'],['memo','詳細メモ']]) out.push([l,c[k]]);
+  for(const x of (c.custom||[])) out.push([(x.label||'').trim()||'追加項目',x.value]);
+  for(const q of questionsSorted()){ const a=(c.qa||{})[q.id]; if((a||'').trim()) out.push(['Q. '+q.text,a]); }
+  for(const x of (c.qx||[])){ if((x.a||'').trim()) out.push(['Q. '+(x.text||''),x.a]); }
+  return out.filter(([,t])=>(t||'').trim());
+}
+function charResultsHtml(){
+  const q=charQ.trim();
+  const hits=charsSorted().map(c=>[c,charSearchFields(c).filter(([,t])=>qHit(t,q))]).filter(([,h])=>h.length);
+  if(!hits.length) return '<div class="empty">見つかりませんでした</div>';
+  return `<div class="srcount">${hits.length}人見つかりました</div><ul class="srlist">`+hits.map(([c,h])=>{
+    const rest=h.filter(([l])=>l!=='名前');
+    return `<li class="srrow srchar" data-scharid="${c.id}" tabindex="0"><div class="srname">${avatar(c)}<span>${hlText(c.name,q)}</span></div>${rest.slice(0,4).map(([l,t])=>`<div class="srfld"><span class="srl">${esc(l)}</span><span class="srt">${hlText(t,q,80)}</span></div>`).join('')}${rest.length>4?`<div class="srmore">ほか${rest.length-4}か所</div>`:''}</li>`;
+  }).join('')+'</ul>';
+}
+
 /* ---------- render ---------- */
 const main=$('#main');
 function render(){ renderMain(); renderSide(); }
@@ -1109,19 +1207,15 @@ function renderMain(){
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId) || wideTalk;
   $('#composer').hidden=!inFolder;
 
-  if(tab==='chara'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; renderChara(); return; }
-  if(tab==='world'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; renderWorld(); return; }
+  if(tab==='chara'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; renderChara(); return; }
+  if(tab==='world'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; renderWorld(); return; }
   if(!folderId){
     $('#title').textContent='メモ';
     $('#viewBtn').hidden=true;
     $('#tagFilterBtn').hidden=true;
-    if(wideTalk){ main.innerHTML='<div class="pick-ph">左のリストからフォルダを選んでください</div>'; return; }
-    const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
-    if(!fs.length){main.innerHTML='<div class="empty"><strong>フォルダがありません</strong>右上のボタンで作品ごとのフォルダを作れます。</div>';return;}
-    main.innerHTML='<ul class="folders">'+fs.map(f=>{
-      const n=memosOf(f.id).length;
-      return `<li class="folder" data-id="${f.id}" tabindex="0">${ICON.folder}<div class="fmeta"><span class="fname">${esc(f.name)}</span></div><span class="fcount">${n}</span></li>`;
-    }).join('')+'</ul><div class="hint">長押しで名前変更・削除</div>';
+    $('#memoSearchBtn').hidden=true;
+    if(!db.folders.length){main.innerHTML=wideTalk?'<div class="pick-ph">左のリストからフォルダを選んでください</div>':'<div class="empty"><strong>フォルダがありません</strong>右上のボタンで作品ごとのフォルダを作れます。</div>';return;}
+    main.innerHTML=searchBox('memoQ',memoQ,'すべてのメモから検索')+`<div id="memoHome">${memoHomeHtml()}</div>`;
     return;
   }
   const f=folderById(folderId);
@@ -1133,16 +1227,9 @@ function renderMain(){
   $('#viewBtn').setAttribute('aria-label', one?'1行表示中。全文表示に切り替え':'全文表示中。1行表示に切り替え');
   $('#tagFilterBtn').hidden=false;
   $('#tagFilterBtn').classList.toggle('on',!!tagFilter.length);
-  const all=memosOf(folderId), ms=visibleMemos(folderId);
-  const fbar=tagFilterBarHtml();
-  if(!all.length){ main.innerHTML=fbar+'<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>'; return; }
-  main.innerHTML = fbar + (ms.length
-    ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
-        if(!one) return `<li class="memo" data-id="${m.id}" tabindex="0">${esc(m.text)}${memoTagsHtml(m)}</li>`;
-        const lines=m.text.split('\n'), n=lines.length-1;
-        return `<li class="memo" data-id="${m.id}" tabindex="0"><span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
-      }).join('')+'</ul>'
-    : '<div class="empty"><strong>あてはまるメモがありません</strong></div>');
+  $('#memoSearchBtn').hidden=false;
+  $('#memoSearchBtn').classList.toggle('on',folderSearchOpen);
+  main.innerHTML = (folderSearchOpen?searchBox('folderQ',folderQ,'このフォルダ内を検索'):'') + `<div id="memoList">${folderMemosHtml()}</div>`;
   renderComposerTags();
 }
 function toBottom(){ main.scrollTop=main.scrollHeight; }
@@ -1512,6 +1599,12 @@ function groupsOf(list){
   return out;
 }
 
+let charListCache='';
+function charHomeHtml(){
+  if(charQ.trim()) return charResultsHtml();
+  if(isWide()) return '<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>'+(db.chars.length>1?CMP_ENTRY.replace('cmpentry','cmpentry center'):'');
+  return charListCache;
+}
 function renderChara(){
   if(charView==='detail' && !charById(charId)) charView='list';
   if(charView==='qa'){ if(charDraft){ renderQa(); return; } charView=charById(charId)?'detail':'list'; }
@@ -1526,7 +1619,7 @@ function renderChara(){
     if(reorderMode){ $('#settingsBtn').hidden=true; $('#charDoneBtn').hidden=false; }
     else if(selectMode){ $('#settingsBtn').hidden=true; $('#charCancelBtn').hidden=false; $('#charCancelBtn').textContent='キャンセル'; $('#charDelSelBtn').hidden=false; $('#charDelSelBtn').disabled=!selected.size; }
     else if(isWide()){
-      main.innerHTML='<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>'+(db.chars.length>1?CMP_ENTRY.replace('cmpentry','cmpentry center'):'');
+      main.innerHTML=(db.chars.length?searchBox('charQ',charQ,'全キャラの項目・質問の答えから検索'):'')+`<div id="charHome">${charHomeHtml()}</div>`;
       return;
     }
     else{
@@ -1548,8 +1641,10 @@ function renderChara(){
     }else{
       main.innerHTML=`<ul class="clist">${list.map(row).join('')}</ul>`;
     }
-    if(!reorderMode && !selectMode && list.length>1) main.insertAdjacentHTML('afterbegin',CMP_ENTRY);
-    if(!reorderMode && !selectMode) main.insertAdjacentHTML('afterbegin',CK_SEG());
+    if(!reorderMode && !selectMode){
+      charListCache=(list.length>1?CMP_ENTRY:'')+main.innerHTML;
+      main.innerHTML=CK_SEG()+searchBox('charQ',charQ,'全キャラの項目・質問の答えから検索')+`<div id="charHome">${charHomeHtml()}</div>`;
+    }
     if(reorderMode) main.insertAdjacentHTML('beforeend','<div class="hint">右のつまみをドラッグして並べ替え'+(charGroup?'（同じ所属の中で移動）':'')+'</div>');
     return;
   }
@@ -1760,6 +1855,20 @@ main.addEventListener('change',e=>{
 });
 main.addEventListener('submit',e=>{ if(e.target.id==='charForm') e.preventDefault(); });
 
+/* search results: jump to the memo / character */
+main.addEventListener('click',e=>{
+  const r=e.target.closest('.srrow'); if(!r) return;
+  if(r.dataset.smid){
+    const mid=r.dataset.smid; openFolder(r.dataset.sfid);
+    const el=main.querySelector(`.memo[data-id="${mid}"]`); if(el && el.closest('.oneline')) el.classList.add('open');
+    flashEl(`.memo[data-id="${mid}"]`);
+  } else if(r.dataset.scharid){
+    const cid=r.dataset.scharid;
+    guardLeave(()=>{ charId=cid; charView='detail'; render(); main.scrollTop=0; });
+  }
+});
+main.addEventListener('keydown',e=>{ if(e.key==='Enter' && e.target.classList && e.target.classList.contains('srrow')) e.target.click(); });
+
 /* hide tab bar while typing anywhere */
 document.addEventListener('focusin',e=>{ if(e.target.matches('main input, main textarea')) document.body.classList.add('typing'); });
 document.addEventListener('focusout',e=>{
@@ -1882,9 +1991,15 @@ function renderQtpl(){
   $('#settingsBtn').hidden=true; $('#backBtn').hidden=false; $('#qAddBtn').hidden=false;
   const qs=questionsSorted(), cats=qCats();
   const head=`<div class="qtplbar"><span class="small">全キャラ共通の質問リスト（${qs.length}問）。タップで編集、右のつまみで並べ替え。右の「◯人」は回答済みのキャラ数です。</span><button type="button" class="chip" data-a="qbulk">まとめて追加</button></div>`;
-  main.innerHTML=`<div class="qtpl">${head}${!qs.length
-    ? '<div class="empty"><strong>まだ質問がありません</strong>右上の＋で1問ずつ、「まとめて追加」で貼り付けて一気に登録できます。</div>'
-    : cats.map(c=>`<div class="qcat">${esc(catLabel(c))}</div><ul class="qtlist">${qs.filter(q=>(q.cat||'').trim()===c).map(q=>`<li class="qrow" data-qid="${q.id}" tabindex="0"><span class="qt">${esc(q.text)}</span>${(n=>n?`<span class="qn" title="${n}人が回答済み">${n}人</span>`:'')(qAnswered(q.id).length)}<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span></li>`).join('')}</ul>`).join('')}</div>`;
+  main.innerHTML=`<div class="qtpl">${head}${qs.length?searchBox('qtplQ',qtplQ,'質問・カテゴリから検索'):''}<div id="qtplList">${qtplListHtml()}</div></div>`;
+}
+function qtplListHtml(){
+  const all=questionsSorted(), q=qtplQ.trim();
+  if(!all.length) return '<div class="empty"><strong>まだ質問がありません</strong>右上の＋で1問ずつ、「まとめて追加」で貼り付けて一気に登録できます。</div>';
+  const qs=q?all.filter(x=>qHit(x.text,q)||qHit(x.cat,q)):all;
+  if(!qs.length) return '<div class="empty">見つかりませんでした</div>';
+  const cats=qCats().filter(c=>qs.some(x=>(x.cat||'').trim()===c));
+  return (q?`<div class="srcount">${qs.length}問</div>`:'')+cats.map(c=>`<div class="qcat">${q?hlText(catLabel(c),q):esc(catLabel(c))}</div><ul class="qtlist">${qs.filter(x=>(x.cat||'').trim()===c).map(x=>`<li class="qrow" data-qid="${x.id}" tabindex="0"><span class="qt">${q?hlText(x.text,q):esc(x.text)}</span>${(n=>n?`<span class="qn" title="${n}人が回答済み">${n}人</span>`:'')(qAnswered(x.id).length)}<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span></li>`).join('')}</ul>`).join('');
 }
 function qtplClick(e){
   if(e.target.closest('.handle')) return;
@@ -3299,6 +3414,7 @@ function renderTerms(){
   main.innerHTML=`<div class="tmview"><div class="tmsearch"><input type="search" id="tmQ" placeholder="単語・読み・説明から検索" value="${esc(termQ)}" autocomplete="off" enterkeyhint="search"></div><div id="tmList">${termListHtml()}</div></div>`;
 }
 main.addEventListener('input',e=>{
+  const sb=SEARCH_BOXES[e.target.id]; if(sb){ sb.set(e.target.value); refreshSearch(e.target.id); return; }
   if(e.target.id!=='tmQ') return;
   termQ=e.target.value; const box=$('#tmList'); if(box) box.innerHTML=termListHtml();
 });
@@ -3612,6 +3728,11 @@ $('#composerQuickBar').addEventListener('pointerdown',e=>{ if(e.target.closest('
 $('#composerTagBtn').addEventListener('click',()=>{ pickCharsSheet(composerTags, ids=>{ composerTags=ids; renderComposerTags(); }, 'このメモのキャラをタグ付け'); });
 $('#composerTagBar').addEventListener('click',e=>{ const b=e.target.closest('[data-untag]'); if(!b) return; composerTags=composerTags.filter(id=>id!==b.dataset.untag); renderComposerTags(); });
 $('#composerQuickBar').addEventListener('click',e=>{ const b=e.target.closest('.qbtn'); if(!b) return; insertQuote(b.dataset.qi||null); });
+$('#memoSearchBtn').addEventListener('click',()=>{
+  folderSearchOpen=!folderSearchOpen; if(!folderSearchOpen) folderQ='';
+  renderMain(); main.scrollTop=0;
+  if(folderSearchOpen){ const el=$('#folderQ'); if(el) el.focus(); } else toBottom();
+});
 $('#tagFilterBtn').addEventListener('click',()=>{ pickCharsSheet(tagFilter, ids=>{ tagFilter=ids; const st=main.scrollTop; renderMain(); main.scrollTop=st; }, 'キャラで絞り込み'); });
 main.addEventListener('click',e=>{
   if(tab!=='talk') return;
