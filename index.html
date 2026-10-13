@@ -668,7 +668,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.27.0';
+const APP_VERSION='0.27.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -900,7 +900,7 @@ function buildStoryBible(){
       if((c.memo||'').trim()){ L.push('詳細メモ:'); L.push(c.memo.trim()); }
       for(const f of (c.custom||[])) if((f.value||'').trim()){ L.push(`${(f.label||'').trim()||'項目'}:`); L.push(f.value.trim()); }
       const qa=[];
-      for(const q of questionsSorted()){ const a=(c.qa||{})[q.id]; if((a||'').trim()) qa.push(`- ${q.text} → ${a.trim()}`); }
+      for(const q of questionsByCat()){ const a=(c.qa||{})[q.id]; if((a||'').trim()) qa.push(`- ${q.text} → ${a.trim()}`); }
       for(const x of (c.qx||[])) if((x.a||'').trim()) qa.push(`- ${(x.text||'').trim()||'（質問なし）'} → ${x.a.trim()}`);
       if(qa.length){ L.push('質問と回答:'); L.push(...qa); }
       L.push('');
@@ -1180,7 +1180,7 @@ function charSearchFields(c){
   for(const f of FIELDS) out.push([f.label,f.k==='birthday'?fmtBirthday(c.birthday):c[f.k]]);
   for(const [k,l] of [['looks','見た目'],['personality','性格'],['goal','目的'],['skills','スキル・武器など'],['history','来歴'],['memo','詳細メモ']]) out.push([l,c[k]]);
   for(const x of (c.custom||[])) out.push([(x.label||'').trim()||'追加項目',x.value]);
-  for(const q of questionsSorted()){ const a=(c.qa||{})[q.id]; if((a||'').trim()) out.push(['Q. '+q.text,a]); }
+  for(const q of questionsByCat()){ const a=(c.qa||{})[q.id]; if((a||'').trim()) out.push(['Q. '+q.text,a]); }
   for(const x of (c.qx||[])){ if((x.a||'').trim()) out.push(['Q. '+(x.text||''),x.a]); }
   return out.filter(([,t])=>(t||'').trim());
 }
@@ -1887,9 +1887,12 @@ let qaOpen=(()=>{try{return localStorage.getItem(QA_OPEN_KEY)==='1';}catch(e){re
 let qaCat='all', qaUnans=false, qtplBack=null, lastQCat='';
 function inCharDraft(){ return tab==='chara' && (charView==='edit'||charView==='qa') && !!charDraft; }
 function questionsSorted(){ return [...db.questions].sort((a,b)=>(a.order??0)-(b.order??0)||a.createdAt-b.createdAt); }
+// Questions grouped by category (★ categories first), keeping the template order inside each.
+function questionsByCat(){ const all=questionsSorted(); return qCats().flatMap(c=>all.filter(q=>(q.cat||'').trim()===c)); }
 function qById(id){ return db.questions.find(q=>q.id===id); }
 function nextQOrder(){ return db.questions.reduce((m,q)=>Math.max(m,q.order??0),-1)+1; }
-function qCats(){ const seen=[]; for(const q of questionsSorted()){ const c=(q.cat||'').trim(); if(!seen.includes(c)) seen.push(c); } return seen; }
+// Categories in order of first appearance, except that names starting with ★ always come first.
+function qCats(){ const seen=[]; for(const q of questionsSorted()){ const c=(q.cat||'').trim(); if(!seen.includes(c)) seen.push(c); } return [...seen.filter(c=>c.startsWith('★')),...seen.filter(c=>!c.startsWith('★'))]; }
 function catLabel(c){ return c||'カテゴリなし'; }
 function qaStats(c){
   const qa=c.qa||{}, qx=c.qx||[];
@@ -1898,7 +1901,7 @@ function qaStats(c){
 }
 function qaBlockHtml(c){
   const {total,done}=qaStats(c), qa=c.qa||{};
-  const items=questionsSorted().filter(q=>(qa[q.id]||'').trim()).map(q=>({key:q.id,q:q.text,a:qa[q.id]}))
+  const items=questionsByCat().filter(q=>(qa[q.id]||'').trim()).map(q=>({key:q.id,q:q.text,a:qa[q.id]}))
     .concat((c.qx||[]).filter(x=>(x.a||'').trim()).map(x=>({key:'x:'+x.id,q:(x.text||'').trim()||'（質問なし）',a:x.a})));
   const cnt = total ? `${done} / ${total} 回答済み` : '';
   if(!items.length) return `<div class="qablock"><button type="button" class="qasum" data-a="qa"><span>質問</span><span class="cnt">${cnt}</span><span class="go">答える ›</span></button></div>`;
@@ -2540,8 +2543,9 @@ function cmpOptions(){
   const basic=[['f:alias','別名'],...FIELDS.map(f=>['f:'+f.k,f.label]),['affil','所属'],['f:looks','見た目'],['f:personality','性格'],['f:goal','目的'],['f:skills','スキル・武器など'],['f:history','来歴']];
   const seen=new Set(), custom=[];
   for(const c of charsSorted()) for(const x of (c.custom||[])){ const l=(x.label||'').trim(); if(l && !seen.has(l)){ seen.add(l); custom.push(['c:'+l,l]); } }
-  const qs=questionsSorted().map(q=>['q:'+q.id,q.text]);
-  return {basic,custom,qs};
+  const all=questionsSorted(), qs=all.map(q=>['q:'+q.id,q.text]);
+  const qcats=qCats().map(c=>[c,all.filter(q=>(q.cat||'').trim()===c).map(q=>['q:'+q.id,q.text])]);
+  return {basic,custom,qs,qcats};
 }
 function cmpValue(c,key){
   if(key==='affil') return (c.affilIds||[]).map(groupById).filter(Boolean).map(groupLabel).join('・');
@@ -2570,7 +2574,7 @@ function renderCmp(){
       <select id="cmpKey" aria-label="見比べる項目">
         <optgroup label="基本の項目">${o.basic.map(opt).join('')}</optgroup>
         ${o.custom.length?`<optgroup label="追加した項目">${o.custom.map(opt).join('')}</optgroup>`:''}
-        ${o.qs.length?`<optgroup label="質問">${o.qs.map(opt).join('')}</optgroup>`:''}
+        ${o.qcats.map(([c,items])=>`<optgroup label="質問：${esc(catLabel(c))}">${items.map(opt).join('')}</optgroup>`).join('')}
       </select>
       <div class="seg" role="group" aria-label="並び順"><button type="button" data-cmpsort="order" aria-pressed="${cmpSort==='order'}">登録順</button><button type="button" data-cmpsort="value" aria-pressed="${cmpSort==='value'}">値の順</button></div>
     </div>
