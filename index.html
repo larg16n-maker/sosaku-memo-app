@@ -727,12 +727,12 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.28.0';
+const APP_VERSION='0.28.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-10-13';
+const APP_DATE='2026-10-15';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
@@ -1269,7 +1269,10 @@ function charResultsHtml(){
 
 /* ---------- render ---------- */
 const main=$('#main');
-function render(){ renderMain(); renderSide(); }
+function render(){ renderMain(); renderSide(); clearStaleTyping(); }
+// The tab bar hides while typing (body.typing). If the focused field is removed by a redraw,
+// iOS sends no blur, so the class would stick and the tab bar stay hidden; clear it here.
+function clearStaleTyping(){ const a=document.activeElement; if(!(a && a.isConnected && a.matches('input,textarea'))) document.body.classList.remove('typing'); }
 function renderMain(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const inFolder = tab==='talk' && folderId;
@@ -3759,7 +3762,7 @@ function xcPlaceBg(x){ const im=$('#xcBg'); if(!im||!x.bg) return; const b=x.bg;
 function xcFitBg(x){ const b=x.bg; b.zoom=1; b.ox=0; b.oy=(1-(b.h&&b.w?b.h/b.w:1))/2; }
 function xcSetZoom(x,z,cx,cy){ const b=x.bg; z=Math.min(3,Math.max(.5,z)); cx=cx??.5; cy=cy??.5;
   b.ox=cx-(cx-b.ox)*z/b.zoom; b.oy=cy-(cy-b.oy)*z/b.zoom; b.zoom=z; xcPlaceBg(x); const r=$('#xcZoom'); if(r) r.value=Math.round(z*100); }
-function closeXcPop(){ const p=document.querySelector('.xc-pop'); if(p) p.remove(); }
+function closeXcPop(){ const p=document.querySelector('.xc-pop'); if(!p) return; const a=document.activeElement; if(a&&p.contains(a)) a.blur(); p.remove(); }
 function xcOpenPop(x,cid){
   closeXcPop();
   const c=charById(cid), p=x.pins[cid], board=$('#xcBoard'); if(!c||!p||!board) return;
