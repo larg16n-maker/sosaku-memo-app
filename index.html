@@ -242,7 +242,7 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .memos.oneline .memo.fav .mfav{top:9px}
 .actstar{width:20px;text-align:center;color:var(--faint);font-size:16px;line-height:1}
 .actstar.on{color:var(--brass)}
-#favFilterBtn.on svg{fill:currentColor}
+.pstar{background:var(--brass);color:#fff;font-size:15px;display:grid;place-items:center}
 .memo.flash,.flash{animation:flash 1.2s ease-out}
 @keyframes flash{from{background:var(--press)}to{background:transparent}}
 
@@ -679,11 +679,10 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
     <span class="hgroup right">
       <button class="hbtn" id="figBtn" hidden aria-label="図と一覧を切り替え"></button>
       <button class="hbtn" id="viewBtn" hidden aria-label="表示を切り替え"></button>
-      <button class="hbtn" id="favFilterBtn" hidden aria-label="★のメモだけ表示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></button>
       <button class="hbtn" id="memoSearchBtn" hidden aria-label="このフォルダ内を検索">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
       </button>
-      <button class="hbtn" id="tagFilterBtn" hidden aria-label="キャラで絞り込み">
+      <button class="hbtn" id="tagFilterBtn" hidden aria-label="★・キャラで絞り込み">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8l8 8-8 8-8-8z"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/></svg>
       </button>
       <button class="hbtn" id="charGroupBtn" hidden aria-label="所属別に表示"></button>
@@ -1198,8 +1197,7 @@ function visibleMemos(fid){
 }
 function favMark(m){ return m.fav?'<span class="mfav" aria-label="お気に入り">★</span>':''; }
 function tagFilterBarHtml(){
-  if(favOnly && !tagFilter.length) return `<div class="mfilterbar">★のメモだけ表示中<button type="button" class="mfilterclear" data-a="clearfav">解除</button></div>`;
-  if(!tagFilter.length) return '';
+  if(!tagFilter.length && !favOnly) return '';
   const cs=tagFilter.map(charById).filter(Boolean);
   return `<div class="mfilterbar">絞り込み中：${favOnly?'<span class="mtagchip">★</span>':''}${cs.map(c=>tagChip(c,false)).join('')}<button type="button" class="mfilterclear" data-a="clearfilter">すべて解除</button></div>`;
 }
@@ -1302,13 +1300,13 @@ function renderMain(){
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId) || wideTalk;
   $('#composer').hidden=!inFolder;
 
-  if(tab==='chara'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; $('#favFilterBtn').hidden=true; renderChara(); return; }
-  if(tab==='world'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; $('#favFilterBtn').hidden=true; renderWorld(); return; }
+  if(tab==='chara'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; renderChara(); return; }
+  if(tab==='world'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; renderWorld(); return; }
   if(!folderId){
     $('#title').textContent='メモ';
     $('#viewBtn').hidden=true;
     $('#tagFilterBtn').hidden=true;
-    $('#memoSearchBtn').hidden=true; $('#favFilterBtn').hidden=true;
+    $('#memoSearchBtn').hidden=true;
     if(!db.folders.length){main.innerHTML=wideTalk?'<div class="pick-ph">左のリストからフォルダを選んでください</div>':'<div class="empty"><strong>フォルダがありません</strong>右上のボタンで作品ごとのフォルダを作れます。</div>';return;}
     main.innerHTML=searchBox('memoQ',memoQ,'すべてのメモから検索')+`<div id="memoHome">${memoHomeHtml()}</div>`;
     return;
@@ -1321,10 +1319,10 @@ function renderMain(){
   $('#viewBtn').innerHTML = (one?ICON.lines:ICON.full) + (one?'1行':'全文');
   $('#viewBtn').setAttribute('aria-label', one?'1行表示中。全文表示に切り替え':'全文表示中。1行表示に切り替え');
   $('#tagFilterBtn').hidden=false;
-  $('#tagFilterBtn').classList.toggle('on',!!tagFilter.length);
+  $('#tagFilterBtn').classList.toggle('on',!!tagFilter.length||favOnly);
   $('#memoSearchBtn').hidden=false;
   $('#memoSearchBtn').classList.toggle('on',folderSearchOpen);
-  $('#favFilterBtn').hidden=false; $('#favFilterBtn').classList.toggle('on',favOnly); $('#favFilterBtn').setAttribute('aria-pressed',favOnly);
+
   main.innerHTML = (folderSearchOpen?searchBox('folderQ',folderQ,'このフォルダ内を検索'):'') + `<div id="memoList">${folderMemosHtml()}</div>`;
   renderComposerTags();
 }
@@ -3420,15 +3418,17 @@ function deleteGroupConfirm(id,after){
   });
 }
 
-function pickCharsSheet(ids,cb,title){
-  const sel=new Set(ids), list=charsSorted();
-  if(!list.length){ toast('先にキャラクターを登録してください'); return; }
+// opts.fav: also offer a 「★ お気に入り」 row on top (memo filter); cb then gets (ids, favChecked).
+function pickCharsSheet(ids,cb,title,opts){
+  const sel=new Set(ids), list=charsSorted(), withFav=!!(opts&&'fav' in opts);
+  if(withFav && opts.fav) sel.add('__fav__');
+  if(!list.length && !withFav){ toast('先にキャラクターを登録してください'); return; }
   openSheet(`<div class="title">${esc(title||'関わったキャラ')}</div>
-    <div class="picklist" role="group">${list.map(c=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${c.id}" aria-checked="${sel.has(c.id)}">${avatar(c)}<span>${esc(c.name)}</span><span class="ck">${CI.check}</span></div>`).join('')}</div>
+    <div class="picklist" role="group">${withFav?`<div class="pickrow pfav" role="checkbox" tabindex="0" data-pid="__fav__" aria-checked="${sel.has('__fav__')}"><span class="av pstar">★</span><span>お気に入り</span><span class="ck">${CI.check}</span></div>`:''}${list.map(c=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${c.id}" aria-checked="${sel.has(c.id)}">${avatar(c)}<span>${esc(c.name)}</span><span class="ck">${CI.check}</span></div>`).join('')}</div>
     <div class="row"><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
     s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; const id=r.dataset.pid;
       sel.has(id)?sel.delete(id):sel.add(id); r.setAttribute('aria-checked',sel.has(id)); });
-    s.querySelector('[data-a=ok]').onclick=()=>{ closeSheet(); cb(list.map(c=>c.id).filter(id=>sel.has(id))); };
+    s.querySelector('[data-a=ok]').onclick=()=>{ closeSheet(); cb(list.map(c=>c.id).filter(id=>sel.has(id)), sel.has('__fav__')); };
   },'pickchars');
 }
 function pickGroupsSheet(ids,cb){
@@ -4082,16 +4082,12 @@ $('#composerQuickBar').addEventListener('pointerdown',e=>{ if(e.target.closest('
 $('#composerTagBtn').addEventListener('click',()=>{ pickCharsSheet(composerTags, ids=>{ composerTags=ids; renderComposerTags(); }, 'このメモのキャラをタグ付け'); });
 $('#composerTagBar').addEventListener('click',e=>{ const b=e.target.closest('[data-untag]'); if(!b) return; composerTags=composerTags.filter(id=>id!==b.dataset.untag); renderComposerTags(); });
 $('#composerQuickBar').addEventListener('click',e=>{ const b=e.target.closest('.qbtn'); if(!b) return; insertQuote(b.dataset.qi||null); });
-$('#favFilterBtn').addEventListener('click',()=>{
-  favOnly=!favOnly; renderMain(); if(favOnly) main.scrollTop=0; else toBottom();
-  toast(favOnly?'★のメモだけ表示':'すべてのメモを表示');
-});
 $('#memoSearchBtn').addEventListener('click',()=>{
   folderSearchOpen=!folderSearchOpen; if(!folderSearchOpen) folderQ='';
   renderMain(); main.scrollTop=0;
   if(folderSearchOpen){ const el=$('#folderQ'); if(el) el.focus(); } else toBottom();
 });
-$('#tagFilterBtn').addEventListener('click',()=>{ pickCharsSheet(tagFilter, ids=>{ tagFilter=ids; const st=main.scrollTop; renderMain(); main.scrollTop=st; }, 'キャラで絞り込み'); });
+$('#tagFilterBtn').addEventListener('click',()=>{ pickCharsSheet(tagFilter, (ids,fav)=>{ tagFilter=ids; favOnly=fav; const st=main.scrollTop; renderMain(); main.scrollTop=st; }, '絞り込み', {fav:favOnly}); });
 main.addEventListener('click',e=>{
   if(tab!=='talk') return;
   const cl=e.target.closest('[data-a="clearfilter"],[data-a="clearfav"]'); if(cl){ tagFilter=[]; favOnly=false; const st=main.scrollTop; renderMain(); main.scrollTop=st; }
