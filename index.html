@@ -274,10 +274,14 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .cfields dt,.cfields dd{margin:0;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.5}
 .cfields dt{color:var(--faint);font-size:11px;padding-top:9px;white-space:nowrap;max-width:9em;overflow:hidden;text-overflow:ellipsis}
 .cfields dd{white-space:pre-wrap;word-break:break-word}
-.cfields dd.fold{cursor:pointer}
-.cfields dd.fold .fv{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.cfields dd.fold.open .fv{display:block;-webkit-line-clamp:unset}
-.cfields dd.fold .fmore{display:block;font-size:11px;color:var(--brass);margin-top:2px}
+.fold{display:block}
+.fold .fv{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.fold.open .fv{display:block;-webkit-line-clamp:unset}
+.fold .fmore{display:none;font-size:11px;color:var(--brass);margin-top:2px}
+.fold.can{cursor:pointer}
+.fold.can .fmore{display:block}
+.cbs{border-top:1px solid var(--line)}
+.cbs .cblock{padding:10px 0;border-bottom:1px solid var(--line)}
 .cblock .clabel{font-size:11px;color:var(--faint);margin-bottom:4px}
 .cblock .ctext{font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
 .clinked{margin-top:4px;padding-top:16px;border-top:2px solid var(--line);display:flex;flex-direction:column;gap:12px}
@@ -1681,14 +1685,16 @@ function groupsOf(list){
 
 let charListCache='';
 const foldOpen=new Set();
+// A value only becomes tappable when its 3-line preview actually cuts text off.
+function markFolds(){ main.querySelectorAll('.fold:not(.open)').forEach(d=>{ const v=d.querySelector('.fv'); const can=v.scrollHeight>v.clientHeight+1; d.classList.toggle('can',can); if(can){ d.setAttribute('role','button'); d.tabIndex=0; d.setAttribute('aria-expanded','false'); } }); }
 main.addEventListener('click',e=>{
-  const d=e.target.closest('[data-fold]'); if(!d) return;
-  if(getSelection && String(getSelection()).length) return;
+  const d=e.target.closest('.fold.can'); if(!d) return;
+  if(window.getSelection && String(getSelection()).length) return;
   const k=d.dataset.fold, open=!foldOpen.has(k); open?foldOpen.add(k):foldOpen.delete(k);
   d.classList.toggle('open',open); d.setAttribute('aria-expanded',open);
-  const m=d.querySelector('.fmore'); if(m) m.textContent=open?'閉じる':`すべて表示（${d.querySelector('.fv').textContent.split('\n').length}行）`;
+  const m=d.querySelector('.fmore'); if(m) m.textContent=open?'閉じる':'すべて表示';
 });
-main.addEventListener('keydown',e=>{ if(e.key==='Enter' && e.target.matches && e.target.matches('[data-fold]')) e.target.click(); });
+main.addEventListener('keydown',e=>{ if(e.key==='Enter' && e.target.matches && e.target.matches('.fold.can')) e.target.click(); });
 function charHomeHtml(){
   if(charQ.trim()) return charResultsHtml();
   if(isWide()) return '<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>'+(db.chars.length>1?CMP_ENTRY.replace('cmpentry','cmpentry center'):'');
@@ -1741,25 +1747,22 @@ function renderChara(){
     const c=charById(charId);
     $('#title').textContent=c.name;
     $('#settingsBtn').hidden=!isWide(); $('#backBtn').hidden=isWide(); $('#charEditBtn').hidden=false;
-    const rows=FIELDS.filter(f=>(c[f.k]||'').trim()).map(f=>{
-      const v=c[f.k].trim(), n=v.split('\n').length;
-      // イメージ曲 grows into long lists: show 3 lines, tap to open the rest
-      if(f.k==='song' && n>3){ const open=foldOpen.has(c.id+':song');
-        return `<dt>${f.label}</dt><dd class="fold${open?' open':''}" data-fold="${c.id}:song" role="button" tabindex="0" aria-expanded="${open}"><span class="fv">${esc(v)}</span><span class="fmore">${open?'閉じる':`すべて表示（${n}行）`}</span></dd>`; }
-      return `<dt>${f.label}</dt><dd>${esc(v)}</dd>`;
-    });
-    const crows=(c.custom||[]).filter(x=>(x.value||'').trim()).map(x=>`<dt>${esc((x.label||'').trim()||'（項目名なし）')}</dt><dd>${esc(x.value.trim())}</dd>`);
+    // Every value folds to 3 lines when longer (checked after drawing); tap to open the rest.
+    const fold=(key,v)=>{ const open=foldOpen.has(c.id+':'+key); return `<span class="fold${open?' open can':''}" data-fold="${esc(c.id+':'+key)}"><span class="fv">${esc(v)}</span><span class="fmore">${open?'閉じる':'すべて表示'}</span></span>`; };
+    const rows=FIELDS.filter(f=>(c[f.k]||'').trim()).map(f=>`<dt>${f.label}</dt><dd>${f.k==='birthday'?esc(c[f.k].trim()):fold(f.k,c[f.k].trim())}</dd>`);
+    const crows=(c.custom||[]).filter(x=>(x.value||'').trim()).map(x=>`<dt>${esc((x.label||'').trim()||'（項目名なし）')}</dt><dd>${fold('x:'+x.id,x.value.trim())}</dd>`);
     main.innerHTML=`<div class="cdetail">
       <div class="chead">${avatar(c,'lg')}<div><div class="cname">${esc(c.name)}</div>${(c.alias||'').trim()?`<div class="calias">${esc(c.alias.trim())}</div>`:''}</div></div>
       ${affilChipsHtml(c)}
       ${(c.images||[]).length?`<div class="imgstrip">${c.images.map((im,i)=>`<button type="button" class="imgshot" data-imgview="${i}">${imgTag(im)}${(im.caption||'').trim()?`<span>${esc(im.caption.trim())}</span>`:''}</button>`).join('')}</div>`:''}
       ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
-      ${[['looks','見た目'],['personality','性格'],['goal','目的'],['skills','スキル・武器など'],['history','来歴'],['memo','詳細メモ']].filter(([k])=>(c[k]||'').trim()).map(([k,l])=>`<div class="cblock"><div class="clabel">${l}</div><div class="ctext">${esc(c[k].trim())}</div></div>`).join('')}
+      ${(bl=>bl.length?`<div class="cbs">${bl.map(([k,l])=>`<div class="cblock"><div class="clabel">${l}</div><div class="ctext">${fold(k,c[k].trim())}</div></div>`).join('')}</div>`:'')([['looks','見た目'],['personality','性格'],['goal','目的'],['skills','スキル・武器など'],['history','来歴'],['memo','詳細メモ']].filter(([k])=>(c[k]||'').trim()))}
       ${crows.length?`<dl class="cfields cfields-custom">${crows.join('')}</dl>`:''}
       ${qaBlockHtml(c)}
       ${charLinksHtml(c)}
     </div>`;
     main.scrollTop=0;
+    markFolds();
     return;
   }
   // edit
