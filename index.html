@@ -237,6 +237,12 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .memo.open .l1,.memo.open .more{display:none}
 .memo.open .all{display:block}
 .memo.pressing{background:var(--press)}
+.memo.fav{position:relative;padding-right:30px}
+.mfav{position:absolute;right:12px;top:10px;color:var(--brass);font-size:12px;line-height:1}
+.memos.oneline .memo.fav .mfav{top:9px}
+.actstar{width:20px;text-align:center;color:var(--faint);font-size:16px;line-height:1}
+.actstar.on{color:var(--brass)}
+#favFilterBtn.on svg{fill:currentColor}
 .memo.flash,.flash{animation:flash 1.2s ease-out}
 @keyframes flash{from{background:var(--press)}to{background:transparent}}
 
@@ -673,6 +679,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
     <span class="hgroup right">
       <button class="hbtn" id="figBtn" hidden aria-label="図と一覧を切り替え"></button>
       <button class="hbtn" id="viewBtn" hidden aria-label="表示を切り替え"></button>
+      <button class="hbtn" id="favFilterBtn" hidden aria-label="★のメモだけ表示"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></button>
       <button class="hbtn" id="memoSearchBtn" hidden aria-label="このフォルダ内を検索">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
       </button>
@@ -735,7 +742,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.28.2';
+const APP_VERSION='0.29.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1147,9 +1154,9 @@ function folderById(id){return db.folders.find(f=>f.id===id);}
 // A memo can be tagged with characters who are "in" it. Tags live only on the memo
 // (m.tags = [charId, ...]) and are never surfaced on the character's own page — this is a
 // memo-tab-only label, not a world-building link like relationships/events.
-let composerTags=[], tagFilter=[];
-function openFolder(id){ folderId=id; composerTags=[]; tagFilter=[]; folderQ=''; folderSearchOpen=false; render(); toBottom(); }
-function closeFolder(){ folderId=null; composerTags=[]; tagFilter=[]; folderQ=''; folderSearchOpen=false; }
+let composerTags=[], tagFilter=[], favOnly=false;
+function openFolder(id){ folderId=id; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; render(); toBottom(); }
+function closeFolder(){ folderId=null; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; }
 function tagChip(c,removable,ds){ return `<span class="mtagchip"${ds?` data-cid="${c.id}"`:''}>${esc(c.name)}${removable?`<button type="button" class="mtagx" data-untag="${c.id}" aria-label="${esc(c.name)}のタグを外す">${CI.x}</button>`:''}</span>`; }
 function renderComposerTags(){
   const bar=$('#composerTagBar'); if(!bar) return;
@@ -1185,13 +1192,16 @@ function memoTagsHtml(m){
   return cs.length?`<div class="mtags">${cs.map(c=>tagChip(c,false)).join('')}</div>`:'';
 }
 function visibleMemos(fid){
-  const ms=memosOf(fid);
+  let ms=memosOf(fid);
+  if(favOnly) ms=ms.filter(m=>m.fav);
   return tagFilter.length ? ms.filter(m=>tagFilter.every(id=>(m.tags||[]).includes(id))) : ms;
 }
+function favMark(m){ return m.fav?'<span class="mfav" aria-label="お気に入り">★</span>':''; }
 function tagFilterBarHtml(){
+  if(favOnly && !tagFilter.length) return `<div class="mfilterbar">★のメモだけ表示中<button type="button" class="mfilterclear" data-a="clearfav">解除</button></div>`;
   if(!tagFilter.length) return '';
   const cs=tagFilter.map(charById).filter(Boolean);
-  return `<div class="mfilterbar">絞り込み中：${cs.map(c=>tagChip(c,false)).join('')}<button type="button" class="mfilterclear" data-a="clearfilter">すべて解除</button></div>`;
+  return `<div class="mfilterbar">絞り込み中：${favOnly?'<span class="mtagchip">★</span>':''}${cs.map(c=>tagChip(c,false)).join('')}<button type="button" class="mfilterclear" data-a="clearfilter">すべて解除</button></div>`;
 }
 
 
@@ -1249,10 +1259,11 @@ function folderMemosHtml(){
   if(!all.length) return fbar+'<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>';
   return fbar + (q?`<div class="srcount">${ms.length}件</div>`:'') + (ms.length
     ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
-        if(!one) return `<li class="memo" data-id="${m.id}" tabindex="0">${q?hlText(m.text,q):esc(m.text)}${memoTagsHtml(m)}</li>`;
+        if(!one) return `<li class="memo${m.fav?' fav':''}" data-id="${m.id}" tabindex="0">${favMark(m)}${q?hlText(m.text,q):esc(m.text)}${memoTagsHtml(m)}</li>`;
         const lines=m.text.split('\n'), n=lines.length-1;
-        return `<li class="memo" data-id="${m.id}" tabindex="0"><span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
+        return `<li class="memo${m.fav?' fav':''}" data-id="${m.id}" tabindex="0">${favMark(m)}<span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
       }).join('')+'</ul>'
+    : favOnly&&!q&&!tagFilter.length ? '<div class="empty"><strong>★のついたメモはまだありません</strong>メモを長押しして「お気に入り」を選ぶと★がつきます。</div>'
     : '<div class="empty"><strong>あてはまるメモがありません</strong></div>');
 }
 // Every searchable text of a character, as [label, text].
@@ -1291,13 +1302,13 @@ function renderMain(){
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId) || wideTalk;
   $('#composer').hidden=!inFolder;
 
-  if(tab==='chara'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; renderChara(); return; }
-  if(tab==='world'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; renderWorld(); return; }
+  if(tab==='chara'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; $('#favFilterBtn').hidden=true; renderChara(); return; }
+  if(tab==='world'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; $('#favFilterBtn').hidden=true; renderWorld(); return; }
   if(!folderId){
     $('#title').textContent='メモ';
     $('#viewBtn').hidden=true;
     $('#tagFilterBtn').hidden=true;
-    $('#memoSearchBtn').hidden=true;
+    $('#memoSearchBtn').hidden=true; $('#favFilterBtn').hidden=true;
     if(!db.folders.length){main.innerHTML=wideTalk?'<div class="pick-ph">左のリストからフォルダを選んでください</div>':'<div class="empty"><strong>フォルダがありません</strong>右上のボタンで作品ごとのフォルダを作れます。</div>';return;}
     main.innerHTML=searchBox('memoQ',memoQ,'すべてのメモから検索')+`<div id="memoHome">${memoHomeHtml()}</div>`;
     return;
@@ -1313,6 +1324,7 @@ function renderMain(){
   $('#tagFilterBtn').classList.toggle('on',!!tagFilter.length);
   $('#memoSearchBtn').hidden=false;
   $('#memoSearchBtn').classList.toggle('on',folderSearchOpen);
+  $('#favFilterBtn').hidden=false; $('#favFilterBtn').classList.toggle('on',favOnly); $('#favFilterBtn').setAttribute('aria-pressed',favOnly);
   main.innerHTML = (folderSearchOpen?searchBox('folderQ',folderQ,'このフォルダ内を検索'):'') + `<div id="memoList">${folderMemosHtml()}</div>`;
   renderComposerTags();
 }
@@ -1409,11 +1421,13 @@ function memoMenu(id){
   const cs=(m.tags||[]).map(charById).filter(Boolean);
   openSheet(`<div class="preview selectable">${esc(m.text)}</div>
     ${cs.length?`<div class="mtags" style="padding:0 6px 8px">${cs.map(c=>tagChip(c,false)).join('')}</div>`:''}
+    <button class="act" data-a="fav"><span class="actstar${m.fav?' on':''}">★</span>${m.fav?'お気に入りから外す':'お気に入り'}</button>
     <button class="act" data-a="edit">${ICON.edit}編集</button>
     <button class="act" data-a="tag">${SV.plus}タグを編集</button>
     <button class="act" data-a="move">${ICON.folder}別のフォルダへ移動</button>
     <button class="act" data-a="copy">${ICON.copy}コピー</button>
     <button class="act danger" data-a="del">${ICON.trash}削除</button>`, s=>{
+    s.querySelector('[data-a=fav]').onclick=()=>{ if(m.fav) delete m.fav; else m.fav=true; m.updatedAt=Date.now(); commit(); closeSheet(); const st=main.scrollTop; renderMain(); main.scrollTop=st; toast(m.fav?'★をつけました':'★を外しました'); };
     s.querySelector('[data-a=edit]').onclick=()=>editMemo(m);
     s.querySelector('[data-a=tag]').onclick=()=>{ closeSheet(); pickCharsSheet(m.tags||[], ids=>{ m.tags=ids; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; render(); main.scrollTop=st; }, 'このメモのキャラをタグ付け'); };
     s.querySelector('[data-a=move]').onclick=()=>moveMemoSheet(m);
@@ -4068,6 +4082,10 @@ $('#composerQuickBar').addEventListener('pointerdown',e=>{ if(e.target.closest('
 $('#composerTagBtn').addEventListener('click',()=>{ pickCharsSheet(composerTags, ids=>{ composerTags=ids; renderComposerTags(); }, 'このメモのキャラをタグ付け'); });
 $('#composerTagBar').addEventListener('click',e=>{ const b=e.target.closest('[data-untag]'); if(!b) return; composerTags=composerTags.filter(id=>id!==b.dataset.untag); renderComposerTags(); });
 $('#composerQuickBar').addEventListener('click',e=>{ const b=e.target.closest('.qbtn'); if(!b) return; insertQuote(b.dataset.qi||null); });
+$('#favFilterBtn').addEventListener('click',()=>{
+  favOnly=!favOnly; renderMain(); if(favOnly) main.scrollTop=0; else toBottom();
+  toast(favOnly?'★のメモだけ表示':'すべてのメモを表示');
+});
 $('#memoSearchBtn').addEventListener('click',()=>{
   folderSearchOpen=!folderSearchOpen; if(!folderSearchOpen) folderQ='';
   renderMain(); main.scrollTop=0;
@@ -4076,7 +4094,7 @@ $('#memoSearchBtn').addEventListener('click',()=>{
 $('#tagFilterBtn').addEventListener('click',()=>{ pickCharsSheet(tagFilter, ids=>{ tagFilter=ids; const st=main.scrollTop; renderMain(); main.scrollTop=st; }, 'キャラで絞り込み'); });
 main.addEventListener('click',e=>{
   if(tab!=='talk') return;
-  const cl=e.target.closest('[data-a="clearfilter"]'); if(cl){ tagFilter=[]; const st=main.scrollTop; renderMain(); main.scrollTop=st; }
+  const cl=e.target.closest('[data-a="clearfilter"],[data-a="clearfav"]'); if(cl){ tagFilter=[]; favOnly=false; const st=main.scrollTop; renderMain(); main.scrollTop=st; }
 });
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'){
