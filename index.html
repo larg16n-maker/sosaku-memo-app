@@ -748,7 +748,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.30.0';
+const APP_VERSION='0.30.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1396,13 +1396,27 @@ function renderMain(){
 function toBottom(){ main.scrollTop=main.scrollHeight; }
 
 /* ---------- navigation ---------- */
+// Each tab remembers where its screen was scrolled, so switching tabs and coming back
+// returns to the same spot (only when it's still the same screen).
+const tabScroll={};
+function viewKey(){
+  if(tab==='talk') return 'talk:'+(folderId||'')+':'+(folderId&&folderTl(folderById(folderId))&&storyOrder(folderId)?'s':'w');
+  if(tab==='chara') return 'chara:'+charView+':'+(charView==='gdetail'?gId:charId)+':'+charKind;
+  return 'world:'+wView+':'+(wView==='tl'?tlId:wView==='xc'?xcId:wView==='rc'?rcId:wView==='rg'?rgId:'');
+}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  const same=tab===b.dataset.tab;
+  if(!same) tabScroll[tab]={key:viewKey(),top:main.scrollTop};
   if(tab===b.dataset.tab && tab==='talk'){closeFolder();}
   if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa' && charView!=='gedit'){charView='list'; cmpReturn=false; gdReturn=null; reorderMode=false; grpReorderMode=false; selectMode=false; selected.clear();}
   if(tab===b.dataset.tab && tab==='world' && wView!=='ev' && wView!=='rel'){wView='hub';}
   if(b.dataset.tab==='world'){ wReturn=null; wReturnG=null; }
   if(tab==='chara' && charView==='qtpl' && b.dataset.tab!=='chara'){ charView=(qtplBack&&qtplBack.cv)||'list'; qtplBack=null; }
-  tab=b.dataset.tab; render(); if(folderId) toBottom();
+  tab=b.dataset.tab; render();
+  const saved=!same&&tabScroll[tab];
+  if(saved && saved.key===viewKey()) main.scrollTop=saved.top;
+  else if(tab==='talk' && folderId && !(folderTl(folderById(folderId))&&storyOrder(folderId))) toBottom();
+  else main.scrollTop=0;
 }));
 $('#backBtn').addEventListener('click',()=>{
   if(tab==='chara'){
