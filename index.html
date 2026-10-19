@@ -761,7 +761,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.31.0';
+const APP_VERSION='0.31.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1230,7 +1230,8 @@ function setCurWhen(fid,w){ const o=lsGet(MW_KEY); if(w) o[fid]=w; else delete o
 function storyOrder(fid){ return lsGet(MO_KEY)[fid]==='story'; }
 function setStoryOrder(fid,on){ const o=lsGet(MO_KEY); if(on) o[fid]='story'; else delete o[fid]; lsSet(MO_KEY,o); }
 function whenText(tl,w){ if(!tl||!w) return ''; const d=dateLabel({month:w.m,day:w.d}); return yearLabel(tl,w.y)+(d?' '+d:''); }
-function whenKey(w){ return ymdKey(w.y,w.m,w.d); }
+// Same order as timeline events: within a year, no month comes first, then 1月, 2月…; within a month, no day first.
+function whenKey(w){ return w.y*10000+(w.m||0)*100+(w.d||0); }
 function whenSheet(tl,init,title,note,done){
   const signs = tl.mode==='ad' ? [[1,'西暦'],[-1,'紀元前']] : [[-1,'前'],[1,'後']];
   let sign = init ? (init.y<0?-1:1) : (tl.mode==='ad'?1:-1);
