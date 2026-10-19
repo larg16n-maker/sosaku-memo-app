@@ -237,6 +237,17 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .memo.open .l1,.memo.open .more{display:none}
 .memo.open .all{display:block}
 .memo.pressing{background:var(--press)}
+.selecting .memo{position:relative;padding-left:42px;cursor:pointer}
+.mck{position:absolute;left:12px;top:11px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--faint);display:grid;place-items:center;color:transparent}
+.mck svg{width:12px;height:12px}
+.memo.sel{background:color-mix(in srgb,var(--brass) 9%,transparent)}
+.memo.sel .mck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.mselbar{flex:none;display:flex;gap:4px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--bg)}
+.mselbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;font-size:11px;color:var(--ink)}
+.mselbar button svg{width:20px;height:20px}
+.mselbar button:disabled{opacity:.35}
+.mselbar button.danger{color:var(--danger)}
+.mselbar button:active:not(:disabled){background:var(--press)}
 .memo.fav{position:relative;padding-right:30px}
 .mfav{position:absolute;right:12px;top:10px;color:var(--brass);font-size:12px;line-height:1}
 .memos.oneline .memo.fav .mfav{top:9px}
@@ -677,6 +688,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
       </button>
       <button class="hbtn txt" id="charCancelBtn" hidden>キャンセル</button>
       <button class="hbtn txt" id="wCancelBtn" hidden>キャンセル</button>
+      <button class="hbtn txt" id="memoSelCancel" hidden>キャンセル</button>
       <button class="hbtn" id="settingsBtn" aria-label="同期設定">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 000-3l1.9-1.4-2-3.4-2.2.8a7.6 7.6 0 00-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 00-2.6 1.5l-2.2-.8-2 3.4L4.6 10.5a7.6 7.6 0 000 3L2.7 15l2 3.4 2.2-.8c.8.7 1.6 1.2 2.6 1.5l.5 2.5h4l.5-2.5a7.6 7.6 0 002.6-1.5l2.2.8 2-3.4z"/></svg>
       </button>
@@ -730,6 +742,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
       </button>
     </div>
   </form>
+  <div class="mselbar" id="memoSelBar" hidden></div>
 </div>
 </div>
   <nav class="tabs" role="tablist">
@@ -748,7 +761,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.30.1';
+const APP_VERSION='0.31.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1162,8 +1175,8 @@ function folderById(id){return db.folders.find(f=>f.id===id);}
 // (m.tags = [charId, ...]) and are never surfaced on the character's own page — this is a
 // memo-tab-only label, not a world-building link like relationships/events.
 let composerTags=[], tagFilter=[], favOnly=false;
-function openFolder(id){ folderId=id; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; render(); if(folderTl(folderById(id))&&storyOrder(id)) main.scrollTop=0; else toBottom(); }
-function closeFolder(){ folderId=null; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; }
+function openFolder(id){ memoSel=null; folderId=id; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; render(); if(folderTl(folderById(id))&&storyOrder(id)) main.scrollTop=0; else toBottom(); }
+function closeFolder(){ memoSel=null; folderId=null; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; }
 function tagChip(c,removable,ds){ return `<span class="mtagchip"${ds?` data-cid="${c.id}"`:''}>${esc(c.name)}${removable?`<button type="button" class="mtagx" data-untag="${c.id}" aria-label="${esc(c.name)}のタグを外す">${CI.x}</button>`:''}</span>`; }
 function renderComposerTags(){
   const bar=$('#composerTagBar'); if(!bar) return;
@@ -1250,6 +1263,53 @@ function folderTlSheet(f){
       closeSheet(); render(); toast(v?'時系列を設定しました':'時系列を外しました'); });
   },'foldertl');
 }
+/* select mode: pick several memos in the open folder, then change time / move / ★ / delete together */
+let memoSel=null;
+const MS_ICON={
+  when:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>'
+};
+function startMemoSel(id){ memoSel=new Set(id?[id]:[]); folderSearchOpen=false; folderQ=''; const st=main.scrollTop; renderMain(); main.scrollTop=st; }
+function endMemoSel(){ if(!memoSel) return; memoSel=null; const st=main.scrollTop; renderMain(); main.scrollTop=st; }
+function toggleMemoSel(id){ if(!memoSel) return; memoSel.has(id)?memoSel.delete(id):memoSel.add(id);
+  const el=main.querySelector(`.memo[data-id="${id}"]`); if(el){ el.classList.toggle('sel',memoSel.has(id)); el.setAttribute('aria-checked',memoSel.has(id)); }
+  renderSelBar(); }
+function selMemos(){ return memoSel?db.memos.filter(m=>memoSel.has(m.id)):[]; }
+function renderSelBar(){
+  const bar=$('#memoSelBar'); if(!bar) return;
+  const n=memoSel?memoSel.size:0, f=folderById(folderId), tl=folderTl(f), ms=selMemos(), allFav=ms.length&&ms.every(m=>m.fav);
+  $('#title').textContent=n?`${n}件選択中`:'メモを選択';
+  bar.innerHTML=`${tl?`<button type="button" data-ms="when"${n?'':' disabled'}>${MS_ICON.when}<span>時期</span></button>`:''}
+    <button type="button" data-ms="move"${n?'':' disabled'}>${ICON.folder}<span>移動</span></button>
+    <button type="button" data-ms="fav"${n?'':' disabled'}>${MS_ICON.star}<span>${allFav?'★を外す':'★をつける'}</span></button>
+    <button type="button" data-ms="del" class="danger"${n?'':' disabled'}>${ICON.trash}<span>削除</span></button>`;
+}
+function selDone(msg){ memoSel=null; commit(); const st=main.scrollTop; render(); main.scrollTop=st; if(msg) toast(msg); }
+function moveMemosSheet(list,after){
+  const from=list[0]&&list[0].folderId;
+  const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt).filter(f=>f.id!==from);
+  if(!fs.length){ toast('ほかのフォルダがありません'); return; }
+  openSheet(`<div class="title">${list.length}件の移動先</div>
+    ${fs.map(f=>`<button class="act" data-fid="${f.id}">${ICON.folder}${esc(f.name)}<span class="small" style="margin-left:auto">${memosOf(f.id).length}</span></button>`).join('')}`, s=>{
+    s.querySelectorAll('[data-fid]').forEach(b=>b.onclick=()=>{
+      const to=folderById(b.dataset.fid); if(!to) return; const t=Date.now();
+      list.forEach(m=>{ m.folderId=to.id; m.updatedAt=t; });
+      closeSheet(); after(); toastAction(`${list.length}件を「${to.name}」へ移動しました`,'開く',()=>openFolder(to.id));
+    });
+  },'move');
+}
+$('#memoSelBar').addEventListener('click',e=>{
+  const b=e.target.closest('[data-ms]'); if(!b||b.disabled) return;
+  const ms=selMemos(); if(!ms.length) return; const a=b.dataset.ms, t=Date.now();
+  if(a==='when'){ const tl=folderTl(folderById(folderId)); if(!tl) return;
+    whenSheet(tl,null,`${ms.length}件の時期`,'選んだメモ全部を同じ時期にします。',w=>{ ms.forEach(m=>{ if(w) m.when={...w}; else delete m.when; m.updatedAt=t; }); selDone(`${ms.length}件の時期を変えました`); }); return; }
+  if(a==='move'){ moveMemosSheet(ms,()=>selDone()); return; }
+  if(a==='fav'){ const on=!ms.every(m=>m.fav); ms.forEach(m=>{ if(on) m.fav=true; else delete m.fav; m.updatedAt=t; }); selDone(on?`${ms.length}件に★をつけました`:`${ms.length}件の★を外しました`); return; }
+  if(a==='del'){ confirmSheet(`${ms.length}件のメモを削除しますか？`,'元に戻せません。','削除',()=>{
+    const ids=new Set(ms.map(m=>m.id)); db.memos=db.memos.filter(m=>!ids.has(m.id)); ids.forEach(id=>db.deletedMemos.push({id,deletedAt:t}));
+    selDone(`${ids.size}件削除しました`); }); return; }
+});
+$('#memoSelCancel').addEventListener('click',endMemoSel);
 function favMark(m){ return m.fav?'<span class="mfav" aria-label="お気に入り">★</span>':''; }
 function tagFilterBarHtml(){
   const f=folderById(folderId), story=folderTl(f)&&storyOrder(folderId);
@@ -1323,9 +1383,9 @@ function folderMemosHtml(){
   if(!all.length) return fbar+'<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>';
   return fbar + (q?`<div class="srcount">${ms.length}件</div>`:'') + (ms.length
     ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
-        if(!one) return `${head(m)}<li class="memo${m.fav?' fav':''}" data-id="${m.id}" tabindex="0">${favMark(m)}${wl(m)}${q?hlText(m.text,q):esc(m.text)}${memoTagsHtml(m)}</li>`;
+        if(!one) return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}${q?hlText(m.text,q):esc(m.text)}${memoTagsHtml(m)}</li>`;
         const lines=m.text.split('\n'), n=lines.length-1;
-        return `${head(m)}<li class="memo${m.fav?' fav':''}" data-id="${m.id}" tabindex="0">${favMark(m)}${wl(m)}<span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
+        return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}<span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
       }).join('')+'</ul>'
     : favOnly&&!q&&!tagFilter.length ? '<div class="empty"><strong>★のついたメモはまだありません</strong>メモを長押しして「お気に入り」を選ぶと★がつきます。</div>'
     : '<div class="empty"><strong>あてはまるメモがありません</strong></div>');
@@ -1365,6 +1425,8 @@ function renderMain(){
   $('#backBtn').hidden=!inFolder || wideTalk;
   $('#addFolderBtn').hidden=!(tab==='talk' && !folderId) || wideTalk;
   $('#composer').hidden=!inFolder;
+  $('#memoSelBar').hidden=true; $('#memoSelCancel').hidden=true;
+  if(memoSel && !(tab==='talk' && folderId)) memoSel=null;
 
   if(tab==='chara'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; renderChara(); return; }
   if(tab==='world'){ $('#viewBtn').hidden=true; $('#tagFilterBtn').hidden=true; $('#memoSearchBtn').hidden=true; renderWorld(); return; }
@@ -1390,7 +1452,11 @@ function renderMain(){
   $('#memoSearchBtn').hidden=false;
   $('#memoSearchBtn').classList.toggle('on',folderSearchOpen);
 
-  main.innerHTML = (folderSearchOpen?searchBox('folderQ',folderQ,'このフォルダ内を検索'):'') + `<div id="memoList">${folderMemosHtml()}</div>`;
+  main.innerHTML = (folderSearchOpen?searchBox('folderQ',folderQ,'このフォルダ内を検索'):'') + `<div id="memoList" class="${memoSel?'selecting':''}">${folderMemosHtml()}</div>`;
+  if(memoSel){
+    ['viewBtn','tagFilterBtn','memoSearchBtn','settingsBtn','backBtn'].forEach(id=>$('#'+id).hidden=true);
+    $('#memoSelCancel').hidden=false; $('#composer').hidden=true; $('#memoSelBar').hidden=false; renderSelBar();
+  }
   renderComposerTags();
 }
 function toBottom(){ main.scrollTop=main.scrollHeight; }
@@ -1406,6 +1472,7 @@ function viewKey(){
 }
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
   const same=tab===b.dataset.tab;
+  if(memoSel){ memoSel=null; }
   if(!same) tabScroll[tab]={key:viewKey(),top:main.scrollTop};
   if(tab===b.dataset.tab && tab==='talk'){closeFolder();}
   if(tab===b.dataset.tab && tab==='chara' && charView!=='edit' && charView!=='qa' && charView!=='gedit'){charView='list'; cmpReturn=false; gdReturn=null; reorderMode=false; grpReorderMode=false; selectMode=false; selected.clear();}
@@ -1442,6 +1509,7 @@ let lp=null;
 for(const root of [main, $('#side')]){
   root.addEventListener('pointerdown',e=>{
     const el=e.target.closest(FOLDER_SEL); if(!el) return;
+    if(memoSel && el.classList.contains('memo')){ lp={el,x:e.clientX,y:e.clientY,fired:false,timer:0,sel:true}; return; }
     const x=e.clientX,y=e.clientY;
     // With a mouse, memo text can be drag-selected; its menu comes from right-click instead of a long press.
     const noHold=e.pointerType==='mouse' && el.classList.contains('memo');
@@ -1454,7 +1522,8 @@ for(const root of [main, $('#side')]){
   });
   root.addEventListener('pointermove',e=>{ if(lp && Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>10){cancelLp(); lp=null;} });
   root.addEventListener('pointerup',e=>{
-    if(!lp) return; const {el,fired}=lp; cancelLp(); lp=null;
+    if(!lp) return; const {el,fired,sel}=lp; cancelLp(); lp=null;
+    if(sel){ toggleMemoSel(el.dataset.id); return; }
     if(fired) return;
     if(el.classList.contains('memo')){ if(el.closest('.oneline')) el.classList.toggle('open'); return; }
     openFolder(el.dataset.id);
@@ -1462,13 +1531,14 @@ for(const root of [main, $('#side')]){
   root.addEventListener('pointercancel',()=>{cancelLp(); lp=null;});
   root.addEventListener('contextmenu',e=>{
     const el=e.target.closest(FOLDER_SEL); if(!el) return; e.preventDefault();
+    if(memoSel && el.classList.contains('memo')) return;
     if(lp&&lp.fired) return;
     cancelLp(); lp=null;
     el.classList.contains('memo')?memoMenu(el.dataset.id):folderMenu(el.dataset.id);
   });
   root.addEventListener('keydown',e=>{
     const el=e.target.closest(FOLDER_SEL); if(!el||e.key!=='Enter') return;
-    if(el.classList.contains('memo')){ memoMenu(el.dataset.id); return; }
+    if(el.classList.contains('memo')){ memoSel?toggleMemoSel(el.dataset.id):memoMenu(el.dataset.id); return; }
     openFolder(el.dataset.id);
   });
 }
@@ -1503,6 +1573,7 @@ function memoMenu(id){
     <button class="act" data-a="fav"><span class="actstar${m.fav?' on':''}">★</span>${m.fav?'お気に入りから外す':'お気に入り'}</button>
     ${folderTl(folderById(m.folderId))?`<button class="act" data-a="when">${WI.line}時期を変える<span class="small" style="margin-left:auto">${esc(whenText(folderTl(folderById(m.folderId)),m.when)||'時期なし')}</span></button>`:''}
     <button class="act" data-a="edit">${ICON.edit}編集</button>
+    <button class="act" data-a="select">${CI.check}選択する（まとめて操作）</button>
     <button class="act" data-a="tag">${SV.plus}タグを編集</button>
     <button class="act" data-a="move">${ICON.folder}別のフォルダへ移動</button>
     <button class="act" data-a="copy">${ICON.copy}コピー</button>
@@ -1511,6 +1582,7 @@ function memoMenu(id){
     const wb=s.querySelector('[data-a=when]');
     if(wb) wb.onclick=()=>{ const tl=folderTl(folderById(m.folderId)); whenSheet(tl,m.when||curWhen(m.folderId),'このメモの時期','',w=>{ if(w) m.when=w; else delete m.when; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; renderMain(); main.scrollTop=st; toast('時期を変えました'); }); };
     s.querySelector('[data-a=edit]').onclick=()=>editMemo(m);
+    s.querySelector('[data-a=select]').onclick=()=>{ closeSheet(); startMemoSel(m.id); };
     s.querySelector('[data-a=tag]').onclick=()=>{ closeSheet(); pickCharsSheet(m.tags||[], ids=>{ m.tags=ids; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; render(); main.scrollTop=st; }, 'このメモのキャラをタグ付け'); };
     s.querySelector('[data-a=move]').onclick=()=>moveMemoSheet(m);
     s.querySelector('[data-a=copy]').onclick=()=>copyText(m.text);
