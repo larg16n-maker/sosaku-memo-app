@@ -536,6 +536,13 @@ body.kbopen .cedit{padding-bottom:120px}
 .qbar{display:flex;flex-wrap:wrap;gap:6px;padding:0 2px 6px;overflow-x:auto}
 .qbtn{flex:none;height:28px;padding:0 12px;border-radius:14px;background:var(--press);color:var(--ink);font-size:12px;white-space:nowrap;-webkit-user-select:none;user-select:none}
 .qbtn:active{opacity:.7}
+.qtime{flex:none;margin-left:auto;height:28px;padding:0 10px;border-radius:14px;border:1px dashed var(--faint);color:var(--sub);font-size:11px;white-space:nowrap;-webkit-user-select:none;user-select:none}
+.qtime.set{border:1px solid var(--brass);color:var(--brass);background:color-mix(in srgb,var(--brass) 10%,transparent)}
+.mwhen{display:block;font-size:10px;color:var(--brass);line-height:1.4;margin-bottom:1px;font-variant-numeric:tabular-nums}
+.memos.oneline .mwhen{display:inline;margin:0 6px 0 0;flex:none}
+.mwhead{list-style:none;position:sticky;top:0;z-index:1;background:var(--bg);font-size:11px;font-weight:600;color:var(--brass);padding:8px 14px 3px;border-bottom:1px solid var(--line);letter-spacing:.04em}
+.mwhead.none{color:var(--faint)}
+.pkorder{display:flex;margin-bottom:4px}.pkorder button{flex:1}
 .tagbtn{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--faint);background:transparent}
 .tagbtn.on{color:var(--accent);background:var(--press)}
 .tagbtn svg{width:18px;height:18px}
@@ -741,7 +748,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.29.0';
+const APP_VERSION='0.30.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1041,6 +1048,7 @@ function buildStoryBible(){
       L.push(`### ${f.name}`);
       for(const m of memosOf(f.id)){
         const tagNames=(m.tags||[]).map(charById).filter(Boolean).map(c=>c.name);
+        const wt=whenText(folderTl(f),m.when); if(wt) L.push(`[時期: ${wt}]`);
         if(tagNames.length) L.push(`[登場: ${tagNames.join('、')}]`);
         L.push(m.text.trim()); L.push('');
       }
@@ -1154,7 +1162,7 @@ function folderById(id){return db.folders.find(f=>f.id===id);}
 // (m.tags = [charId, ...]) and are never surfaced on the character's own page — this is a
 // memo-tab-only label, not a world-building link like relationships/events.
 let composerTags=[], tagFilter=[], favOnly=false;
-function openFolder(id){ folderId=id; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; render(); toBottom(); }
+function openFolder(id){ folderId=id; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; render(); if(folderTl(folderById(id))&&storyOrder(id)) main.scrollTop=0; else toBottom(); }
 function closeFolder(){ folderId=null; composerTags=[]; tagFilter=[]; favOnly=false; folderQ=''; folderSearchOpen=false; }
 function tagChip(c,removable,ds){ return `<span class="mtagchip"${ds?` data-cid="${c.id}"`:''}>${esc(c.name)}${removable?`<button type="button" class="mtagx" data-untag="${c.id}" aria-label="${esc(c.name)}のタグを外す">${CI.x}</button>`:''}</span>`; }
 function renderComposerTags(){
@@ -1173,7 +1181,9 @@ function quickBtnsHtml(cs){
 }
 function renderQuickBar(taggedChars){
   const qbar=$('#composerQuickBar'); if(!qbar) return;
-  qbar.innerHTML=quickBtnsHtml(taggedChars||composerTags.map(charById).filter(Boolean));
+  const f=folderById(folderId), tl=folderTl(f), w=tl&&curWhen(folderId);
+  qbar.innerHTML=quickBtnsHtml(taggedChars||composerTags.map(charById).filter(Boolean))
+    + (tl?`<button type="button" class="qtime${w?' set':''}" data-qtime="1">${w?'時期：'+esc(whenText(tl,w)):'＋ 時期'}</button>`:'');
 }
 function insertQuote(cid,target){
   const el=target||input; if(!el) return;
@@ -1195,9 +1205,59 @@ function visibleMemos(fid){
   if(favOnly) ms=ms.filter(m=>m.fav);
   return tagFilter.length ? ms.filter(m=>tagFilter.every(id=>(m.tags||[]).includes(id))) : ms;
 }
+/* memo timing: a folder may be tied to one timeline (f.tlId); its memos can then carry
+   m.when={y,m,d} counted the same way as that timeline's events. The time chip in the composer
+   sets the time for new memos (kept per folder on this device). */
+const MW_KEY='sosaku-memowhen', MO_KEY='sosaku-memoorder';
+function lsGet(k){ try{ return JSON.parse(localStorage.getItem(k)||'{}')||{}; }catch(_){ return {}; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(_){} }
+function folderTl(f){ return f&&f.tlId?tlById(f.tlId):null; }
+function curWhen(fid){ return lsGet(MW_KEY)[fid]||null; }
+function setCurWhen(fid,w){ const o=lsGet(MW_KEY); if(w) o[fid]=w; else delete o[fid]; lsSet(MW_KEY,o); }
+function storyOrder(fid){ return lsGet(MO_KEY)[fid]==='story'; }
+function setStoryOrder(fid,on){ const o=lsGet(MO_KEY); if(on) o[fid]='story'; else delete o[fid]; lsSet(MO_KEY,o); }
+function whenText(tl,w){ if(!tl||!w) return ''; const d=dateLabel({month:w.m,day:w.d}); return yearLabel(tl,w.y)+(d?' '+d:''); }
+function whenKey(w){ return ymdKey(w.y,w.m,w.d); }
+function whenSheet(tl,init,title,note,done){
+  const signs = tl.mode==='ad' ? [[1,'西暦'],[-1,'紀元前']] : [[-1,'前'],[1,'後']];
+  let sign = init ? (init.y<0?-1:1) : (tl.mode==='ad'?1:-1);
+  openSheet(`<div class="title">${title}</div>${note?`<div class="small" style="padding:0 2px 6px">${note}</div>`:''}
+    <div class="fl">年（時系列「${esc(tl.name)}」の数え方）</div>
+    <div class="yrow"><div class="seg" role="group">${signs.map(([v,l])=>`<button type="button" data-sg="${v}" aria-pressed="${sign===v}">${l}</button>`).join('')}</div>
+      <input id="mwY" type="text" inputmode="numeric" pattern="[0-9]*" value="${init?Math.abs(init.y):''}" placeholder="${tl.mode==='ad'?'例：1985':'0で基準年'}" autocomplete="off"><span class="yu">年</span></div>
+    <div class="fl">月・日（なくてもOK）</div>
+    <div class="grid2"><select id="mwM" aria-label="月"><option value="">月 —</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${init&&init.m===i+1?' selected':''}>${i+1}月</option>`).join('')}</select>
+      <select id="mwD" aria-label="日"><option value="">日 —</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${init&&init.d===i+1?' selected':''}>${i+1}日</option>`).join('')}</select></div>
+    <div class="row"><button type="button" data-a="none">時期なし</button><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
+    const yi=s.querySelector('#mwY'), ok=s.querySelector('[data-a=ok]');
+    const upd=()=>{ const v=yi.value.replace(/[^0-9]/g,''); if(v!==yi.value) yi.value=v; ok.disabled=!v; }; upd(); yi.addEventListener('input',upd);
+    s.querySelectorAll('[data-sg]').forEach(b=>b.onclick=()=>{ sign=Number(b.dataset.sg); s.querySelectorAll('[data-sg]').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    s.querySelector('[data-a=none]').onclick=()=>{ closeSheet(); done(null); };
+    ok.onclick=()=>{ const n=Number(yi.value||0), m=Number(s.querySelector('#mwM').value)||null, d=Number(s.querySelector('#mwD').value)||null;
+      closeSheet(); done({y:sign*n,m,d:m?d:null}); };
+  },'when');
+}
+function folderTlSheet(f){
+  const ts=tlsSorted();
+  openSheet(`<div class="title">「${esc(f.name)}」の時系列</div>
+    <div class="small" style="padding:0 2px 6px">選ぶと、このフォルダのメモに作中の時期をつけて「作中の順」に並べられます。年はこの時系列と同じ数え方です。</div>
+    <div class="picklist">${ts.map(t=>`<div class="pickrow" role="radio" tabindex="0" data-tl="${t.id}" aria-checked="${f.tlId===t.id}">${WI.line}<span>${esc(t.name)}<span class="small" style="margin-left:6px">${t.mode==='ad'?'西暦':'基準からの年数'}</span></span><span class="ck">${CI.check}</span></div>`).join('')}
+      <div class="pickrow" role="radio" tabindex="0" data-tl="" aria-checked="${!f.tlId}"><span style="width:20px"></span><span>使わない</span><span class="ck">${CI.check}</span></div></div>
+    ${ts.length?'':'<div class="small" style="padding:4px 2px">時系列がまだありません。世界観タブの「時系列」で作れます。</div>'}`, s=>{
+    s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-tl]'); if(!r) return;
+      const v=r.dataset.tl||null; if((f.tlId||null)!==v){ if(v) f.tlId=v; else delete f.tlId; f.updatedAt=Date.now(); commit(); }
+      closeSheet(); render(); toast(v?'時系列を設定しました':'時系列を外しました'); });
+  },'foldertl');
+}
 function favMark(m){ return m.fav?'<span class="mfav" aria-label="お気に入り">★</span>':''; }
 function tagFilterBarHtml(){
-  if(!tagFilter.length && !favOnly) return '';
+  const f=folderById(folderId), story=folderTl(f)&&storyOrder(folderId);
+  const sbar=story?`<div class="mfilterbar">並び順：<span class="mtagchip">作中の順</span><button type="button" class="mfilterclear" data-a="writtenorder">書いた順に戻す</button></div>`:'';
+  if(!tagFilter.length && !favOnly) return sbar;
+  return sbar+tagFilterBarCore();
+}
+function tagFilterBarCore(){
   const cs=tagFilter.map(charById).filter(Boolean);
   return `<div class="mfilterbar">絞り込み中：${favOnly?'<span class="mtagchip">★</span>':''}${cs.map(c=>tagChip(c,false)).join('')}<button type="button" class="mfilterclear" data-a="clearfilter">すべて解除</button></div>`;
 }
@@ -1252,14 +1312,20 @@ function folderMemosHtml(){
   const f=folderById(folderId); if(!f) return '';
   const q=folderSearchOpen?folderQ.trim():'';
   const one=f.view==='line' && !q;
-  const all=memosOf(folderId), ms=visibleMemos(folderId).filter(m=>!q||qHit(m.text,q));
+  const tl=folderTl(f), story=!!tl && storyOrder(f.id);
+  const all=memosOf(folderId);
+  let ms=visibleMemos(folderId).filter(m=>!q||qHit(m.text,q));
+  if(story){ ms=[...ms.filter(m=>m.when).sort((a,b)=>whenKey(a.when)-whenKey(b.when)||a.createdAt-b.createdAt), ...ms.filter(m=>!m.when)]; }
+  const wl=m=>tl&&m.when?`<span class="mwhen">${esc(whenText(tl,m.when))}</span>`:'';
+  let lastY;
+  const head=m=>{ if(!story) return ''; const y=m.when?m.when.y:null; if(y===lastY) return ''; lastY=y; return `<li class="mwhead${y===null?' none':''}">${y===null?'時期なし':esc(yearLabel(tl,y))}</li>`; };
   const fbar=tagFilterBarHtml();
   if(!all.length) return fbar+'<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>';
   return fbar + (q?`<div class="srcount">${ms.length}件</div>`:'') + (ms.length
     ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
-        if(!one) return `<li class="memo${m.fav?' fav':''}" data-id="${m.id}" tabindex="0">${favMark(m)}${q?hlText(m.text,q):esc(m.text)}${memoTagsHtml(m)}</li>`;
+        if(!one) return `${head(m)}<li class="memo${m.fav?' fav':''}" data-id="${m.id}" tabindex="0">${favMark(m)}${wl(m)}${q?hlText(m.text,q):esc(m.text)}${memoTagsHtml(m)}</li>`;
         const lines=m.text.split('\n'), n=lines.length-1;
-        return `<li class="memo${m.fav?' fav':''}" data-id="${m.id}" tabindex="0">${favMark(m)}<span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
+        return `${head(m)}<li class="memo${m.fav?' fav':''}" data-id="${m.id}" tabindex="0">${favMark(m)}${wl(m)}<span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
       }).join('')+'</ul>'
     : favOnly&&!q&&!tagFilter.length ? '<div class="empty"><strong>★のついたメモはまだありません</strong>メモを長押しして「お気に入り」を選ぶと★がつきます。</div>'
     : '<div class="empty"><strong>あてはまるメモがありません</strong></div>');
@@ -1319,7 +1385,8 @@ function renderMain(){
   $('#viewBtn').innerHTML = (one?ICON.lines:ICON.full) + (one?'1行':'全文');
   $('#viewBtn').setAttribute('aria-label', one?'1行表示中。全文表示に切り替え':'全文表示中。1行表示に切り替え');
   $('#tagFilterBtn').hidden=false;
-  $('#tagFilterBtn').classList.toggle('on',!!tagFilter.length||favOnly);
+  $('#tagFilterBtn').classList.toggle('on',!!tagFilter.length||favOnly||(!!folderTl(f)&&storyOrder(f.id)));
+  renderQuickBar();
   $('#memoSearchBtn').hidden=false;
   $('#memoSearchBtn').classList.toggle('on',folderSearchOpen);
 
@@ -1420,12 +1487,15 @@ function memoMenu(id){
   openSheet(`<div class="preview selectable">${esc(m.text)}</div>
     ${cs.length?`<div class="mtags" style="padding:0 6px 8px">${cs.map(c=>tagChip(c,false)).join('')}</div>`:''}
     <button class="act" data-a="fav"><span class="actstar${m.fav?' on':''}">★</span>${m.fav?'お気に入りから外す':'お気に入り'}</button>
+    ${folderTl(folderById(m.folderId))?`<button class="act" data-a="when">${WI.line}時期を変える<span class="small" style="margin-left:auto">${esc(whenText(folderTl(folderById(m.folderId)),m.when)||'時期なし')}</span></button>`:''}
     <button class="act" data-a="edit">${ICON.edit}編集</button>
     <button class="act" data-a="tag">${SV.plus}タグを編集</button>
     <button class="act" data-a="move">${ICON.folder}別のフォルダへ移動</button>
     <button class="act" data-a="copy">${ICON.copy}コピー</button>
     <button class="act danger" data-a="del">${ICON.trash}削除</button>`, s=>{
     s.querySelector('[data-a=fav]').onclick=()=>{ if(m.fav) delete m.fav; else m.fav=true; m.updatedAt=Date.now(); commit(); closeSheet(); const st=main.scrollTop; renderMain(); main.scrollTop=st; toast(m.fav?'★をつけました':'★を外しました'); };
+    const wb=s.querySelector('[data-a=when]');
+    if(wb) wb.onclick=()=>{ const tl=folderTl(folderById(m.folderId)); whenSheet(tl,m.when||curWhen(m.folderId),'このメモの時期','',w=>{ if(w) m.when=w; else delete m.when; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; renderMain(); main.scrollTop=st; toast('時期を変えました'); }); };
     s.querySelector('[data-a=edit]').onclick=()=>editMemo(m);
     s.querySelector('[data-a=tag]').onclick=()=>{ closeSheet(); pickCharsSheet(m.tags||[], ids=>{ m.tags=ids; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; render(); main.scrollTop=st; }, 'このメモのキャラをタグ付け'); };
     s.querySelector('[data-a=move]').onclick=()=>moveMemoSheet(m);
@@ -1472,7 +1542,9 @@ function folderMenu(id){
   const f=folderById(id); if(!f) return;
   openSheet(`<div class="title">${esc(f.name)}</div>
     <button class="act" data-a="ren">${ICON.edit}名前を変更</button>
+    <button class="act" data-a="tl">${WI.line}時系列を選ぶ<span class="small" style="margin-left:auto">${f.tlId&&tlById(f.tlId)?esc(tlById(f.tlId).name):'使わない'}</span></button>
     <button class="act danger" data-a="del">${ICON.trash}フォルダを削除</button>`, s=>{
+    s.querySelector('[data-a=tl]').onclick=()=>folderTlSheet(f);
     s.querySelector('[data-a=ren]').onclick=()=>nameSheet('名前を変更',f.name,'変更',name=>{f.name=name;f.updatedAt=Date.now();commit();render();});
     s.querySelector('[data-a=del]').onclick=()=>{
       const n=memosOf(id).length;
@@ -3422,13 +3494,16 @@ function deleteGroupConfirm(id,after){
 function pickCharsSheet(ids,cb,title,opts){
   const sel=new Set(ids), list=charsSorted(), withFav=!!(opts&&'fav' in opts);
   if(withFav && opts.fav) sel.add('__fav__');
+  const withOrder=!!(opts&&'order' in opts); let story=withOrder&&opts.order;
   if(!list.length && !withFav){ toast('先にキャラクターを登録してください'); return; }
   openSheet(`<div class="title">${esc(title||'関わったキャラ')}</div>
+    ${withOrder?`<div class="fl">並び順</div><div class="seg pkorder" role="group"><button type="button" data-ord="0" aria-pressed="${!story}">書いた順</button><button type="button" data-ord="1" aria-pressed="${!!story}">作中の順</button></div><div class="fl">絞り込み</div>`:''}
     <div class="picklist" role="group">${withFav?`<div class="pickrow pfav" role="checkbox" tabindex="0" data-pid="__fav__" aria-checked="${sel.has('__fav__')}"><span class="av pstar">★</span><span>お気に入り</span><span class="ck">${CI.check}</span></div>`:''}${list.map(c=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${c.id}" aria-checked="${sel.has(c.id)}">${avatar(c)}<span>${esc(c.name)}</span><span class="ck">${CI.check}</span></div>`).join('')}</div>
     <div class="row"><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
     s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; const id=r.dataset.pid;
       sel.has(id)?sel.delete(id):sel.add(id); r.setAttribute('aria-checked',sel.has(id)); });
-    s.querySelector('[data-a=ok]').onclick=()=>{ closeSheet(); cb(list.map(c=>c.id).filter(id=>sel.has(id)), sel.has('__fav__')); };
+    s.querySelectorAll('[data-ord]').forEach(b=>b.onclick=()=>{ story=b.dataset.ord==='1'; s.querySelectorAll('[data-ord]').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
+    s.querySelector('[data-a=ok]').onclick=()=>{ closeSheet(); cb(list.map(c=>c.id).filter(id=>sel.has(id)), sel.has('__fav__'), story); };
   },'pickchars');
 }
 function pickGroupsSheet(ids,cb){
@@ -4067,7 +4142,9 @@ $('#composer').addEventListener('submit',e=>{
   e.preventDefault();
   const text=input.value.replace(/\s+$/,''); if(!text.trim()||!folderId) return;
   const t=Date.now();
-  db.memos.push({id:uid(),folderId,text,tags:composerTags.slice(),createdAt:t,updatedAt:t}); commit();
+  const nm={id:uid(),folderId,text,tags:composerTags.slice(),createdAt:t,updatedAt:t};
+  const cw=folderTl(folderById(folderId))&&curWhen(folderId); if(cw) nm.when={...cw};
+  db.memos.push(nm); commit();
   input.value=''; try{localStorage.removeItem(DRAFT)}catch(e){} grow(); composerTags=[];
   render(); toBottom(); input.focus();
 });
@@ -4078,18 +4155,28 @@ sendBtn.addEventListener('pointerdown',e=>e.preventDefault());
 // shift) can miss the button entirely.
 $('#composerTagBtn').addEventListener('pointerdown',e=>e.preventDefault());
 $('#composerTagBar').addEventListener('pointerdown',e=>{ if(e.target.closest('[data-untag]')) e.preventDefault(); });
-$('#composerQuickBar').addEventListener('pointerdown',e=>{ if(e.target.closest('.qbtn')) e.preventDefault(); });
+$('#composerQuickBar').addEventListener('pointerdown',e=>{ if(e.target.closest('.qbtn,.qtime')) e.preventDefault(); });
 $('#composerTagBtn').addEventListener('click',()=>{ pickCharsSheet(composerTags, ids=>{ composerTags=ids; renderComposerTags(); }, 'このメモのキャラをタグ付け'); });
 $('#composerTagBar').addEventListener('click',e=>{ const b=e.target.closest('[data-untag]'); if(!b) return; composerTags=composerTags.filter(id=>id!==b.dataset.untag); renderComposerTags(); });
-$('#composerQuickBar').addEventListener('click',e=>{ const b=e.target.closest('.qbtn'); if(!b) return; insertQuote(b.dataset.qi||null); });
+$('#composerQuickBar').addEventListener('click',e=>{
+  if(e.target.closest('[data-qtime]')){ const f=folderById(folderId), tl=folderTl(f); if(!tl) return; const fid=folderId;
+    whenSheet(tl,curWhen(fid),'これから書くメモの時期','決めた時期は、変えるまでこのフォルダの新しいメモ全部につきます。',w=>{ setCurWhen(fid,w); renderQuickBar(); toast(w?'時期：'+whenText(tl,w):'時期なしで書きます'); });
+    return; }
+  const b=e.target.closest('.qbtn'); if(!b) return; insertQuote(b.dataset.qi||null); });
 $('#memoSearchBtn').addEventListener('click',()=>{
   folderSearchOpen=!folderSearchOpen; if(!folderSearchOpen) folderQ='';
   renderMain(); main.scrollTop=0;
   if(folderSearchOpen){ const el=$('#folderQ'); if(el) el.focus(); } else toBottom();
 });
-$('#tagFilterBtn').addEventListener('click',()=>{ pickCharsSheet(tagFilter, (ids,fav)=>{ tagFilter=ids; favOnly=fav; const st=main.scrollTop; renderMain(); main.scrollTop=st; }, '絞り込み', {fav:favOnly}); });
+$('#tagFilterBtn').addEventListener('click',()=>{
+  const fid=folderId, hasTl=!!folderTl(folderById(fid)), was=hasTl&&storyOrder(fid);
+  pickCharsSheet(tagFilter, (ids,fav,story)=>{ tagFilter=ids; favOnly=fav;
+    if(hasTl) setStoryOrder(fid,!!story);
+    const st=main.scrollTop; renderMain(); if(hasTl&&!!story!==was){ if(story) main.scrollTop=0; else toBottom(); } else main.scrollTop=st; },
+    hasTl?'絞り込み・並び順':'絞り込み', hasTl?{fav:favOnly,order:was}:{fav:favOnly}); });
 main.addEventListener('click',e=>{
   if(tab!=='talk') return;
+  if(e.target.closest('[data-a="writtenorder"]')){ setStoryOrder(folderId,false); renderMain(); toBottom(); return; }
   const cl=e.target.closest('[data-a="clearfilter"],[data-a="clearfav"]'); if(cl){ tagFilter=[]; favOnly=false; const st=main.scrollTop; renderMain(); main.scrollTop=st; }
 });
 document.addEventListener('visibilitychange',()=>{
