@@ -237,6 +237,10 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .memo.open .l1,.memo.open .more{display:none}
 .memo.open .all{display:block}
 .memo.pressing{background:var(--press)}
+.jumpwrap{position:sticky;bottom:12px;height:0;display:flex;justify-content:flex-end;padding-right:12px;pointer-events:none;z-index:4}
+.jumpbtn{pointer-events:auto;transform:translateY(-44px);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--sub);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.14)}
+.jumpbtn svg{width:18px;height:18px}
+.jumpbtn:active{background:var(--press)}
 .selecting .memo{position:relative;padding-left:42px;cursor:pointer}
 .mck{position:absolute;left:12px;top:11px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--faint);display:grid;place-items:center;color:transparent}
 .mck svg{width:12px;height:12px}
@@ -766,12 +770,12 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.32.0';
+const APP_VERSION='0.32.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-10-20';
+const APP_DATE='2026-10-21';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
@@ -1461,7 +1465,9 @@ function renderMain(){
   $('#memoSearchBtn').hidden=false;
   $('#memoSearchBtn').classList.toggle('on',folderSearchOpen);
 
-  main.innerHTML = (folderSearchOpen?searchBox('folderQ',folderQ,'このフォルダ内を検索'):'') + `<div id="memoList" class="${memoSel?'selecting':''}">${folderMemosHtml()}</div>`;
+  main.innerHTML = (folderSearchOpen?searchBox('folderQ',folderQ,'このフォルダ内を検索'):'') + `<div id="memoList" class="${memoSel?'selecting':''}">${folderMemosHtml()}</div>`
+    + `<div class="jumpwrap"><button type="button" class="jumpbtn" id="jumpBtn" hidden></button></div>`;
+  requestAnimationFrame(updJump);
   if(memoSel){
     ['viewBtn','tagFilterBtn','memoSearchBtn','settingsBtn','backBtn'].forEach(id=>$('#'+id).hidden=true);
     $('#memoSelCancel').hidden=false; $('#composer').hidden=true; $('#memoSelBar').hidden=false; renderSelBar();
@@ -1469,6 +1475,22 @@ function renderMain(){
   renderComposerTags();
 }
 function toBottom(){ main.scrollTop=main.scrollHeight; }
+/* jump button in a memo folder: in the upper half it jumps to the newest (bottom), in the lower half to the top */
+const JUMP_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20h14M12 4v11M7 10.5l5 5 5-5"/></svg>';
+const JUMP_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14M12 20V9M7 13.5l5-5 5 5"/></svg>';
+function updJump(){
+  const b=$('#jumpBtn'); if(!b) return;
+  const max=main.scrollHeight-main.clientHeight;
+  if(max<240){ b.hidden=true; return; }
+  const down=main.scrollTop<max/2;
+  if(b.dataset.dir!==(down?'down':'up')){ b.dataset.dir=down?'down':'up'; b.innerHTML=down?JUMP_DOWN:JUMP_UP; b.setAttribute('aria-label',down?'いちばん下へ':'いちばん上へ'); }
+  b.hidden=false;
+}
+main.addEventListener('scroll',()=>{ if(tab==='talk'&&folderId) updJump(); },{passive:true});
+main.addEventListener('pointerdown',e=>{ if(e.target.closest('#jumpBtn')) e.preventDefault(); });
+main.addEventListener('click',e=>{ const b=e.target.closest('#jumpBtn'); if(!b) return;
+  const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  main.scrollTo({top:b.dataset.dir==='down'?main.scrollHeight:0,behavior:reduce?'auto':'smooth'}); });
 
 /* ---------- navigation ---------- */
 // Each tab remembers where its screen was scrolled, so switching tabs and coming back
