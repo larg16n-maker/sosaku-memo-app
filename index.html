@@ -4268,9 +4268,9 @@ if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change',onWideChange); el
 /* ---------- composer ---------- */
 const input=$('#input'), sendBtn=$('#sendBtn');
 const DRAFT='sosaku-draft';
-// The composer grows with its text up to about 13 lines, then stops and scrolls inside
+// The composer grows with its text up to about 11 lines, then stops and scrolls inside
 // itself, so a long memo doesn't push the box down behind the keyboard.
-const COMPOSER_MAX_LINES=13;
+const COMPOSER_MAX_LINES=11;
 function grow(){
   const cs=getComputedStyle(input), lh=parseFloat(cs.lineHeight)||18.85;
   const cap=lh*COMPOSER_MAX_LINES+parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom)+parseFloat(cs.borderTopWidth)+parseFloat(cs.borderBottomWidth);
