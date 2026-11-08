@@ -252,9 +252,10 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .mselbar button:disabled{opacity:.35}
 .mselbar button.danger{color:var(--danger)}
 .mselbar button:active:not(:disabled){background:var(--press)}
-.memo.fav{position:relative;padding-right:30px}
-.mfav{position:absolute;right:12px;top:10px;color:var(--brass);font-size:12px;line-height:1}
-.memos.oneline .memo.fav .mfav{top:9px}
+.mside{float:right;display:inline-flex;align-items:center;gap:4px;margin:0 0 0 8px;line-height:1.6;white-space:nowrap;-webkit-user-select:none;user-select:none}
+.mno{font-size:10px;color:var(--faint);opacity:.75;font-variant-numeric:tabular-nums}
+.mfav{color:var(--brass);font-size:12px;line-height:1}
+.memos.oneline .mside{float:none;order:9;margin-left:auto;padding-left:8px}
 .actstar{width:20px;text-align:center;color:var(--faint);font-size:16px;line-height:1}
 .actstar.on{color:var(--brass)}
 .pstar{background:var(--brass);color:#fff;font-size:15px;display:grid;place-items:center}
@@ -771,12 +772,12 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.32.2';
+const APP_VERSION='0.33.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-11-03';
+const APP_DATE='2026-11-08';
 const KEY='sosaku-memo-db-v1';
 const TOKEN_KEY='sosaku-gh-token';
 const LASTSYNC_KEY='sosaku-last-sync';
@@ -808,6 +809,7 @@ function normalize(d){
   const e=emptyDb();
   if(!d||typeof d!=='object') return e;
   e.meta.updatedAt=(d.meta&&d.meta.updatedAt)||0;
+  if(d.meta&&d.meta.memoNoMax) e.meta.memoNoMax=d.meta.memoNoMax;
   for(const [a,b] of COLLS){ e[a]=Array.isArray(d[a])?d[a]:[]; e[b]=Array.isArray(d[b])?d[b]:[]; }
   return e;
 }
@@ -859,6 +861,22 @@ function migrateBirthdays(){
   if(changed){ touch(); save(); }
 }
 migrateBirthdays();
+/* memo numbers: every memo gets a permanent number (#1, #2…), shown in the app and in the AI text.
+   meta.memoNoMax is the highest number ever handed out, so a deleted memo's number is never reused.
+   Memos without a number (older data, another device on an old version) get one in creation order;
+   if two devices handed out the same number while offline, the later memo gets a new one. */
+function fixMemoNos(d){
+  let max=(d.meta&&d.meta.memoNoMax)||0; for(const m of d.memos) if(m.no>max) max=m.no;
+  const sorted=[...d.memos].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)||(a.id<b.id?-1:a.id>b.id?1:0));
+  const keep=new Map(); for(const m of sorted) if(m.no && !keep.has(m.no)) keep.set(m.no,m);
+  let changed=false; const t=Date.now();
+  for(const m of sorted) if(!m.no || keep.get(m.no)!==m){ m.no=++max; m.updatedAt=Math.max(t,(m.updatedAt||0)+1); changed=true; }
+  d.meta=d.meta||{}; d.meta.memoNoMax=max;
+  return changed;
+}
+function nextMemoNo(){ let max=db.meta.memoNoMax||0; for(const m of db.memos) if(m.no>max) max=m.no; db.meta.memoNoMax=max+1; return max+1; }
+function memoNoHit(m,q){ const r=String(q||'').trim().match(/^(?:#|no\.?\s*|ｎｏ\.?\s*|＃)\s*(\d+)$/i)||String(q||'').trim().match(/^(\d+)$/); return !!(r&&m.no===Number(r[1])); }
+if(fixMemoNos(db)){ touch(); save(); }
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){toast('保存できませんでした');} }
 function touch(){ db.meta.updatedAt=Date.now(); }
 function commit(){ touch(); save(); scheduleSync(); }
@@ -890,10 +908,12 @@ function mergeDb(local, remote){
   if(!remote) return {merged:local, changedFromLocal:false, changedFromRemote:true};
   remote=normalize(remote); local=normalize(local);
   const merged={meta:{updatedAt:Math.max(local.meta.updatedAt||0,remote.meta.updatedAt||0)}};
+  const nm=Math.max(local.meta.memoNoMax||0,remote.meta.memoNoMax||0); if(nm) merged.meta.memoNoMax=nm;
   for(const [a,b] of COLLS){
     const r=mergeCollections(local[a], remote[a], local[b], remote[b]);
     merged[a]=r.items; merged[b]=r.deleted;
   }
+  fixMemoNos(merged);
   const changedFromLocal = canon(merged)!==canon(local);
   const changedFromRemote = canon(merged)!==canon(remote);
   return {merged, changedFromLocal, changedFromRemote};
@@ -1074,6 +1094,7 @@ function buildStoryBible(){
       L.push(`### ${f.name}`);
       for(const m of memosOf(f.id)){
         const tagNames=(m.tags||[]).map(charById).filter(Boolean).map(c=>c.name);
+        if(m.no) L.push(`#${m.no}`);
         const wt=whenText(folderTl(f),m.when); if(wt) L.push(`[時期: ${wt}]`);
         if(tagNames.length) L.push(`[登場: ${tagNames.join('、')}]`);
         L.push(m.text.trim()); L.push('');
@@ -1324,7 +1345,7 @@ $('#memoSelBar').addEventListener('click',e=>{
     selDone(`${ids.size}件削除しました`); }); return; }
 });
 $('#memoSelCancel').addEventListener('click',endMemoSel);
-function favMark(m){ return m.fav?'<span class="mfav" aria-label="お気に入り">★</span>':''; }
+function favMark(m){ return `<span class="mside">${m.fav?'<span class="mfav" aria-label="お気に入り">★</span>':''}${m.no?`<span class="mno">#${m.no}</span>`:''}</span>`; }
 function tagFilterBarHtml(){
   const f=folderById(folderId), story=folderTl(f)&&storyOrder(folderId);
   const sbar=story?`<div class="mfilterbar">並び順：<span class="mtagchip">作中の順</span><button type="button" class="mfilterclear" data-a="writtenorder">書いた順に戻す</button></div>`:'';
@@ -1368,8 +1389,8 @@ function memoResultsHtml(){
   const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
   let total=0;
   const html=fs.map(f=>{
-    const ms=memosOf(f.id).filter(m=>qHit(m.text,q)); total+=ms.length; if(!ms.length) return '';
-    return `<div class="tmhead">${ICON.folder}${esc(f.name)}<span class="srn">${ms.length}</span></div><ul class="srlist">${ms.map(m=>`<li class="srrow" data-sfid="${f.id}" data-smid="${m.id}" tabindex="0">${hlText(m.text,q,120)}</li>`).join('')}</ul>`;
+    const ms=memosOf(f.id).filter(m=>qHit(m.text,q)||memoNoHit(m,q)); total+=ms.length; if(!ms.length) return '';
+    return `<div class="tmhead">${ICON.folder}${esc(f.name)}<span class="srn">${ms.length}</span></div><ul class="srlist">${ms.map(m=>`<li class="srrow" data-sfid="${f.id}" data-smid="${m.id}" tabindex="0">${m.no?`<span class="mside"><span class="mno">#${m.no}</span></span>`:''}${hlText(m.text,q,120)}</li>`).join('')}</ul>`;
   }).join('');
   return total?`<div class="srcount">${total}件見つかりました（タップでそのメモへ）</div>`+html:'<div class="empty">見つかりませんでした</div>';
 }
@@ -1388,7 +1409,7 @@ function folderMemosHtml(){
   const one=f.view==='line' && !q;
   const tl=folderTl(f), story=!!tl && storyOrder(f.id);
   const all=memosOf(folderId);
-  let ms=visibleMemos(folderId).filter(m=>!q||qHit(m.text,q));
+  let ms=visibleMemos(folderId).filter(m=>!q||qHit(m.text,q)||memoNoHit(m,q));
   if(story){ ms=[...ms.filter(m=>m.when).sort((a,b)=>whenKey(a.when)-whenKey(b.when)||a.createdAt-b.createdAt), ...ms.filter(m=>!m.when)]; }
   const wl=m=>tl&&m.when?`<span class="mwhen">${esc(whenText(tl,m.when))}</span>`:'';
   let lastY;
@@ -4289,7 +4310,7 @@ $('#composer').addEventListener('submit',e=>{
   e.preventDefault();
   const text=input.value.replace(/\s+$/,''); if(!text.trim()||!folderId) return;
   const t=Date.now();
-  const nm={id:uid(),folderId,text,tags:composerTags.slice(),createdAt:t,updatedAt:t};
+  const nm={id:uid(),no:nextMemoNo(),folderId,text,tags:composerTags.slice(),createdAt:t,updatedAt:t};
   const cw=folderTl(folderById(folderId))&&curWhen(folderId); if(cw) nm.when={...cw};
   db.memos.push(nm); commit();
   input.value=''; try{localStorage.removeItem(DRAFT)}catch(e){} grow(); composerTags=[];
