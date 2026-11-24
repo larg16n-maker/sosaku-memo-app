@@ -772,16 +772,33 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.33.0';
+const APP_VERSION='0.34.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-11-08';
-const KEY='sosaku-memo-db-v1';
-const TOKEN_KEY='sosaku-gh-token';
-const LASTSYNC_KEY='sosaku-last-sync';
-const GH={owner:'larg16n-maker',repo:'sosaku-memo-data',path:'data.json',branch:'main'};
+const APP_DATE='2026-11-24';
+/* ---------- works (multi-project) ----------
+   Each work has its own local db, token and sync target repo. The first work
+   (id 'w1') deliberately keeps the exact pre-multi-work storage keys and repo,
+   so existing data migrates with zero copying. Switching reloads the page with
+   the new work active; everything below reads the keys computed here. */
+const WORKS_KEY='sosaku-works-v1';
+function loadWorks(){
+  try{ const r=JSON.parse(localStorage.getItem(WORKS_KEY)||'null');
+    if(r && Array.isArray(r.works) && r.works.length && r.works.every(w=>w && w.id && w.repo)) return r;
+  }catch(e){}
+  return {active:'w1', works:[{id:'w1', name:'作品1', repo:'sosaku-memo-data'}]};
+}
+let WORKS=loadWorks();
+let ACTIVE=WORKS.works.find(w=>w.id===WORKS.active)||WORKS.works[0];
+WORKS.active=ACTIVE.id;
+function saveWorks(){ try{ localStorage.setItem(WORKS_KEY, JSON.stringify(WORKS)); }catch(e){} }
+function wkey(base){ return ACTIVE.id==='w1' ? base : base+':'+ACTIVE.id; }
+const KEY=wkey('sosaku-memo-db-v1');
+const TOKEN_KEY=wkey('sosaku-gh-token');
+const LASTSYNC_KEY=wkey('sosaku-last-sync');
+const GH={owner:'larg16n-maker',repo:ACTIVE.repo,path:'data.json',branch:'main'};
 const $=s=>document.querySelector(s);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const ICON={
@@ -1255,7 +1272,7 @@ function visibleMemos(fid){
 /* memo timing: a folder may be tied to one timeline (f.tlId); its memos can then carry
    m.when={y,m,d} counted the same way as that timeline's events. The time chip in the composer
    sets the time for new memos (kept per folder on this device). */
-const MW_KEY='sosaku-memowhen', MO_KEY='sosaku-memoorder';
+const MW_KEY=wkey('sosaku-memowhen'), MO_KEY=wkey('sosaku-memoorder');
 function lsGet(k){ try{ return JSON.parse(localStorage.getItem(k)||'{}')||{}; }catch(_){ return {}; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(_){} }
 function folderTl(f){ return f&&f.tlId?tlById(f.tlId):null; }
@@ -1757,7 +1774,13 @@ $('#settingsBtn').addEventListener('click',()=>{
   const has=!!getToken();
   openSheet(`
     <div class="shtop"><div class="title">同期設定</div><button type="button" class="shx" data-a="close" aria-label="閉じる">${CI.x}</button></div>
-    <div class="small">この端末だけのメモを、非公開リポジトリ <b>${GH.owner}/${GH.repo}</b> に自動で保存します。トークンはこの端末にだけ保存され、送信先はGitHubだけです。</div>
+    <div class="sec">作品</div>
+    ${WORKS.works.map(w=>`<button class="act" data-work="${w.id}">${w.id===ACTIVE.id?'✓ ':''}${esc(w.name)}（${esc(w.repo)}）${w.id===ACTIVE.id?' ・使用中':''}</button>`).join('')}
+    <button class="act" data-a="addwork">＋作品を追加</button>
+    <button class="act" data-a="renamework">${ICON.edit}今の作品の名前を変える</button>
+    <div class="small">作品ごとにデータ・保存先・トークンが分かれます。切り替えはめったにしない前提で、ここでのみ行います。</div>
+    <div class="sec">同期</div>
+    <div class="small">この作品のメモを、非公開リポジトリ <b>${GH.owner}/${GH.repo}</b> に自動で保存します。トークンはこの端末にだけ保存され、送信先はGitHubだけです。</div>
     <div class="sec">アクセストークン</div>
     <input id="tokenInput" type="text" inputmode="text" placeholder="github_pat_..." value="${has?'••••••••••••••••••••':''}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
     <div class="small">未作成の場合：<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHubでトークンを作る</a>（Repository access を <b>Only select repositories → ${GH.repo}</b> に、Permissions の <b>Contents</b> を <b>Read and write</b> に設定）</div>
@@ -1795,6 +1818,15 @@ $('#settingsBtn').addEventListener('click',()=>{
       if(v && !v.startsWith('•')){ setToken(v); toast('保存しました'); syncNow(); }
       renderSettingsStatus();
     };
+    s.querySelectorAll('[data-work]').forEach(b=>{
+      b.onclick=()=>{
+        const w=WORKS.works.find(x=>x.id===b.dataset.work);
+        if(!w || w.id===ACTIVE.id) return;
+        confirmSheet('作品を切り替えますか？', '「'+w.name+'」に切り替えます。今の作品のデータはこの端末に保存されたまま残ります。', '切り替える', ()=>switchWork(w));
+      };
+    });
+    s.querySelector('[data-a=addwork]').onclick=()=>addWorkSheet();
+    s.querySelector('[data-a=renamework]').onclick=()=>renameWorkSheet();
     const clearBtn=s.querySelector('[data-a=clear]');
     if(clearBtn) clearBtn.onclick=()=>{ setToken(''); toast('トークンを削除しました'); closeSheet(); };
     s.querySelector('[data-a=syncnow]').onclick=()=>{ if(!getToken()){toast('先にトークンを保存してください');return;} syncNow(); };
@@ -1807,6 +1839,60 @@ $('#settingsBtn').addEventListener('click',()=>{
     fileInput.addEventListener('change',doImport);
   },'settings');
 });
+function switchWork(w){
+  try{ save(); }catch(e){}
+  WORKS.active=w.id; saveWorks();
+  try{ sessionStorage.setItem('sosaku-switched-to', w.name); }catch(e){}
+  location.reload();
+}
+function addWorkSheet(){
+  openSheet(`
+    <div class="shtop"><div class="title">作品を追加</div><button type="button" class="shx" data-a="close" aria-label="閉じる">${CI.x}</button></div>
+    <div class="small">手順：① GitHubで<b>空の非公開リポジトリ</b>を作る（中身のコピーは不要です。最初の同期で保存ファイルが自動で作られます）　② そのリポジトリだけに読み書きできるトークンを作る　③ 下に入れて保存すると、その作品に切り替わります。</div>
+    <div class="sec">作品名</div>
+    <input id="wkName" type="text" placeholder="例：作品2" autocomplete="off">
+    <div class="sec">リポジトリ名（自分のアカウント内）</div>
+    <input id="wkRepo" type="text" placeholder="例：sosaku-memo-data-2" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="sec">アクセストークン（あとからでもOK）</div>
+    <input id="wkToken" type="text" placeholder="github_pat_..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="save">保存して切り替える</button></div>
+  `, s=>{
+    s.querySelector('[data-a=close]').onclick=closeSheet;
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    const saveBtn=s.querySelector('[data-a=save]');
+    saveBtn.addEventListener('pointerdown',e=>e.preventDefault());
+    saveBtn.onclick=()=>{
+      const name=s.querySelector('#wkName').value.trim()||('作品'+(WORKS.works.length+1));
+      const repo=s.querySelector('#wkRepo').value.trim();
+      if(!/^[-A-Za-z0-9_.]+$/.test(repo)){ toast('リポジトリ名を確認してください'); return; }
+      if(WORKS.works.some(w=>w.repo===repo)){ toast('そのリポジトリは登録済みです'); return; }
+      const w={id:uid(), name, repo};
+      WORKS.works.push(w); saveWorks();
+      const tk=s.querySelector('#wkToken').value.trim();
+      if(tk){ try{ localStorage.setItem('sosaku-gh-token:'+w.id, tk); }catch(e){} }
+      switchWork(w);
+    };
+  });
+}
+function renameWorkSheet(){
+  openSheet(`
+    <div class="shtop"><div class="title">作品の名前を変える</div><button type="button" class="shx" data-a="close" aria-label="閉じる">${CI.x}</button></div>
+    <div class="sec">今の作品（${esc(ACTIVE.repo)}）の名前</div>
+    <input id="wkRename" type="text" value="${esc(ACTIVE.name)}" autocomplete="off">
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="save">保存</button></div>
+  `, s=>{
+    s.querySelector('[data-a=close]').onclick=closeSheet;
+    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    const saveBtn=s.querySelector('[data-a=save]');
+    saveBtn.addEventListener('pointerdown',e=>e.preventDefault());
+    saveBtn.onclick=()=>{
+      const name=s.querySelector('#wkRename').value.trim();
+      if(!name){ toast('名前を入れてください'); return; }
+      ACTIVE.name=name; saveWorks();
+      toast('名前を変えました'); closeSheet();
+    };
+  });
+}
 function doExport(){
   try{
     const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
@@ -1853,7 +1939,7 @@ const FIELDS=[
   {k:'height',label:'身長'},{k:'firstPerson',label:'一人称'},{k:'secondPerson',label:'二人称'},
   {k:'song',label:'イメージ曲'}
 ];
-const GROUP_PREF='sosaku-chara-group';
+const GROUP_PREF=wkey('sosaku-chara-group');
 let charView='list', charId=null, charDraft=null, charDirty=false, reorderMode=false, selectMode=false;
 let charAutosaveTimer=null;
 /* Autosave: while editing, changes are written to storage a moment after each edit,
@@ -1882,7 +1968,7 @@ function commitCharDraft(){
 function scheduleCharAutosave(){ clearTimeout(charAutosaveTimer); charAutosaveTimer=setTimeout(commitCharDraft,800); }
 const selected=new Set();
 let charGroup=(()=>{try{return localStorage.getItem(GROUP_PREF)==='1';}catch(e){return false;}})();
-const COLLAPSE_KEY='sosaku-collapsed-groups';
+const COLLAPSE_KEY=wkey('sosaku-collapsed-groups');
 function loadCollapsed(){ try{ return new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY)||'[]')); }catch(e){ return new Set(); } }
 function saveCollapsed(){ try{ localStorage.setItem(COLLAPSE_KEY,JSON.stringify([...collapsedGroups])); }catch(e){} }
 let collapsedGroups=loadCollapsed();
@@ -2203,7 +2289,7 @@ document.addEventListener('focusout',e=>{
 // only its answers, keyed by question id (c.qa = {questionId: answer}), plus any questions of
 // its own (c.qx = [{id,text,a}]). Editing a master question's wording shows up for everyone;
 // removing one only hides it — the answers stay on the characters, so undoing brings them back.
-const QA_OPEN_KEY='sosaku-qa-open', OWN_CAT='__own__';
+const QA_OPEN_KEY=wkey('sosaku-qa-open'), OWN_CAT='__own__';
 let qaOpen=(()=>{try{return localStorage.getItem(QA_OPEN_KEY)==='1';}catch(e){return false;}})();
 let qaCat='all', qaUnans=false, qtplBack=null, lastQCat='';
 function inCharDraft(){ return tab==='chara' && (charView==='edit'||charView==='qa') && !!charDraft; }
@@ -2493,7 +2579,7 @@ function memSheet(tl,rec,preset){
 }
 
 const FIG_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><circle cx="12" cy="7" r="2" fill="currentColor"/><circle cx="12" cy="15" r="2" fill="currentColor"/><path d="M15 7h5M15 15h5M4 10h4"/></svg>';
-const FIG_PREF='sosaku-tlfig';
+const FIG_PREF=wkey('sosaku-tlfig');
 let figPref={on:{},mem:false,born:false};
 try{ const p=JSON.parse(localStorage.getItem(FIG_PREF)||'null'); if(p) figPref={on:p.on||{},mem:!!p.mem,born:!!p.born}; }catch(_){}
 function saveFigPref(){ try{ localStorage.setItem(FIG_PREF,JSON.stringify(figPref)); }catch(_){} }
@@ -2617,7 +2703,7 @@ function bdRead(box){ const m=Number(box.querySelector('[data-bd=m]').value)||0,
    The character tab switches between キャラ and グループ. Groups get a detail page like
    characters (leader, purpose, image songs, free fields, members) and a full-page editor,
    which is also what the world tab's 編集 opens (returning to the world tab afterwards). */
-const CK_PREF='sosaku-charkind';
+const CK_PREF=wkey('sosaku-charkind');
 const CHAR_ADD_HTML=$('#charAddBtn').innerHTML;
 let charKind=(()=>{ try{ return localStorage.getItem(CK_PREF)==='group'?'group':'char'; }catch(_){ return 'char'; } })();
 let gId=null, gDraft=null, gDirty=false, gEditReturn=null, gdReturn=null, gBackChar=null;
@@ -2857,7 +2943,7 @@ function openImgViewer(list,i){
    for every character side by side, so things like 一人称 or 身長 can be checked for overlap. */
 const CMP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15"/></svg>';
 const CMP_ENTRY=`<button type="button" class="cmpentry" data-a="cmp">${CMP_ICON}<span>項目ごとに見比べる</span><span class="chev">›</span></button>`;
-const CMP_PREF='sosaku-cmp';
+const CMP_PREF=wkey('sosaku-cmp');
 let cmpKey='f:firstPerson', cmpSort='order', cmpReturn=false, cmpScroll=0;
 try{ const p=JSON.parse(localStorage.getItem(CMP_PREF)||'null'); if(p){ cmpKey=p.k||cmpKey; cmpSort=p.s||cmpSort; } }catch(_){}
 function saveCmpPref(){ try{ localStorage.setItem(CMP_PREF,JSON.stringify({k:cmpKey,s:cmpSort})); }catch(_){} }
@@ -4288,7 +4374,7 @@ if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change',onWideChange); el
 
 /* ---------- composer ---------- */
 const input=$('#input'), sendBtn=$('#sendBtn');
-const DRAFT='sosaku-draft';
+const DRAFT=wkey('sosaku-draft');
 // The composer grows with its text up to about 11 lines, then stops and scrolls inside
 // itself, so a long memo doesn't push the box down behind the keyboard.
 const COMPOSER_MAX_LINES=11;
@@ -4398,6 +4484,7 @@ if('serviceWorker' in navigator){
 }
 
 render(); grow();
+try{ const sw=sessionStorage.getItem('sosaku-switched-to'); if(sw){ sessionStorage.removeItem('sosaku-switched-to'); toast('「'+sw+'」に切り替えました'); } }catch(e){}
 if(getToken()) syncNow();
 })();
 </script>
