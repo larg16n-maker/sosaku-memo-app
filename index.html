@@ -194,6 +194,16 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .ptacts{margin-left:auto;display:flex;gap:12px;flex:none}
 .ptwho{font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.6}
 .ptcands{padding:12px 14px;border-top:1px solid var(--line)}
+.mimgs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.mimg{padding:0;border:none;background:none;width:72px;height:72px;border-radius:9px;overflow:hidden;flex:none;cursor:pointer}
+.mimg img{width:100%;height:100%;object-fit:cover;display:block}
+.mimg .imgph{font-size:10px;display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--surface2,#eee);color:var(--sub)}
+.mimgn{font-size:10.5px;color:var(--sub);margin-left:6px}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.thmb{width:76px;padding:0;border:none;background:none;cursor:pointer;text-align:left}
+.thmb img{width:76px;height:76px;object-fit:cover;border-radius:10px;display:block}
+.thmb .imgph{font-size:10px;display:flex;align-items:center;justify-content:center;width:76px;height:76px;background:var(--surface2,#eee);color:var(--sub);border-radius:10px}
+.thmb span{display:block;font-size:10px;color:var(--sub);margin-top:2px}
 .cmpentry.center{width:auto;margin:-60px auto 0;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
 .wideentries{width:fit-content;margin:-60px auto 0;display:flex;flex-direction:column;gap:8px}
 .wideentries .cmpentry{width:auto;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
@@ -782,7 +792,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.35.1';
+const APP_VERSION='0.36.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1096,7 +1106,7 @@ function buildStoryBible(){
   }
   if(db.terms.length){
     L.push('## 単語帳');
-    for(const t of termsSorted()) L.push(`- ${t.word}${(t.yomi||'').trim()?`（${t.yomi.trim()}）`:''}${(t.desc||'').trim()?`：${t.desc.trim().replace(/\n/g,' ')}`:''}`);
+    for(const t of termsSorted()) L.push(`- ${t.word}${(t.yomi||'').trim()?`（${t.yomi.trim()}）`:''}${(t.desc||'').trim()?`：${t.desc.trim().replace(/\n/g,' ')}`:''}${(t.images||[]).length?`［画像（同じリポジトリ内）: ${t.images.map(i=>i.path).join('、')}］`:''}`);
     L.push('');
   }
   const xcs=xchartsSorted().filter(x=>Object.keys(x.pins||{}).some(id=>charById(id)));
@@ -1446,9 +1456,9 @@ function folderMemosHtml(){
   if(!all.length) return fbar+'<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>';
   return fbar + (q?`<div class="srcount">${ms.length}件</div>`:'') + (ms.length
     ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
-        if(!one) return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}${q?hlText(m.text,q):esc(m.text)}${memoTagsHtml(m)}</li>`;
+        if(!one) return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}${q?hlText(m.text,q):esc(m.text)}${memoImgsHtml(m)}${memoTagsHtml(m)}</li>`;
         const lines=m.text.split('\n'), n=lines.length-1;
-        return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}<span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}<span class="all">${esc(m.text)}${memoTagsHtml(m)}</span></li>`;
+        return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}<span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}${(m.images||[]).length?`<span class="mimgn">画像${m.images.length}枚</span>`:''}<span class="all">${esc(m.text)}${memoImgsHtml(m)}${memoTagsHtml(m)}</span></li>`;
       }).join('')+'</ul>'
     : favOnly&&!q&&!tagFilter.length ? '<div class="empty"><strong>★のついたメモはまだありません</strong>メモを長押しして「お気に入り」を選ぶと★がつきます。</div>'
     : '<div class="empty"><strong>あてはまるメモがありません</strong></div>');
@@ -1603,6 +1613,8 @@ for(const root of [main, $('#side')]){
   });
   root.addEventListener('pointermove',e=>{ if(lp && Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>10){cancelLp(); lp=null;} });
   root.addEventListener('pointerup',e=>{
+    const mi=e.target.closest('[data-mimg]');
+    if(mi){ cancelLp(); lp=null; const m=db.memos.find(x=>x.id===mi.dataset.mid); if(m&&(m.images||[]).length) openImgViewer(m.images,Number(mi.dataset.mimg)); return; }
     if(!lp) return; const {el,fired,sel}=lp; cancelLp(); lp=null;
     if(sel){ toggleMemoSel(el.dataset.id); return; }
     if(fired) return;
@@ -1668,6 +1680,7 @@ function memoMenu(id){
     s.querySelector('[data-a=move]').onclick=()=>moveMemoSheet(m);
     s.querySelector('[data-a=copy]').onclick=()=>copyText(m.text);
     s.querySelector('[data-a=del]').onclick=()=>confirmSheet('このメモを削除しますか？','元に戻せません。','削除',()=>{
+      if((m.images||[]).length) removeRepoFiles(m.images.map(i=>i.path));
       db.memos=db.memos.filter(x=>x.id!==id);
       db.deletedMemos.push({id, deletedAt:Date.now()});
       commit(); render(); toast('削除しました');
@@ -1689,17 +1702,20 @@ function moveMemoSheet(m){
 }
 function editMemo(m){
   const cs=(m.tags||[]).map(charById).filter(Boolean);
+  const ist={imgs:(m.images||[]).map(x=>({...x})),added:[],removed:[]};
   openSheet(`<div class="title">メモを編集</div>
     <div class="qbar" id="editQuickBar">${quickBtnsHtml(cs)}</div>
     <textarea id="editArea">${esc(m.text)}</textarea>
+    <div class="fld" style="margin-top:10px"><span class="lbl">画像</span><div data-imgbox>${imgEditHtml(ist.imgs)}</div></div>
     <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
+    wireImgEdit(s,'memo',m.id,ist);
     const ta=s.querySelector('#editArea'), ok=s.querySelector('[data-a=ok]'), qb=s.querySelector('#editQuickBar');
     // Keep the textarea focused (and the keyboard up) while tapping the quote buttons.
     qb.addEventListener('pointerdown',e=>{ if(e.target.closest('.qbtn')) e.preventDefault(); });
     qb.addEventListener('click',e=>{ const b=e.target.closest('.qbtn'); if(b) insertQuote(b.dataset.qi||null,ta); });
     ta.addEventListener('input',()=>ok.disabled=!ta.value.trim());
-    s.querySelector('[data-a=cancel]').onclick=closeSheet;
-    ok.onclick=()=>{ m.text=ta.value.replace(/\s+$/,''); m.updatedAt=Date.now(); commit(); closeSheet();
+    s.querySelector('[data-a=cancel]').onclick=()=>{ if(ist.added.length) removeRepoFiles(ist.added); closeSheet(); };
+    ok.onclick=()=>{ m.text=ta.value.replace(/\s+$/,''); m.images=ist.imgs; if(ist.removed.length) removeRepoFiles(ist.removed); m.updatedAt=Date.now(); commit(); closeSheet();
       const st=main.scrollTop; render(); main.scrollTop=st;
       const el=main.querySelector(`[data-id="${m.id}"]`); if(el) el.classList.add('flash'); };
     ta.focus();
@@ -2938,6 +2954,59 @@ async function removeRepoFiles(paths){
     }catch(_){}
   }
 }
+/* Upload one image file into the sync repo under dir/ and return its record (or null).
+   Shared by memo and term attachments; files are stored untouched, like character images. */
+async function uploadRepoImage(file,dir){
+  const token=getToken(); if(!token){ toast('画像には同期の設定（設定の「アクセストークン」）が必要です'); return null; }
+  if(!navigator.onLine){ toast('オフラインです。ネットにつながってから追加してください'); return null; }
+  if(file.size>IMG_MAX){ toast(`「${file.name}」は大きすぎます（25MBまで）`); return null; }
+  const ext=((file.name.match(/\.([a-z0-9]{2,5})$/i)||[])[1]||(file.type.split('/')[1])||'png').toLowerCase();
+  const path=`${dir}/${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}.${ext}`;
+  try{
+    const [b64,size]=await Promise.all([fileToB64(file),imgSize(file)]);
+    const res=await fetch(repoFileUrl(path),{method:'PUT',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify({message:'image: '+path,content:b64,branch:GH.branch})});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    try{ if('caches' in window){ const c=await caches.open(IMG_CACHE); await c.put(imgKey(path),new Response(file)); } }catch(_){}
+    imgUrls.set(path,URL.createObjectURL(file));
+    return {id:uid(),path,w:size.w,h:size.h,caption:''};
+  }catch(e){ toast('アップロードに失敗しました（'+e.message+'）'); return null; }
+}
+/* Image-attachment editor used inside sheets (memo / term). state = {imgs, added, removed}:
+   uploads happen immediately; "added" files are deleted again if the sheet is cancelled,
+   "removed" files are deleted by the caller when the sheet is saved. */
+function imgEditHtml(imgs){
+  return `<div class="imgedit">${imgs.map(im=>`<div class="imgcard" data-imgid="${im.id}"><div class="imgth">${imgTag(im)}</div><input type="text" data-imgcap="${im.id}" value="${esc(im.caption||'')}" placeholder="メモ（任意）" maxlength="40"><button type="button" class="imgrm" data-rmimg="${im.id}" aria-label="この画像を外す">${CI.x}</button></div>`).join('')}
+    <button type="button" class="imgadd" data-addimg>${CI.plus}<span>画像を追加</span></button></div>
+    <input type="file" data-imgfile accept="image/*" multiple hidden>
+    <div class="small" style="padding:4px 2px 0">元の画質のまま同期先のリポジトリに保存します（同期の設定とネット接続が必要です）</div>`;
+}
+function wireImgEdit(s,kind,ownerId,st){
+  const box=s.querySelector('[data-imgbox]'); if(!box) return;
+  const file=box.querySelector('[data-imgfile]');
+  box.querySelector('[data-addimg]').onclick=()=>{ if(!getToken()){ toast('画像には同期の設定（設定の「アクセストークン」）が必要です'); return; } file.click(); };
+  file.addEventListener('change',async()=>{ const files=[...file.files]; file.value=''; if(!files.length) return;
+    toast('アップロード中…');
+    for(const f of files){ const rec=await uploadRepoImage(f,`images/${kind}/${ownerId}`); if(rec){ st.imgs.push(rec); st.added.push(rec.path); } }
+    box.innerHTML=imgEditHtml(st.imgs); wireImgEdit(s,kind,ownerId,st);
+  });
+  box.querySelectorAll('[data-rmimg]').forEach(b=>b.onclick=()=>{ const im=st.imgs.find(x=>x.id===b.dataset.rmimg); if(!im) return;
+    st.imgs=st.imgs.filter(x=>x.id!==im.id);
+    if(st.added.includes(im.path)){ st.added=st.added.filter(p=>p!==im.path); removeRepoFiles([im.path]); } else st.removed.push(im.path);
+    box.innerHTML=imgEditHtml(st.imgs); wireImgEdit(s,kind,ownerId,st);
+  });
+  box.querySelectorAll('[data-imgcap]').forEach(inp=>inp.addEventListener('input',()=>{ const im=st.imgs.find(x=>x.id===inp.dataset.imgcap); if(im) im.caption=inp.value; }));
+  box.querySelectorAll('.imgcard .imgth').forEach(th=>th.addEventListener('click',()=>{ const card=th.closest('[data-imgid]'); const i=st.imgs.findIndex(x=>x.id===card.dataset.imgid); if(i>=0) openImgViewer(st.imgs,i); }));
+}
+function thumbsHtml(images,attr){
+  if(!images||!images.length) return '';
+  return `<div class="thumbs">${images.map((im,i)=>`<button type="button" class="thmb" ${attr}="${i}">${imgTag(im)}${(im.caption||'').trim()?`<span>${esc(im.caption.trim())}</span>`:''}</button>`).join('')}</div>`;
+}
+function memoImgsHtml(m){
+  const ims=m.images||[]; if(!ims.length) return '';
+  return `<span class="mimgs">${ims.map((im,i)=>`<button type="button" class="mimg" data-mimg="${i}" data-mid="${m.id}" aria-label="画像${i+1}を表示">${imgTag(im)}</button>`).join('')}</span>`;
+}
+
 // Full-screen viewer: fits the screen; tap the image to see it at its real size (scroll to pan).
 function openImgViewer(list,i){
   if(!list.length) return;
@@ -3940,7 +4009,7 @@ function termListHtml(){
   if(!list.length) return '<div class="empty">見つかりませんでした</div>';
   return termsGrouped(list).map(([h,ts])=>`<div class="tmhead">${h==='他'?'英数・その他':h}</div>`+ts.map(t=>{
     const open=openTm.has(t.id), desc=(t.desc||'').trim();
-    return `<div class="tmrow wlp${open?' open':''}" data-tmid="${t.id}" tabindex="0"><div class="tmw"><b>${esc(t.word)}</b>${(t.yomi||'').trim()?`<span class="tmy">${esc(t.yomi.trim())}</span>`:''}</div>${desc?`<div class="tmd">${esc(desc)}</div>`:''}${open?`<div class="tmact"><button type="button" class="chip" data-wa="tmedit">編集</button></div>`:''}</div>`;
+    return `<div class="tmrow wlp${open?' open':''}" data-tmid="${t.id}" tabindex="0"><div class="tmw"><b>${esc(t.word)}</b>${(t.yomi||'').trim()?`<span class="tmy">${esc(t.yomi.trim())}</span>`:''}</div>${desc?`<div class="tmd">${esc(desc)}</div>`:''}${open?thumbsHtml(t.images,'data-timg'):''}${open?`<div class="tmact"><button type="button" class="chip" data-wa="tmedit">編集</button></div>`:''}</div>`;
   }).join('')).join('')+'<div class="hint">タップで全文、長押しで編集・削除</div>';
 }
 function renderTerms(){
@@ -3952,26 +4021,31 @@ main.addEventListener('input',e=>{
   termQ=e.target.value; const box=$('#tmList'); if(box) box.innerHTML=termListHtml();
 });
 function termSheet(t){
+  const tid=t?t.id:uid();
+  const ist={imgs:(t&&t.images||[]).map(x=>({...x})),added:[],removed:[]};
   openSheet(`<div class="title">${t?'単語を編集':'単語を追加'}</div>
     <input id="tmWord" type="text" class="plain" maxlength="60" placeholder="単語（例：星詠み）" value="${esc(t?t.word:'')}" autocomplete="off">
     <input id="tmYomi" type="text" class="plain" maxlength="60" placeholder="読み（任意・入れると五十音順に並びます）" value="${esc(t?(t.yomi||''):'')}" autocomplete="off" style="margin-top:6px">
     <textarea id="tmDesc" placeholder="説明" style="min-height:28vh;margin-top:6px">${esc(t?(t.desc||''):'')}</textarea>
+    <div class="fld" style="margin-top:10px"><span class="lbl">画像</span><div data-imgbox>${imgEditHtml(ist.imgs)}</div></div>
     <div class="row">${t?'<button type="button" class="dangerbtn" data-a="del">削除</button>':''}<button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">${t?'保存':'追加'}</button></div>`, s=>{
+    wireImgEdit(s,'term',tid,ist);
     const w=s.querySelector('#tmWord'), y=s.querySelector('#tmYomi'), d=s.querySelector('#tmDesc'), ok=s.querySelector('[data-a=ok]');
     const upd=()=>ok.disabled=!w.value.trim(); upd(); w.addEventListener('input',upd);
-    s.querySelector('[data-a=cancel]').onclick=closeSheet;
+    s.querySelector('[data-a=cancel]').onclick=()=>{ if(ist.added.length) removeRepoFiles(ist.added); closeSheet(); };
     ok.onclick=()=>{
       const word=w.value.trim(); if(!word) return;
       if(db.terms.some(x=>x.id!==(t&&t.id) && (x.word||'').trim()===word)){ toast('同じ単語がすでにあります'); w.focus(); return; }
       const now=Date.now(); let id;
-      if(t){ const ex=termById(t.id); if(ex){ ex.word=word; ex.yomi=y.value.trim(); ex.desc=d.value; ex.updatedAt=now; } id=t.id; }
-      else{ id=uid(); db.terms.push({id,word,yomi:y.value.trim(),desc:d.value,createdAt:now,updatedAt:now}); }
+      if(t){ const ex=termById(t.id); if(ex){ ex.word=word; ex.yomi=y.value.trim(); ex.desc=d.value; ex.images=ist.imgs; ex.updatedAt=now; } id=t.id; }
+      else{ id=tid; db.terms.push({id,word,yomi:y.value.trim(),desc:d.value,images:ist.imgs,createdAt:now,updatedAt:now}); }
+      if(ist.removed.length) removeRepoFiles(ist.removed);
       if(t) openTm.add(id);
       if(!termMatches(termById(id),termQ)) termQ='';
       closeSheet(); commit(); render(); flashEl(`.tmrow[data-tmid="${id}"]`);
     };
     const del=s.querySelector('[data-a=del]');
-    if(del) del.onclick=()=>{ closeSheet(); deleteTerm(t.id); };
+    if(del) del.onclick=()=>{ if(ist.added.length) removeRepoFiles(ist.added); closeSheet(); deleteTerm(t.id); };
     if(!t) w.focus();
   },'term');
 }
@@ -4078,6 +4152,8 @@ main.addEventListener('click',e=>{
   const jc=t.closest('[data-jumpchar]'); if(jc){ tab='chara'; charId=jc.dataset.jumpchar; charView='detail'; render(); return; }
   const ev=t.closest('.ev'); if(ev && wView==='tl'){ if(tlById(tlId).view!=='full'){ ev.classList.toggle('open'); ev.classList.contains('open')?openEv.add(ev.dataset.eid):openEv.delete(ev.dataset.eid); } return; }
   if(wView==='terms'){
+    const ti=t.closest('[data-timg]');
+    if(ti){ const r=t.closest('.tmrow'), tm=r&&termById(r.dataset.tmid); if(tm) openImgViewer(tm.images||[],Number(ti.dataset.timg)); return; }
     if(t.closest('[data-wa="tmedit"]')){ const r=t.closest('.tmrow'), tm=r&&termById(r.dataset.tmid); if(tm) termSheet(tm); return; }
     const tr2=t.closest('.tmrow'); if(tr2){ tr2.classList.toggle('open'); const id=tr2.dataset.tmid; tr2.classList.contains('open')?openTm.add(id):openTm.delete(id); const box=$('#tmList'), st=main.scrollTop; if(box){ box.innerHTML=termListHtml(); main.scrollTop=st; } return; }
   }
