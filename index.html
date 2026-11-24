@@ -186,6 +186,13 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .cmpentry{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--sub);text-align:left}
 .cmpentry svg{width:17px;height:17px;flex:none}
 .cmpentry .chev{margin-left:auto;color:var(--faint)}
+.ptrow{padding:10px 14px;border-bottom:1px solid var(--line)}
+.ptmain{display:flex;align-items:center;gap:8px}
+.ptname{font-weight:600}
+.ptcnt{font-size:11px;color:var(--sub)}
+.ptcnt.hot{color:#b3543f;font-weight:700}
+.ptacts{margin-left:auto;display:flex;gap:12px;flex:none}
+.ptwho{font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.6}
 .cmpentry.center{width:auto;margin:-60px auto 0;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
 .cmpentry:active{background:var(--press)}
 .cmpbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px 6px}
@@ -772,12 +779,12 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.34.0';
+const APP_VERSION='0.35.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
 function setKbExtra(v){ try{ localStorage.setItem(KB_KEY,String(v)); }catch(e){} }
-const APP_DATE='2026-11-24';
+const APP_DATE='2026-11-25';
 /* ---------- works (multi-project) ----------
    Each work has its own local db, token and sync target repo. The first work
    (id 'w1') deliberately keeps the exact pre-multi-work storage keys and repo,
@@ -820,7 +827,7 @@ function b64enc(str){ return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2}
 function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
 
 /* ---------- data model ---------- */
-const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms'],['tmems','deletedTmems'],['xcharts','deletedXcharts']];
+const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms'],['tmems','deletedTmems'],['xcharts','deletedXcharts'],['ptags','deletedPtags']];
 function emptyDb(){ const d={meta:{updatedAt:0}}; for(const [a,b] of COLLS){ d[a]=[]; d[b]=[]; } return d; }
 function normalize(d){
   const e=emptyDb();
@@ -1034,6 +1041,7 @@ function buildStoryBible(){
       if((c.images||[]).length) L.push('全身画像（同じリポジトリ内）: '+c.images.map(im=>im.path+((im.caption||'').trim()?`（${im.caption.trim()}）`:'')).join('、'));
       if((c.looks||'').trim()){ L.push('見た目:'); L.push(c.looks.trim()); }
       if((c.personality||'').trim()){ L.push('性格:'); L.push(c.personality.trim()); }
+      const pts=(c.ptags||[]).map(ptagById).filter(Boolean); if(pts.length) L.push('性格タグ: '+pts.map(t=>t.name).join('、'));
       if((c.goal||'').trim()){ L.push('目的:'); L.push(c.goal.trim()); }
       if((c.skills||'').trim()){ L.push('スキル・武器など:'); L.push(c.skills.trim()); }
       if((c.history||'').trim()){ L.push('来歴:'); L.push(c.history.trim()); }
@@ -2006,7 +2014,7 @@ main.addEventListener('click',e=>{
 main.addEventListener('keydown',e=>{ if(e.key==='Enter' && e.target.matches && e.target.matches('.fold.can')) e.target.click(); });
 function charHomeHtml(){
   if(charQ.trim()) return charResultsHtml();
-  if(isWide()) return '<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>'+(db.chars.length>1?CMP_ENTRY.replace('cmpentry','cmpentry center'):'');
+  if(isWide()) return '<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>'+(db.chars.length>1?CMP_ENTRY.replace('cmpentry','cmpentry center'):'')+(db.chars.length?PTAG_ENTRY.replace('cmpentry','cmpentry center'):'');
   return charListCache;
 }
 function renderChara(){
@@ -2014,6 +2022,7 @@ function renderChara(){
   if(charView==='qa'){ if(charDraft){ renderQa(); return; } charView=charById(charId)?'detail':'list'; }
   if(charView==='qtpl'){ renderQtpl(); return; }
   if(charView==='cmp'){ renderCmp(); return; }
+  if(charView==='ptags'){ renderPtags(); return; }
   if(charView==='gdetail' && !groupById(gId)) charView='list';
   if(charView==='gdetail'){ renderGroupDetail(); return; }
   if(charView==='gedit'){ if(gDraft){ renderGroupEdit(); return; } charView='list'; }
@@ -2046,7 +2055,7 @@ function renderChara(){
       main.innerHTML=`<ul class="clist">${list.map(row).join('')}</ul>`;
     }
     if(!reorderMode && !selectMode){
-      charListCache=(list.length>1?CMP_ENTRY:'')+main.innerHTML;
+      charListCache=(list.length>1?CMP_ENTRY:'')+(list.length?PTAG_ENTRY:'')+main.innerHTML;
       main.innerHTML=CK_SEG()+searchBox('charQ',charQ,'全キャラの項目・質問の答えから検索')+`<div id="charHome">${charHomeHtml()}</div>`;
     }
     if(reorderMode) main.insertAdjacentHTML('beforeend','<div class="hint">右のつまみをドラッグして並べ替え'+(charGroup?'（同じ所属の中で移動）':'')+'</div>');
@@ -2063,6 +2072,7 @@ function renderChara(){
     main.innerHTML=`<div class="cdetail">
       <div class="chead">${avatar(c,'lg')}<div><div class="cname">${esc(c.name)}</div>${(c.alias||'').trim()?`<div class="calias">${esc(c.alias.trim())}</div>`:''}</div></div>
       ${affilChipsHtml(c)}
+      ${ptagChipsHtml(c)}
       ${(c.images||[]).length?`<div class="imgstrip">${c.images.map((im,i)=>`<button type="button" class="imgshot" data-imgview="${i}">${imgTag(im)}${(im.caption||'').trim()?`<span>${esc(im.caption.trim())}</span>`:''}</button>`).join('')}</div>`:''}
       ${rows.length?`<dl class="cfields">${rows.join('')}</dl>`:''}
       ${(bl=>bl.length?`<div class="cbs">${bl.map(([k,l])=>`<div class="cblock"><div class="clabel">${l}</div><div class="ctext">${fold(k,c[k].trim())}</div></div>`).join('')}</div>`:'')([['looks','見た目'],['personality','性格'],['goal','目的'],['skills','スキル・武器など'],['history','来歴'],['memo','詳細メモ']].filter(([k])=>(c[k]||'').trim()))}
@@ -2199,15 +2209,18 @@ main.addEventListener('click',e=>{
     if(qb.dataset.a==='qa'){ startQa(charById(charId)); return; }
     if(qb.dataset.a==='addrel'){ startRelFromChar(charId); return; }
     if(qb.dataset.a==='addev'){ startEvFromChar(charId); return; }
+    if(qb.dataset.a==='ptagpick'){ pickPtagsSheet(charById(charId)); return; }
     if(qb.dataset.a==='qatoggle'){ qaOpen=!qaOpen; try{localStorage.setItem(QA_OPEN_KEY,qaOpen?'1':'0');}catch(_){} const st=main.scrollTop; renderChara(); main.scrollTop=st; }
     return;
   }
   if(charView==='qa'){ qaClick(e); return; }
   if(charView==='qtpl'){ qtplClick(e); return; }
   if(charView==='cmp'){ cmpClick(e); return; }
+  if(charView==='ptags'){ ptagViewClick(e); return; }
   const ck=e.target.closest('[data-ck]'); if(ck && charView==='list'){ setCharKind(ck.dataset.ck); return; }
   if(charView==='gdetail'||charView==='gedit'||(charView==='list'&&charKind==='group')){ groupClick(e); return; }
   if(charView==='list' && !reorderMode && !selectMode && e.target.closest('[data-a=cmp]')){ openCmp(); return; }
+  if(charView==='list' && !reorderMode && !selectMode && e.target.closest('[data-a=ptags]')){ openPtags(); return; }
   const a=e.target.closest('[data-a]');
   if(charView==='edit' && a){
     const act=a.dataset.a;
@@ -2938,6 +2951,77 @@ function openImgViewer(list,i){
     if(e.target.closest('.ivbody img')){ ov.classList.toggle('full'); return; }
   });
 }
+/* ---------- personality tags (性格タグ) ----------
+   A shared master list of trait tags; characters reference tags by id, so renaming a tag
+   updates every character at once. Overlap (who shares a tag) is shown only in the tag
+   list view, never on character pages or in the picker. */
+const PTAG_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
+const PTAG_ENTRY=`<button type="button" class="cmpentry" data-a="ptags">${PTAG_ICON}<span>性格タグ一覧</span><span class="chev">›</span></button>`;
+function ptagById(id){ return db.ptags.find(t=>t.id===id); }
+function ptagsSorted(){ return [...db.ptags].sort((a,b)=>a.createdAt-b.createdAt); }
+function charsWithPtag(id){ return charsSorted().filter(c=>(c.ptags||[]).includes(id)); }
+function ptagChipsHtml(c){
+  const ts=(c.ptags||[]).map(ptagById).filter(Boolean);
+  return `<div class="cblock"><div class="clabel"><span>性格タグ</span><button type="button" class="cladd" data-a="ptagpick">${CI.plus}タグを付け外し</button></div>${ts.length?`<div class="chips">${ts.map(t=>`<span class="pchip">${esc(t.name)}</span>`).join('')}</div>`:'<div class="clempty">まだタグが付いていません</div>'}</div>`;
+}
+function pickPtagsSheet(c,preset){
+  if(!c) return;
+  const sel=new Set(preset||c.ptags||[]);
+  const ts=ptagsSorted();
+  openSheet(`<div class="title">${esc(c.name)}の性格タグ</div>
+    <div class="picklist">${ts.length?ts.map(t=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${t.id}" aria-checked="${sel.has(t.id)}"><span>${esc(t.name)}</span><span class="ck">${CI.check}</span></div>`).join(''):'<div class="pick-ph">まだタグがありません。下から追加できます</div>'}</div>
+    <div class="row" style="margin-top:10px"><input id="ptagNew" type="text" maxlength="30" placeholder="新しいタグ名（例：人見知り）" style="flex:1"><button type="button" data-a="add">追加</button></div>
+    <div class="row"><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
+    s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; const id=r.dataset.pid;
+      sel.has(id)?sel.delete(id):sel.add(id); r.setAttribute('aria-checked',sel.has(id)); });
+    const inp=s.querySelector('#ptagNew');
+    const add=()=>{ const name=inp.value.trim(); if(!name) return;
+      const ex=ptagsSorted().find(t=>t.name===name);
+      if(ex){ sel.add(ex.id); toast('そのタグはもうあります'); }
+      else{ const t=Date.now(); const nt={id:uid(),name,createdAt:t,updatedAt:t}; db.ptags.push(nt); sel.add(nt.id); commit(); }
+      pickPtagsSheet(c,[...sel]); };
+    s.querySelector('[data-a=add]').onclick=add;
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); add(); } });
+    s.querySelector('[data-a=ok]').onclick=()=>{ c.ptags=ptagsSorted().map(t=>t.id).filter(id=>sel.has(id)); c.updatedAt=Date.now(); commit(); closeSheet(); const st=main.scrollTop; renderChara(); main.scrollTop=st; };
+  },'pickptags');
+}
+function openPtags(){ charView='ptags'; render(); main.scrollTop=0; }
+function renderPtags(){
+  $('#title').textContent='性格タグ';
+  if(!isWide()){ $('#settingsBtn').hidden=true; $('#backBtn').hidden=false; }
+  const rows=ptagsSorted().map(t=>({t,cs:charsWithPtag(t.id)})).sort((a,b)=>b.cs.length-a.cs.length||a.t.createdAt-b.t.createdAt);
+  main.innerHTML=`<div class="qtplbar"><span class="small">タグごとに、付けているキャラの一覧です。2人以上に付いているタグが「被り」です。タグ名の変更・削除もここからできます。</span><button type="button" class="chip" data-a="ptagadd">タグを追加</button></div>`
+    + (rows.length ? rows.map(({t,cs})=>`<div class="ptrow"><div class="ptmain"><span class="ptname">${esc(t.name)}</span><span class="ptcnt${cs.length>=2?' hot':''}">${cs.length}人${cs.length>=2?'・被り':''}</span><span class="ptacts"><button type="button" class="qlink" data-ptedit="${t.id}">名前を変更</button><button type="button" class="qlink" data-ptdel="${t.id}">削除</button></span></div><div class="ptwho">${cs.length?cs.map(c=>esc(c.name)).join('・'):'まだ誰にも付いていません'}</div></div>`).join('')
+      : '<div class="empty"><strong>タグがありません</strong>上の「タグを追加」か、キャラ詳細の「タグを付け外し」から追加できます。</div>');
+}
+function ptagViewClick(e){
+  if(e.target.closest('[data-a=ptagadd]')){
+    nameSheet('タグを追加','','追加',name=>{
+      if(ptagsSorted().some(t=>t.name===name)){ toast('そのタグはもうあります'); return; }
+      const t=Date.now(); db.ptags.push({id:uid(),name,createdAt:t,updatedAt:t}); commit(); renderChara(); toast('タグを追加しました');
+    });
+    return;
+  }
+  const ed=e.target.closest('[data-ptedit]');
+  if(ed){ const t=ptagById(ed.dataset.ptedit); if(!t) return;
+    nameSheet('タグ名を変更',t.name,'変更',name=>{
+      if(ptagsSorted().some(x=>x.id!==t.id&&x.name===name)){ toast('そのタグはもうあります'); return; }
+      t.name=name; t.updatedAt=Date.now(); commit(); renderChara(); toast('タグ名を変更しました');
+    });
+    return;
+  }
+  const del=e.target.closest('[data-ptdel]');
+  if(del){ const t=ptagById(del.dataset.ptdel); if(!t) return; const n=charsWithPtag(t.id).length;
+    confirmSheet('タグを削除しますか？',`「${t.name}」を削除します。${n?`${n}人のキャラからも外れます。`:''}`,'削除',()=>{
+      const now=Date.now();
+      db.ptags=db.ptags.filter(x=>x.id!==t.id); db.deletedPtags.push({id:t.id,deletedAt:now});
+      for(const c of db.chars){ if((c.ptags||[]).includes(t.id)){ c.ptags=c.ptags.filter(id=>id!==t.id); c.updatedAt=now; } }
+      commit(); renderChara(); toast('タグを削除しました');
+    });
+    return;
+  }
+}
+
 /* ---------- compare (見比べ) ----------
    One item at a time (a basic field, a custom field label, or a Q&A template question) shown
    for every character side by side, so things like 一人称 or 身長 can be checked for overlap. */
@@ -4294,7 +4378,7 @@ function renderSide(){
       ${db.chars.length>1?`<button class="hbtn${charView==='cmp'?' on':''}" data-sa="cmp" aria-label="項目ごとに見比べる">${CMP_ICON}</button>`:''}
       ${db.chars.length?'<button class="hbtn txt" data-sa="select">選択</button>':''}
       <button class="hbtn" data-sa="add" aria-label="キャラクターを追加">${SV.addp}</button></span>`;
-    const list=charsSorted(), act=c=>(charView!=='list' && charView!=='qtpl' && charView!=='cmp' && charId===c.id)?' active':'';
+    const list=charsSorted(), act=c=>(charView!=='list' && charView!=='qtpl' && charView!=='cmp' && charView!=='ptags' && charId===c.id)?' active':'';
     const row=c=>`<li class="crow${act(c)}" data-scid="${c.id}" tabindex="0">${avatar(c)}<span class="cn">${esc(c.name)}</span></li>`;
     body = !list.length ? '<div class="pick-ph">まだキャラがいません</div>'
       : charGroup ? groupsOf(list).map(([g,cs,gid])=>{
