@@ -204,6 +204,21 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .thmb img{width:76px;height:76px;object-fit:cover;border-radius:10px;display:block}
 .thmb .imgph{font-size:10px;display:flex;align-items:center;justify-content:center;width:76px;height:76px;background:var(--surface2,#eee);color:var(--sub);border-radius:10px}
 .thmb span{display:block;font-size:10px;color:var(--sub);margin-top:2px}
+.mdv{line-height:1.7;word-break:break-word}
+.mdv .mdh{margin:8px 0 4px;line-height:1.4}
+.mdv h3.mdh{font-size:15.5px}
+.mdv h4.mdh{font-size:14.5px}
+.mdv h5.mdh{font-size:13.5px}
+.mdv h6.mdh{font-size:12.5px}
+.mdv .mdp{margin:4px 0}
+.mdv .mdul,.mdv .mdol{margin:4px 0 4px 18px;padding:0}
+.mdv li{margin:2px 0}
+.mdv .mdq{border-left:3px solid var(--line);margin:6px 0;padding:2px 0 2px 10px;color:var(--sub)}
+.mdv .mdpre{background:var(--surface2,#f0f0f0);border-radius:8px;padding:8px 10px;font-size:11.5px;overflow-x:auto;white-space:pre;margin:6px 0}
+.mdv code{background:var(--surface2,#f0f0f0);border-radius:4px;padding:0 4px;font-size:.92em}
+.mdv .mdpre code{background:none;padding:0}
+.mdv .mdhr{border:none;border-top:1px solid var(--line);margin:10px 0}
+.mdv a{color:#2f6fb2}
 .cmpentry.center{width:auto;margin:-60px auto 0;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
 .wideentries{width:fit-content;margin:-60px auto 0;display:flex;flex-direction:column;gap:8px}
 .wideentries .cmpentry{width:auto;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
@@ -792,7 +807,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.36.0';
+const APP_VERSION='0.37.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1456,9 +1471,9 @@ function folderMemosHtml(){
   if(!all.length) return fbar+'<div class="empty"><strong>まだメモがありません</strong>下の入力欄から書いてみてください。</div>';
   return fbar + (q?`<div class="srcount">${ms.length}件</div>`:'') + (ms.length
     ? '<ul class="memos'+(one?' oneline':'')+'">'+ms.map(m=>{
-        if(!one) return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}${q?hlText(m.text,q):esc(m.text)}${memoImgsHtml(m)}${memoTagsHtml(m)}</li>`;
+        if(!one) return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}${m.md&&!q?`<div class="mdv">${mdToHtml(m.text)}</div>`:q?hlText(m.text,q):esc(m.text)}${memoImgsHtml(m)}${memoTagsHtml(m)}</li>`;
         const lines=m.text.split('\n'), n=lines.length-1;
-        return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}<span class="l1">${esc(lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}${(m.images||[]).length?`<span class="mimgn">画像${m.images.length}枚</span>`:''}<span class="all">${esc(m.text)}${memoImgsHtml(m)}${memoTagsHtml(m)}</span></li>`;
+        return `${head(m)}<li class="memo${m.fav?' fav':''}${memoSel&&memoSel.has(m.id)?' sel':''}" data-id="${m.id}" tabindex="0"${memoSel?` role="checkbox" aria-checked="${memoSel.has(m.id)}"`:''}>${memoSel?`<span class="mck">${CI.check}</span>`:''}${favMark(m)}${wl(m)}<span class="l1">${esc(m.md?mdFirstLine(m.text):lines[0])||'&nbsp;'}</span>${n?`<span class="more">+${n}行</span>`:''}${(m.images||[]).length?`<span class="mimgn">画像${m.images.length}枚</span>`:''}<span class="all">${m.md&&!q?`<div class="mdv">${mdToHtml(m.text)}</div>`:esc(m.text)}${memoImgsHtml(m)}${memoTagsHtml(m)}</span></li>`;
       }).join('')+'</ul>'
     : favOnly&&!q&&!tagFilter.length ? '<div class="empty"><strong>★のついたメモはまだありません</strong>メモを長押しして「お気に入り」を選ぶと★がつきます。</div>'
     : '<div class="empty"><strong>あてはまるメモがありません</strong></div>');
@@ -1666,6 +1681,7 @@ function memoMenu(id){
     <button class="act" data-a="fav"><span class="actstar${m.fav?' on':''}">★</span>${m.fav?'お気に入りから外す':'お気に入り'}</button>
     ${folderTl(folderById(m.folderId))?`<button class="act" data-a="when">${WI.line}時期を変える<span class="small" style="margin-left:auto">${esc(whenText(folderTl(folderById(m.folderId)),m.when)||'時期なし')}</span></button>`:''}
     <button class="act" data-a="edit">${ICON.edit}編集</button>
+    <button class="act" data-a="md"><span style="font-weight:700;font-size:10.5px;border:1.5px solid currentColor;border-radius:4px;padding:0 3px;line-height:1.5">MD</span>${m.md?'通常の表示に戻す':'Markdown表示にする'}</button>
     <button class="act" data-a="select">${CI.check}選択する（まとめて操作）</button>
     <button class="act" data-a="tag">${SV.plus}タグを編集</button>
     <button class="act" data-a="move">${ICON.folder}別のフォルダへ移動</button>
@@ -1675,6 +1691,7 @@ function memoMenu(id){
     const wb=s.querySelector('[data-a=when]');
     if(wb) wb.onclick=()=>{ const tl=folderTl(folderById(m.folderId)); whenSheet(tl,m.when||curWhen(m.folderId),'このメモの時期','',w=>{ if(w) m.when=w; else delete m.when; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; renderMain(); main.scrollTop=st; toast('時期を変えました'); }); };
     s.querySelector('[data-a=edit]').onclick=()=>editMemo(m);
+    s.querySelector('[data-a=md]').onclick=()=>{ if(m.md) delete m.md; else m.md=true; m.updatedAt=Date.now(); commit(); closeSheet(); const st=main.scrollTop; render(); main.scrollTop=st; toast(m.md?'Markdown表示にしました':'通常の表示に戻しました'); };
     s.querySelector('[data-a=select]').onclick=()=>{ closeSheet(); startMemoSel(m.id); };
     s.querySelector('[data-a=tag]').onclick=()=>{ closeSheet(); pickCharsSheet(m.tags||[], ids=>{ m.tags=ids; m.updatedAt=Date.now(); commit(); const st=main.scrollTop; render(); main.scrollTop=st; }, 'このメモのキャラをタグ付け'); };
     s.querySelector('[data-a=move]').onclick=()=>moveMemoSheet(m);
@@ -1706,16 +1723,19 @@ function editMemo(m){
   openSheet(`<div class="title">メモを編集</div>
     <div class="qbar" id="editQuickBar">${quickBtnsHtml(cs)}</div>
     <textarea id="editArea">${esc(m.text)}</textarea>
+    <div class="row" style="justify-content:flex-start;align-items:center;gap:8px;margin-top:8px"><button type="button" class="chip" data-a="mdt">Markdown表示：${m.md?'ON':'OFF'}</button><span class="small">${!m.md&&looksLikeMd(m.text)?'Markdownっぽい文章です。ONにすると整形して表示します':''}</span></div>
     <div class="fld" style="margin-top:10px"><span class="lbl">画像</span><div data-imgbox>${imgEditHtml(ist.imgs)}</div></div>
     <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="ok">保存</button></div>`, s=>{
     wireImgEdit(s,'memo',m.id,ist);
+    let mdOn=!!m.md; const mdt=s.querySelector('[data-a=mdt]');
+    mdt.onclick=()=>{ mdOn=!mdOn; mdt.textContent='Markdown表示：'+(mdOn?'ON':'OFF'); };
     const ta=s.querySelector('#editArea'), ok=s.querySelector('[data-a=ok]'), qb=s.querySelector('#editQuickBar');
     // Keep the textarea focused (and the keyboard up) while tapping the quote buttons.
     qb.addEventListener('pointerdown',e=>{ if(e.target.closest('.qbtn')) e.preventDefault(); });
     qb.addEventListener('click',e=>{ const b=e.target.closest('.qbtn'); if(b) insertQuote(b.dataset.qi||null,ta); });
     ta.addEventListener('input',()=>ok.disabled=!ta.value.trim());
     s.querySelector('[data-a=cancel]').onclick=()=>{ if(ist.added.length) removeRepoFiles(ist.added); closeSheet(); };
-    ok.onclick=()=>{ m.text=ta.value.replace(/\s+$/,''); m.images=ist.imgs; if(ist.removed.length) removeRepoFiles(ist.removed); m.updatedAt=Date.now(); commit(); closeSheet();
+    ok.onclick=()=>{ m.text=ta.value.replace(/\s+$/,''); if(mdOn) m.md=true; else delete m.md; m.images=ist.imgs; if(ist.removed.length) removeRepoFiles(ist.removed); m.updatedAt=Date.now(); commit(); closeSheet();
       const st=main.scrollTop; render(); main.scrollTop=st;
       const el=main.querySelector(`[data-id="${m.id}"]`); if(el) el.classList.add('flash'); };
     ta.focus();
@@ -3002,6 +3022,44 @@ function thumbsHtml(images,attr){
   if(!images||!images.length) return '';
   return `<div class="thumbs">${images.map((im,i)=>`<button type="button" class="thmb" ${attr}="${i}">${imgTag(im)}${(im.caption||'').trim()?`<span>${esc(im.caption.trim())}</span>`:''}</button>`).join('')}</div>`;
 }
+/* ---------- light markdown (per-memo opt-in) ----------
+   Only memos flagged m.md are rendered; everything else stays plain text, so casual
+   typing (#, -, *) never changes shape unless the user turns it on for that memo.
+   The renderer escapes HTML first and only emits its own tags (links: http/https only). */
+function mdInline(s){
+  const codes=[];
+  s=s.replace(/`([^`\n]+)`/g,(m,c)=>{ codes.push(c); return '\u0001'+(codes.length-1)+'\u0002'; });
+  s=s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/~~([^~]+)~~/g,'<del>$1</del>');
+  s=s.replace(/(^|[^*\w])\*([^*\n]+)\*/g,'$1<em>$2</em>');
+  s=s.replace(/\u0001(\d+)\u0002/g,(m,i)=>'<code>'+codes[Number(i)]+'</code>');
+  return s;
+}
+function mdToHtml(text){
+  const lines=esc(text).split('\n'); const out=[]; let i=0;
+  const isBlock=l=>/^#{1,4}\s/.test(l)||/^&gt;\s?/.test(l)||/^\s*[-*+]\s+/.test(l)||/^\s*\d+[.)]\s+/.test(l)||/^\s*(---+|\*\*\*+|___+)\s*$/.test(l)||/^```/.test(l);
+  while(i<lines.length){
+    const l=lines[i];
+    if(/^```/.test(l)){ const buf=[]; i++; while(i<lines.length&&!/^```/.test(lines[i])){ buf.push(lines[i]); i++; } i++; out.push('<pre class="mdpre">'+buf.join('\n')+'</pre>'); continue; }
+    if(!l.trim()){ i++; continue; }
+    const h=l.match(/^(#{1,4})\s+(.*)$/);
+    if(h){ const lv=h[1].length+2; out.push(`<h${lv} class="mdh">${mdInline(h[2])}</h${lv}>`); i++; continue; }
+    if(/^\s*(---+|\*\*\*+|___+)\s*$/.test(l)){ out.push('<hr class="mdhr">'); i++; continue; }
+    if(/^&gt;\s?/.test(l)){ const buf=[]; while(i<lines.length&&/^&gt;\s?/.test(lines[i])){ buf.push(lines[i].replace(/^&gt;\s?/,'')); i++; } out.push('<blockquote class="mdq">'+buf.map(mdInline).join('<br>')+'</blockquote>'); continue; }
+    if(/^\s*[-*+]\s+/.test(l)){ const items=[]; while(i<lines.length&&/^\s*[-*+]\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*[-*+]\s+/,'').replace(/^\[ \]\s+/,'☐ ').replace(/^\[[xX]\]\s+/,'☑ ')); i++; } out.push('<ul class="mdul">'+items.map(x=>'<li>'+mdInline(x)+'</li>').join('')+'</ul>'); continue; }
+    if(/^\s*\d+[.)]\s+/.test(l)){ const items=[]; while(i<lines.length&&/^\s*\d+[.)]\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*\d+[.)]\s+/,'')); i++; } out.push('<ol class="mdol">'+items.map(x=>'<li>'+mdInline(x)+'</li>').join('')+'</ol>'); continue; }
+    const buf=[l]; i++; while(i<lines.length&&lines[i].trim()&&!isBlock(lines[i])){ buf.push(lines[i]); i++; }
+    out.push('<p class="mdp">'+buf.map(mdInline).join('<br>')+'</p>');
+  }
+  return out.join('');
+}
+function mdPlainLine(line){
+  return line.replace(/^#{1,6}\s*/,'').replace(/^>\s?/,'').replace(/^\s*[-*+]\s+(\[[ xX]\]\s+)?/,'').replace(/^\s*\d+[.)]\s+/,'')
+    .replace(/\*\*([^*]+)\*\*/g,'$1').replace(/~~([^~]+)~~/g,'$1').replace(/`([^`]+)`/g,'$1').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').trim();
+}
+function mdFirstLine(text){ for(const l of text.split('\n')){ const p=mdPlainLine(l); if(p) return p; } return ''; }
+function looksLikeMd(t){ let n=0; if(/```/.test(t)) n+=2; if(/(^|\n)#{1,4}\s+\S/.test(t)) n++; if(/\*\*[^*\n]+\*\*/.test(t)) n++; if(/(^|\n)\s*[-*]\s+\S/.test(t)) n++; if(/(^|\n)>\s?\S/.test(t)) n++; if(/(^|\n)\s*\d+\.\s+\S/.test(t)) n++; return n>=2; }
 function memoImgsHtml(m){
   const ims=m.images||[]; if(!ims.length) return '';
   return `<span class="mimgs">${ims.map((im,i)=>`<button type="button" class="mimg" data-mimg="${i}" data-mid="${m.id}" aria-label="画像${i+1}を表示">${imgTag(im)}</button>`).join('')}</span>`;
