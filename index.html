@@ -193,7 +193,10 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .ptcnt.hot{color:#b3543f;font-weight:700}
 .ptacts{margin-left:auto;display:flex;gap:12px;flex:none}
 .ptwho{font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.6}
+.ptcands{padding:12px 14px;border-top:1px solid var(--line)}
 .cmpentry.center{width:auto;margin:-60px auto 0;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
+.wideentries{width:fit-content;margin:-60px auto 0;display:flex;flex-direction:column;gap:8px}
+.wideentries .cmpentry{width:auto;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
 .cmpentry:active{background:var(--press)}
 .cmpbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px 6px}
 .cmpbar select{flex:1 1 180px;min-width:0;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;padding:0 8px}
@@ -779,7 +782,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.35.0';
+const APP_VERSION='0.35.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -2014,7 +2017,7 @@ main.addEventListener('click',e=>{
 main.addEventListener('keydown',e=>{ if(e.key==='Enter' && e.target.matches && e.target.matches('.fold.can')) e.target.click(); });
 function charHomeHtml(){
   if(charQ.trim()) return charResultsHtml();
-  if(isWide()) return '<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>'+(db.chars.length>1?CMP_ENTRY.replace('cmpentry','cmpentry center'):'')+(db.chars.length?PTAG_ENTRY.replace('cmpentry','cmpentry center'):'');
+  if(isWide()) return '<div class="pick-ph">'+(db.chars.length?'左の一覧からキャラを選んでください':'左上の人型ボタンからキャラを追加できます')+'</div>'+(db.chars.length?`<div class="wideentries">${db.chars.length>1?CMP_ENTRY:''}${PTAG_ENTRY}</div>`:'');
   return charListCache;
 }
 function renderChara(){
@@ -2960,6 +2963,10 @@ const PTAG_ENTRY=`<button type="button" class="cmpentry" data-a="ptags">${PTAG_I
 function ptagById(id){ return db.ptags.find(t=>t.id===id); }
 function ptagsSorted(){ return [...db.ptags].sort((a,b)=>a.createdAt-b.createdAt); }
 function charsWithPtag(id){ return charsSorted().filter(c=>(c.ptags||[]).includes(id)); }
+const PTAG_SAMPLES=['クール','無口','天然','努力家','世話焼き','負けず嫌い','人見知り','明るい','優しい','厳しい','甘えん坊','しっかり者','自由人','真面目','不器用','素直','頑固','冷静','情熱的','マイペース'];
+function ptagCandidates(){ const have=new Set(db.ptags.map(t=>t.name)); return PTAG_SAMPLES.filter(n=>!have.has(n)); }
+function addPtagByName(name){ const t=Date.now(); const nt={id:uid(),name,createdAt:t,updatedAt:t}; db.ptags.push(nt); commit(); return nt; }
+function ptagCandHtml(){ const cs=ptagCandidates(); return cs.length?`<div class="small" style="margin-top:12px">候補から追加</div><div class="chips" style="margin-top:6px">${cs.map(n=>`<button type="button" class="chip" data-cand="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:''; }
 function ptagChipsHtml(c){
   const ts=(c.ptags||[]).map(ptagById).filter(Boolean);
   return `<div class="cblock"><div class="clabel"><span>性格タグ</span><button type="button" class="cladd" data-a="ptagpick">${CI.plus}タグを付け外し</button></div>${ts.length?`<div class="chips">${ts.map(t=>`<span class="pchip">${esc(t.name)}</span>`).join('')}</div>`:'<div class="clempty">まだタグが付いていません</div>'}</div>`;
@@ -2970,10 +2977,12 @@ function pickPtagsSheet(c,preset){
   const ts=ptagsSorted();
   openSheet(`<div class="title">${esc(c.name)}の性格タグ</div>
     <div class="picklist">${ts.length?ts.map(t=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${t.id}" aria-checked="${sel.has(t.id)}"><span>${esc(t.name)}</span><span class="ck">${CI.check}</span></div>`).join(''):'<div class="pick-ph">まだタグがありません。下から追加できます</div>'}</div>
+    <div id="ptagCands">${ptagCandHtml()}</div>
     <div class="row" style="margin-top:10px"><input id="ptagNew" type="text" maxlength="30" placeholder="新しいタグ名（例：人見知り）" style="flex:1"><button type="button" data-a="add">追加</button></div>
     <div class="row"><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
     s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; const id=r.dataset.pid;
       sel.has(id)?sel.delete(id):sel.add(id); r.setAttribute('aria-checked',sel.has(id)); });
+    s.querySelectorAll('[data-cand]').forEach(b=>b.onclick=()=>{ const nt=addPtagByName(b.dataset.cand); sel.add(nt.id); pickPtagsSheet(c,[...sel]); });
     const inp=s.querySelector('#ptagNew');
     const add=()=>{ const name=inp.value.trim(); if(!name) return;
       const ex=ptagsSorted().find(t=>t.name===name);
@@ -2992,9 +3001,12 @@ function renderPtags(){
   const rows=ptagsSorted().map(t=>({t,cs:charsWithPtag(t.id)})).sort((a,b)=>b.cs.length-a.cs.length||a.t.createdAt-b.t.createdAt);
   main.innerHTML=`<div class="qtplbar"><span class="small">タグごとに、付けているキャラの一覧です。2人以上に付いているタグが「被り」です。タグ名の変更・削除もここからできます。</span><button type="button" class="chip" data-a="ptagadd">タグを追加</button></div>`
     + (rows.length ? rows.map(({t,cs})=>`<div class="ptrow"><div class="ptmain"><span class="ptname">${esc(t.name)}</span><span class="ptcnt${cs.length>=2?' hot':''}">${cs.length}人${cs.length>=2?'・被り':''}</span><span class="ptacts"><button type="button" class="qlink" data-ptedit="${t.id}">名前を変更</button><button type="button" class="qlink" data-ptdel="${t.id}">削除</button></span></div><div class="ptwho">${cs.length?cs.map(c=>esc(c.name)).join('・'):'まだ誰にも付いていません'}</div></div>`).join('')
-      : '<div class="empty"><strong>タグがありません</strong>上の「タグを追加」か、キャラ詳細の「タグを付け外し」から追加できます。</div>');
+      : '<div class="empty"><strong>タグがありません</strong>上の「タグを追加」か、キャラ詳細の「タグを付け外し」から追加できます。</div>')
+    + (ptagCandidates().length?`<div class="ptcands"><div class="small">候補から追加（タップで一覧に足されます）</div><div class="chips" style="margin-top:6px">${ptagCandidates().map(n=>`<button type="button" class="chip" data-cand="${esc(n)}">${esc(n)}</button>`).join('')}</div></div>`:'');
 }
 function ptagViewClick(e){
+  const cand=e.target.closest('[data-cand]');
+  if(cand){ addPtagByName(cand.dataset.cand); renderChara(); toast('タグを追加しました'); return; }
   if(e.target.closest('[data-a=ptagadd]')){
     nameSheet('タグを追加','','追加',name=>{
       if(ptagsSorted().some(t=>t.name===name)){ toast('そのタグはもうあります'); return; }
