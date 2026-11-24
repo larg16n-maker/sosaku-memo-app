@@ -458,6 +458,7 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .picklist{display:flex;flex-direction:column;max-height:52vh;overflow-y:auto}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .pchip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px 0 4px;border-radius:14px;background:var(--press);font-size:12px}
+.pchip.txt{padding:0 13px}
 .partner{display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px;text-align:left;width:100%}
 .partner .ph{color:var(--faint)}
 .mchoice{display:flex;flex-direction:column;gap:6px;padding:0 6px 4px}
@@ -811,7 +812,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.37.1';
+const APP_VERSION='0.37.3';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -3106,30 +3107,37 @@ function ptagById(id){ return db.ptags.find(t=>t.id===id); }
 function ptagsSorted(){ return [...db.ptags].sort((a,b)=>a.createdAt-b.createdAt); }
 function charsWithPtag(id){ return charsSorted().filter(c=>(c.ptags||[]).includes(id)); }
 const PTAG_SAMPLES=['クール','無口','天然','努力家','世話焼き','負けず嫌い','人見知り','明るい','優しい','厳しい','甘えん坊','しっかり者','自由人','真面目','不器用','素直','頑固','冷静','情熱的','マイペース'];
-function ptagCandidates(){ const have=new Set(db.ptags.map(t=>t.name)); return PTAG_SAMPLES.filter(n=>!have.has(n)); }
-function addPtagByName(name){ const t=Date.now(); const nt={id:uid(),name,createdAt:t,updatedAt:t}; db.ptags.push(nt); commit(); return nt; }
+const PTAG_HIST_KEY='sosaku-ptag-history';
+function ptagHistory(){ try{ const h=JSON.parse(localStorage.getItem(PTAG_HIST_KEY)||'[]'); return Array.isArray(h)?h.filter(n=>typeof n==='string'):[]; }catch(_){ return []; } }
+function rememberPtagName(name){ if(!name) return; const h=ptagHistory().filter(n=>n!==name); h.unshift(name); try{ localStorage.setItem(PTAG_HIST_KEY,JSON.stringify(h.slice(0,100))); }catch(_){} }
+function syncPtagHistory(){ for(const t of db.ptags) rememberPtagName(t.name); }
+function ptagCandidates(){ syncPtagHistory(); const have=new Set(db.ptags.map(t=>t.name)); const seen=new Set(), out=[];
+  for(const n of [...ptagHistory(),...PTAG_SAMPLES]){ if(!have.has(n)&&!seen.has(n)){ seen.add(n); out.push(n); } } return out; }
+function addPtagByName(name){ const t=Date.now(); const nt={id:uid(),name,createdAt:t,updatedAt:t}; db.ptags.push(nt); rememberPtagName(name); commit(); return nt; }
 function ptagCandHtml(){ const cs=ptagCandidates(); return cs.length?`<div class="small" style="margin-top:12px">候補から追加</div><div class="chips" style="margin-top:6px">${cs.map(n=>`<button type="button" class="chip" data-cand="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:''; }
 function ptagChipsHtml(c){
   const ts=(c.ptags||[]).map(ptagById).filter(Boolean);
-  return `<div class="cblock"><div class="clabel"><span>性格タグ</span><button type="button" class="cladd" data-a="ptagpick">${CI.plus}タグを付け外し</button></div>${ts.length?`<div class="chips">${ts.map(t=>`<span class="pchip">${esc(t.name)}</span>`).join('')}</div>`:'<div class="clempty">まだタグが付いていません</div>'}</div>`;
+  return `<div class="cblock"><div class="clabel"><span>性格タグ</span><button type="button" class="cladd" data-a="ptagpick">${CI.plus}タグを付け外し</button></div>${ts.length?`<div class="chips">${ts.map(t=>`<span class="pchip txt">${esc(t.name)}</span>`).join('')}</div>`:'<div class="clempty">まだタグが付いていません</div>'}</div>`;
 }
 function pickPtagsSheet(c,preset){
   if(!c) return;
   const sel=new Set(preset||c.ptags||[]);
-  const ts=ptagsSorted();
+  const selTags=ptagsSorted().filter(t=>sel.has(t.id));
+  const selNames=new Set(selTags.map(t=>t.name));
+  syncPtagHistory(); const seen=new Set(), cands=[];
+  for(const n of [...ptagsSorted().map(t=>t.name),...ptagHistory(),...PTAG_SAMPLES]){ if(!selNames.has(n)&&!seen.has(n)){ seen.add(n); cands.push(n); } }
   openSheet(`<div class="title">${esc(c.name)}の性格タグ</div>
-    <div class="picklist">${ts.length?ts.map(t=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${t.id}" aria-checked="${sel.has(t.id)}"><span>${esc(t.name)}</span><span class="ck">${CI.check}</span></div>`).join(''):'<div class="pick-ph">まだタグがありません。下から追加できます</div>'}</div>
-    <div id="ptagCands">${ptagCandHtml()}</div>
+    <div class="picklist">${selTags.length?selTags.map(t=>`<div class="pickrow" role="checkbox" tabindex="0" data-pid="${t.id}" aria-checked="true"><span>${esc(t.name)}</span><span class="ck">${CI.check}</span></div>`).join(''):'<div class="pick-ph">まだタグが付いていません。下の候補か入力から追加できます</div>'}</div>
+    ${cands.length?`<div class="small" style="margin-top:12px">候補から追加</div><div class="chips" style="margin-top:6px">${cands.map(n=>`<button type="button" class="chip" data-cand="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:''}
     <div class="row" style="margin-top:10px"><input id="ptagNew" type="text" maxlength="30" placeholder="新しいタグ名（例：人見知り）" style="flex:1"><button type="button" data-a="add">追加</button></div>
     <div class="row"><button type="button" class="primary" data-a="ok">決定</button></div>`, s=>{
-    s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; const id=r.dataset.pid;
-      sel.has(id)?sel.delete(id):sel.add(id); r.setAttribute('aria-checked',sel.has(id)); });
-    s.querySelectorAll('[data-cand]').forEach(b=>b.onclick=()=>{ const nt=addPtagByName(b.dataset.cand); sel.add(nt.id); pickPtagsSheet(c,[...sel]); });
+    s.querySelector('.picklist').addEventListener('click',e=>{ const r=e.target.closest('[data-pid]'); if(!r) return; sel.delete(r.dataset.pid); pickPtagsSheet(c,[...sel]); });
+    s.querySelectorAll('[data-cand]').forEach(b=>b.onclick=()=>{ const name=b.dataset.cand; const ex=ptagsSorted().find(t=>t.name===name); if(ex) sel.add(ex.id); else sel.add(addPtagByName(name).id); pickPtagsSheet(c,[...sel]); });
     const inp=s.querySelector('#ptagNew');
     const add=()=>{ const name=inp.value.trim(); if(!name) return;
       const ex=ptagsSorted().find(t=>t.name===name);
       if(ex){ sel.add(ex.id); toast('そのタグはもうあります'); }
-      else{ const t=Date.now(); const nt={id:uid(),name,createdAt:t,updatedAt:t}; db.ptags.push(nt); sel.add(nt.id); commit(); }
+      else{ const nt=addPtagByName(name); sel.add(nt.id); }
       pickPtagsSheet(c,[...sel]); };
     s.querySelector('[data-a=add]').onclick=add;
     inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); add(); } });
@@ -3152,7 +3160,7 @@ function ptagViewClick(e){
   if(e.target.closest('[data-a=ptagadd]')){
     nameSheet('タグを追加','','追加',name=>{
       if(ptagsSorted().some(t=>t.name===name)){ toast('そのタグはもうあります'); return; }
-      const t=Date.now(); db.ptags.push({id:uid(),name,createdAt:t,updatedAt:t}); commit(); renderChara(); toast('タグを追加しました');
+      addPtagByName(name); renderChara(); toast('タグを追加しました');
     });
     return;
   }
@@ -3160,7 +3168,7 @@ function ptagViewClick(e){
   if(ed){ const t=ptagById(ed.dataset.ptedit); if(!t) return;
     nameSheet('タグ名を変更',t.name,'変更',name=>{
       if(ptagsSorted().some(x=>x.id!==t.id&&x.name===name)){ toast('そのタグはもうあります'); return; }
-      t.name=name; t.updatedAt=Date.now(); commit(); renderChara(); toast('タグ名を変更しました');
+      t.name=name; t.updatedAt=Date.now(); rememberPtagName(name); commit(); renderChara(); toast('タグ名を変更しました');
     });
     return;
   }
