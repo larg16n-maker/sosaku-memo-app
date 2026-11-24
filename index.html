@@ -219,6 +219,10 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .mdv .mdpre code{background:none;padding:0}
 .mdv .mdhr{border:none;border-top:1px solid var(--line);margin:10px 0}
 .mdv a{color:#2f6fb2}
+.mdtw{overflow-x:auto;margin:8px 0}
+.mdt{border-collapse:collapse;font-size:12px;min-width:100%}
+.mdt th,.mdt td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top;line-height:1.5;white-space:normal}
+.mdt th{background:var(--surface2,#f0f0f0);font-weight:700}
 .cmpentry.center{width:auto;margin:-60px auto 0;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
 .wideentries{width:fit-content;margin:-60px auto 0;display:flex;flex-direction:column;gap:8px}
 .wideentries .cmpentry{width:auto;border:1px solid var(--line);border-radius:18px;padding:8px 14px}
@@ -807,7 +811,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.37.0';
+const APP_VERSION='0.37.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -3036,6 +3040,10 @@ function mdInline(s){
   s=s.replace(/\u0001(\d+)\u0002/g,(m,i)=>'<code>'+codes[Number(i)]+'</code>');
   return s;
 }
+function mdRowCells(l){ let s=l.trim(); if(s.startsWith('|')) s=s.slice(1); if(s.endsWith('|')) s=s.slice(0,-1); return s.split('|').map(c=>c.trim()); }
+function mdDelimAligns(l){ if(!/^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(l)||!l.includes('-')) return null;
+  const cells=mdRowCells(l); if(cells.some(c=>!/^:?-+:?$/.test(c))) return null;
+  return cells.map(c=>c.startsWith(':')&&c.endsWith(':')?'center':c.endsWith(':')?'right':'left'); }
 function mdToHtml(text){
   const lines=esc(text).split('\n'); const out=[]; let i=0;
   const isBlock=l=>/^#{1,4}\s/.test(l)||/^&gt;\s?/.test(l)||/^\s*[-*+]\s+/.test(l)||/^\s*\d+[.)]\s+/.test(l)||/^\s*(---+|\*\*\*+|___+)\s*$/.test(l)||/^```/.test(l);
@@ -3043,13 +3051,20 @@ function mdToHtml(text){
     const l=lines[i];
     if(/^```/.test(l)){ const buf=[]; i++; while(i<lines.length&&!/^```/.test(lines[i])){ buf.push(lines[i]); i++; } i++; out.push('<pre class="mdpre">'+buf.join('\n')+'</pre>'); continue; }
     if(!l.trim()){ i++; continue; }
+    if(l.includes('|') && i+1<lines.length){ const aligns=mdDelimAligns(lines[i+1]);
+      if(aligns){ const head=mdRowCells(l); const rows=[]; i+=2;
+        while(i<lines.length && lines[i].includes('|') && lines[i].trim()){ rows.push(mdRowCells(lines[i])); i++; }
+        const al=j=>aligns[j]&&aligns[j]!=='left'?` style="text-align:${aligns[j]}"`:'';
+        out.push('<div class="mdtw"><table class="mdt"><thead><tr>'+head.map((c,j)=>`<th${al(j)}>${mdInline(c)}</th>`).join('')+'</tr></thead>'
+          +(rows.length?'<tbody>'+rows.map(r=>'<tr>'+head.map((_,j)=>`<td${al(j)}>${mdInline(r[j]||'')}</td>`).join('')+'</tr>').join('')+'</tbody>':'')+'</table></div>');
+        continue; } }
     const h=l.match(/^(#{1,4})\s+(.*)$/);
     if(h){ const lv=h[1].length+2; out.push(`<h${lv} class="mdh">${mdInline(h[2])}</h${lv}>`); i++; continue; }
     if(/^\s*(---+|\*\*\*+|___+)\s*$/.test(l)){ out.push('<hr class="mdhr">'); i++; continue; }
     if(/^&gt;\s?/.test(l)){ const buf=[]; while(i<lines.length&&/^&gt;\s?/.test(lines[i])){ buf.push(lines[i].replace(/^&gt;\s?/,'')); i++; } out.push('<blockquote class="mdq">'+buf.map(mdInline).join('<br>')+'</blockquote>'); continue; }
     if(/^\s*[-*+]\s+/.test(l)){ const items=[]; while(i<lines.length&&/^\s*[-*+]\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*[-*+]\s+/,'').replace(/^\[ \]\s+/,'☐ ').replace(/^\[[xX]\]\s+/,'☑ ')); i++; } out.push('<ul class="mdul">'+items.map(x=>'<li>'+mdInline(x)+'</li>').join('')+'</ul>'); continue; }
     if(/^\s*\d+[.)]\s+/.test(l)){ const items=[]; while(i<lines.length&&/^\s*\d+[.)]\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*\d+[.)]\s+/,'')); i++; } out.push('<ol class="mdol">'+items.map(x=>'<li>'+mdInline(x)+'</li>').join('')+'</ol>'); continue; }
-    const buf=[l]; i++; while(i<lines.length&&lines[i].trim()&&!isBlock(lines[i])){ buf.push(lines[i]); i++; }
+    const buf=[l]; i++; while(i<lines.length&&lines[i].trim()&&!isBlock(lines[i])&&!(lines[i].includes('|')&&i+1<lines.length&&mdDelimAligns(lines[i+1]))){ buf.push(lines[i]); i++; }
     out.push('<p class="mdp">'+buf.map(mdInline).join('<br>')+'</p>');
   }
   return out.join('');
