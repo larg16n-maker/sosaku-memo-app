@@ -822,7 +822,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.38.0';
+const APP_VERSION='0.38.1';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1158,7 +1158,7 @@ function buildStoryBible(){
   const pls=plotsSorted();
   if(pls.length){
     L.push('## プロット');
-    pls.forEach((p,i)=>{ L.push(`${i+1}. ${(p.title||'').trim()||'（タイトルなし）'}${(p.date||'').trim()?`［日付: ${p.date.trim()}］`:''}`); if((p.body||'').trim()) L.push(p.body.trim()); });
+    pls.forEach((p,i)=>{ const tn=(p.chars||[]).map(charById).filter(Boolean).map(c=>c.name); L.push(`${i+1}. ${(p.title||'').trim()||'（タイトルなし）'}${(p.date||'').trim()?`［日付: ${p.date.trim()}］`:''}${tn.length?`［登場: ${tn.join('、')}］`:''}`); if((p.body||'').trim()) L.push(p.body.trim()); });
     L.push('');
   }
   const foldersWithMemos=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt).filter(f=>memosOf(f.id).length);
@@ -3593,21 +3593,28 @@ function plotById(id){ return db.plots.find(p=>p.id===id); }
 function plotsSorted(){ return [...db.plots].sort((a,b)=>((a.sort??a.createdAt)-(b.sort??b.createdAt))||a.createdAt-b.createdAt); }
 function plotsApplyOrder(ids){ const t=Date.now(); ids.forEach((id,i)=>{ const p=plotById(id); if(p){ p.sort=i; p.updatedAt=t; } }); commit(); }
 function deletePlot(p){ db.plots=db.plots.filter(x=>x.id!==p.id); db.deletedPlots.push({id:p.id,deletedAt:Date.now()}); commit(); }
-function plotSheet(p){
-  const isNew=!p; if(isNew) p={id:uid(),title:'',date:'',body:'',sort:(db.plots.reduce((m,x)=>Math.max(m,x.sort??x.createdAt),0)+1),createdAt:Date.now()};
+function plotSheet(p,draft){
+  const isNew=!p; if(isNew) p={id:uid(),title:'',date:'',body:'',chars:[],sort:(db.plots.reduce((m,x)=>Math.max(m,x.sort??x.createdAt),0)+1),createdAt:Date.now()};
+  const v=draft||{title:p.title||'',date:p.date||'',body:p.body||'',chars:[...(p.chars||[])]};
+  let selChars=[...v.chars];
+  const namesOf=ids=>ids.map(charById).filter(Boolean).map(c=>c.name).join('、');
   openSheet(`<div class="title">${isNew?'プロットを追加':'プロットを編集'}</div>
-    <label class="flabel">タイトル</label><input id="pl_title" type="text" value="${esc(p.title||'')}" placeholder="例：主人公、相棒と出会う">
-    <label class="flabel">日付（任意）</label><input id="pl_date" type="text" value="${esc(p.date||'')}" placeholder="例：第3日／春ごろ／2026-04-01">
-    <label class="flabel">本文</label><textarea id="pl_body" rows="7" placeholder="アイデアを自由に">${esc(p.body||'')}</textarea>
+    <label class="flabel">タイトル</label><input id="pl_title" type="text" value="${esc(v.title)}" placeholder="例：主人公、相棒と出会う">
+    <label class="flabel">日付（任意）</label><input id="pl_date" type="text" value="${esc(v.date)}" placeholder="例：第3日／春ごろ／2026-04-01">
+    <label class="flabel">本文</label><textarea id="pl_body" rows="7" placeholder="アイデアを自由に">${esc(v.body)}</textarea>
+    <label class="flabel">関わるキャラ</label>
+    <button type="button" class="act" data-a="tags">${selChars.length?esc(namesOf(selChars)):'タグ付け（未設定）'}</button>
     ${isNew?'':`<div class="row"><button type="button" data-a="up">↑ 上へ</button><button type="button" data-a="down">↓ 下へ</button></div>
     <div class="row"><button type="button" class="danger" data-a="del">このプロットを削除</button></div>`}
     <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="save">保存</button></div>`, s=>{
     const q=x=>s.querySelector(x);
+    q('[data-a=tags]').onclick=()=>{ if(!db.chars.length){ toast('先にキャラクターを登録してください'); return; } const stash={title:q('#pl_title').value,date:q('#pl_date').value,body:q('#pl_body').value,chars:[...selChars]};
+      closeSheet(); pickCharsSheet(selChars, ids=>{ stash.chars=ids; plotSheet(isNew?null:p, stash); }, '関わるキャラ'); };
     q('[data-a=save]').onclick=()=>{ const title=q('#pl_title').value.trim(), date=q('#pl_date').value.trim(), body=q('#pl_body').value;
       if(!title&&!body.trim()){ toast('タイトルか本文を入力してください'); return; }
-      const t=Date.now();
-      if(isNew){ db.plots.push({id:p.id,title,date,body,sort:p.sort,createdAt:p.createdAt,updatedAt:t}); }
-      else{ Object.assign(p,{title,date,body,updatedAt:t}); }
+      const t=Date.now(), chars=selChars.filter(id=>charById(id));
+      if(isNew){ db.plots.push({id:p.id,title,date,body,chars,sort:p.sort,createdAt:p.createdAt,updatedAt:t}); }
+      else{ Object.assign(p,{title,date,body,chars,updatedAt:t}); }
       commit(); closeSheet(); renderWorld(); };
     q('[data-a=cancel]').onclick=()=>closeSheet();
     if(!isNew){
@@ -3641,6 +3648,7 @@ function attachPlotDrag(){
   });
 }
 let wView='hub', tlId=null, rcId=null, rgId=null, relKind='char', evDraft=null, relDraft=null, wDirty=false, wReturn=null;
+let plotTagFilter=[];
 let grpReorderMode=false;
 const openEv=new Set(), openRel=new Set();
 
@@ -3725,12 +3733,17 @@ function renderWorld(){
   }
   if(wView==='plots'){
     $('#title').textContent='プロット'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','プロットを追加');
-    const ps=plotsSorted();
-    main.innerHTML = ps.length
-      ? '<div id="plotList">'+ps.map(p=>`<div class="plotcard" data-plid="${p.id}"><span class="ploth" data-drag="${p.id}">${PLOT_GRIP}</span><div class="plotmain" data-open="${p.id}"><div class="plott">${esc((p.title||'').trim()||'（タイトルなし）')}</div>${(p.date||'').trim()?`<div class="plotd">${esc(p.date.trim())}</div>`:''}${(p.body||'').trim()?`<div class="plotb">${esc(p.body.trim())}</div>`:''}</div></div>`).join('')+'</div><div class="hint">左のつまみをドラッグで並べ替え／カードをタップで編集</div>'
-      : '<div class="empty"><strong>プロットがありません</strong>右上の＋から、本編のアイデアを順番に置いていけます。日付は任意です。</div>';
+    const all=plotsSorted();
+    const ps=plotTagFilter.length?all.filter(p=>plotTagFilter.every(id=>(p.chars||[]).includes(id))):all;
+    const fNames=plotTagFilter.map(charById).filter(Boolean).map(c=>c.name).join('、');
+    const fbar=`<div class="row" style="margin-bottom:10px"><button type="button" data-a="pfilter">キャラで絞る${plotTagFilter.length?`：${esc(fNames)}`:''}</button>${plotTagFilter.length?'<button type="button" data-a="pclear">解除</button>':''}</div>`;
+    main.innerHTML = fbar + (ps.length
+      ? '<div id="plotList">'+ps.map(p=>{ const cs=(p.chars||[]).map(charById).filter(Boolean); return `<div class="plotcard" data-plid="${p.id}"><span class="ploth" data-drag="${p.id}">${PLOT_GRIP}</span><div class="plotmain" data-open="${p.id}"><div class="plott">${esc((p.title||'').trim()||'（タイトルなし）')}</div>${(p.date||'').trim()?`<div class="plotd">${esc(p.date.trim())}</div>`:''}${(p.body||'').trim()?`<div class="plotb">${esc(p.body.trim())}</div>`:''}${cs.length?`<div class="mtags">${cs.map(c=>tagChip(c,false)).join('')}</div>`:''}</div></div>`; }).join('')+'</div>'+(plotTagFilter.length?'<div class="hint">絞り込み中はドラッグで並べ替えできません（編集画面の↑↓は使えます）</div>':'<div class="hint">左のつまみをドラッグで並べ替え／カードをタップで編集</div>')
+      : (all.length?'<div class="empty"><strong>そのキャラのプロットはありません</strong></div>':'<div class="empty"><strong>プロットがありません</strong>右上の＋から、本編のアイデアを順番に置いていけます。日付は任意です。</div>'));
     main.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click',()=>{ const p=plotById(el.dataset.open); if(p) plotSheet(p); }));
-    attachPlotDrag();
+    const fb=main.querySelector('[data-a=pfilter]'); if(fb) fb.onclick=()=>pickCharsSheet(plotTagFilter, ids=>{ plotTagFilter=ids; renderWorld(); }, 'プロットをキャラで絞る');
+    const cb=main.querySelector('[data-a=pclear]'); if(cb) cb.onclick=()=>{ plotTagFilter=[]; renderWorld(); };
+    if(!plotTagFilter.length) attachPlotDrag();
     return;
   }
   if(wView==='terms'){
