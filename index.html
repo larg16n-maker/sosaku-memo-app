@@ -219,6 +219,16 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .mdv .mdpre code{background:none;padding:0}
 .mdv .mdhr{border:none;border-top:1px solid var(--line);margin:10px 0}
 .mdv a{color:#2f6fb2}
+.flabel{display:block;font-size:12px;color:var(--sub);margin:10px 0 4px}
+.plotcard{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.ploth{flex:none;touch-action:none;cursor:grab;color:var(--faint);padding:2px 2px 6px 0}
+.ploth svg{width:16px;height:16px;display:block}
+.plotmain{flex:1;min-width:0}
+.plott{font-weight:700;font-size:14px;line-height:1.4}
+.plotd{font-size:11px;color:#2f6fb2;margin-top:2px}
+.plotb{font-size:12px;color:var(--sub);margin-top:3px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.plotph{border:1.5px dashed var(--faint);border-radius:12px;margin-bottom:8px}
+.plotghost{position:fixed;z-index:300;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.25);opacity:.95;margin-bottom:0}
 .mdtw{overflow-x:auto;margin:8px 0}
 .mdt{border-collapse:collapse;font-size:12px;min-width:100%}
 .mdt th,.mdt td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top;line-height:1.5;white-space:normal}
@@ -812,7 +822,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.37.3';
+const APP_VERSION='0.38.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -860,7 +870,7 @@ function b64enc(str){ return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2}
 function b64dec(str){ return decodeURIComponent(atob(str).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')); }
 
 /* ---------- data model ---------- */
-const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms'],['tmems','deletedTmems'],['xcharts','deletedXcharts'],['ptags','deletedPtags']];
+const COLLS=[['folders','deletedFolders'],['memos','deletedMemos'],['chars','deletedChars'],['timelines','deletedTimelines'],['events','deletedEvents'],['rels','deletedRels'],['groups','deletedGroups'],['grels','deletedGrels'],['questions','deletedQuestions'],['terms','deletedTerms'],['tmems','deletedTmems'],['xcharts','deletedXcharts'],['ptags','deletedPtags'],['plots','deletedPlots']];
 function emptyDb(){ const d={meta:{updatedAt:0}}; for(const [a,b] of COLLS){ d[a]=[]; d[b]=[]; } return d; }
 function normalize(d){
   const e=emptyDb();
@@ -1144,6 +1154,12 @@ function buildStoryBible(){
         L.push(`- ${c.name}：横${(p.x*2-1).toFixed(1)} 縦${(1-p.y*2).toFixed(1)}${(p.note||'').trim()?`「${p.note.trim().replace(/\n/g,' ')}」`:''}`); }
       L.push('');
     }
+  }
+  const pls=plotsSorted();
+  if(pls.length){
+    L.push('## プロット');
+    pls.forEach((p,i)=>{ L.push(`${i+1}. ${(p.title||'').trim()||'（タイトルなし）'}${(p.date||'').trim()?`［日付: ${p.date.trim()}］`:''}`); if((p.body||'').trim()) L.push(p.body.trim()); });
+    L.push('');
   }
   const foldersWithMemos=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt).filter(f=>memosOf(f.id).length);
   if(foldersWithMemos.length){
@@ -3569,8 +3585,61 @@ const WI={
   rel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2.5 19c.6-3 2.4-4.5 4.5-4.5s3.9 1.5 4.5 4.5M12.5 19c.6-3 2.4-4.5 4.5-4.5s3.9 1.5 4.5 4.5"/></svg>',
   line:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><circle cx="6" cy="12" r="2" fill="currentColor"/><path d="M11 12h9"/></svg>',
   book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 016.5 3H19v15H6.5A1.5 1.5 0 005 19.5z"/><path d="M5 19.5A1.5 1.5 0 006.5 21H19v-3"/><path d="M9 7.5h6M9 11h4"/></svg>',
-  cross:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><circle cx="16.5" cy="7.5" r="2" fill="currentColor" stroke="none"/><circle cx="7.5" cy="15.5" r="2" fill="currentColor" stroke="none"/></svg>'
+  cross:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><circle cx="16.5" cy="7.5" r="2" fill="currentColor" stroke="none"/><circle cx="7.5" cy="15.5" r="2" fill="currentColor" stroke="none"/></svg>',
+  plot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h10M10 12h10M10 18h6"/><circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none"/></svg>'
 };
+const PLOT_GRIP='<svg viewBox="0 0 16 24" fill="currentColor"><circle cx="4" cy="4" r="1.8"/><circle cx="12" cy="4" r="1.8"/><circle cx="4" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="4" cy="20" r="1.8"/><circle cx="12" cy="20" r="1.8"/></svg>';
+function plotById(id){ return db.plots.find(p=>p.id===id); }
+function plotsSorted(){ return [...db.plots].sort((a,b)=>((a.sort??a.createdAt)-(b.sort??b.createdAt))||a.createdAt-b.createdAt); }
+function plotsApplyOrder(ids){ const t=Date.now(); ids.forEach((id,i)=>{ const p=plotById(id); if(p){ p.sort=i; p.updatedAt=t; } }); commit(); }
+function deletePlot(p){ db.plots=db.plots.filter(x=>x.id!==p.id); db.deletedPlots.push({id:p.id,deletedAt:Date.now()}); commit(); }
+function plotSheet(p){
+  const isNew=!p; if(isNew) p={id:uid(),title:'',date:'',body:'',sort:(db.plots.reduce((m,x)=>Math.max(m,x.sort??x.createdAt),0)+1),createdAt:Date.now()};
+  openSheet(`<div class="title">${isNew?'プロットを追加':'プロットを編集'}</div>
+    <label class="flabel">タイトル</label><input id="pl_title" type="text" value="${esc(p.title||'')}" placeholder="例：主人公、相棒と出会う">
+    <label class="flabel">日付（任意）</label><input id="pl_date" type="text" value="${esc(p.date||'')}" placeholder="例：第3日／春ごろ／2026-04-01">
+    <label class="flabel">本文</label><textarea id="pl_body" rows="7" placeholder="アイデアを自由に">${esc(p.body||'')}</textarea>
+    ${isNew?'':`<div class="row"><button type="button" data-a="up">↑ 上へ</button><button type="button" data-a="down">↓ 下へ</button></div>
+    <div class="row"><button type="button" class="danger" data-a="del">このプロットを削除</button></div>`}
+    <div class="row"><button type="button" data-a="cancel">キャンセル</button><button type="button" class="primary" data-a="save">保存</button></div>`, s=>{
+    const q=x=>s.querySelector(x);
+    q('[data-a=save]').onclick=()=>{ const title=q('#pl_title').value.trim(), date=q('#pl_date').value.trim(), body=q('#pl_body').value;
+      if(!title&&!body.trim()){ toast('タイトルか本文を入力してください'); return; }
+      const t=Date.now();
+      if(isNew){ db.plots.push({id:p.id,title,date,body,sort:p.sort,createdAt:p.createdAt,updatedAt:t}); }
+      else{ Object.assign(p,{title,date,body,updatedAt:t}); }
+      commit(); closeSheet(); renderWorld(); };
+    q('[data-a=cancel]').onclick=()=>closeSheet();
+    if(!isNew){
+      const move=dir=>{ const ids=plotsSorted().map(x=>x.id); const i=ids.indexOf(p.id), j=i+dir; if(j<0||j>=ids.length) return; [ids[i],ids[j]]=[ids[j],ids[i]]; plotsApplyOrder(ids); closeSheet(); renderWorld(); toast('順番を変えました'); };
+      q('[data-a=up]').onclick=()=>move(-1); q('[data-a=down]').onclick=()=>move(1);
+      q('[data-a=del]').onclick=()=>confirmSheet('このプロットを削除しますか？','元に戻せません。','削除',()=>{ deletePlot(p); closeSheet(); renderWorld(); toast('削除しました'); });
+    }
+  },'plotsheet');
+}
+function attachPlotDrag(){
+  main.querySelectorAll('[data-drag]').forEach(h=>{
+    h.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      const card=h.closest('.plotcard'); if(!card) return;
+      const list=card.parentElement, pid=card.dataset.plid, rect=card.getBoundingClientRect();
+      const ph=document.createElement('div'); ph.className='plotph'; ph.style.height=rect.height+'px';
+      const ghost=card.cloneNode(true); ghost.classList.add('plotghost'); ghost.style.width=rect.width+'px'; ghost.style.left=rect.left+'px'; ghost.style.top=rect.top+'px';
+      list.insertBefore(ph,card); card.style.display='none'; document.body.appendChild(ghost);
+      const offY=e.clientY-rect.top; let done=false;
+      const move=ev=>{ ghost.style.top=(ev.clientY-offY)+'px';
+        const cards=[...list.querySelectorAll('.plotcard')].filter(x=>x.style.display!=='none');
+        let placed=false;
+        for(const c of cards){ const r=c.getBoundingClientRect(); if(ev.clientY<r.top+r.height/2){ list.insertBefore(ph,c); placed=true; break; } }
+        if(!placed) list.appendChild(ph); };
+      const finish=commitOrder=>{ if(done) return; done=true; window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',cancel);
+        if(commitOrder){ const ids=[]; for(const el of list.children){ if(el===ph) ids.push(pid); else if(el.classList&&el.classList.contains('plotcard')&&el.style.display!=='none') ids.push(el.dataset.plid); } plotsApplyOrder(ids); }
+        ghost.remove(); renderWorld(); };
+      const up=()=>finish(true), cancel=()=>finish(false);
+      window.addEventListener('pointermove',move); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',cancel);
+    });
+  });
+}
 let wView='hub', tlId=null, rcId=null, rgId=null, relKind='char', evDraft=null, relDraft=null, wDirty=false, wReturn=null;
 let grpReorderMode=false;
 const openEv=new Set(), openRel=new Set();
@@ -3634,6 +3703,7 @@ function renderWorld(){
       <div class="wrow" data-go="rchars">${WI.rel}<span class="wn">関係性</span><span class="wc">${relsOfAllCount()}</span></div>
       <div class="wrow" data-go="terms">${WI.book}<span class="wn">単語帳</span><span class="wc">${db.terms.length}</span></div>
       <div class="wrow" data-go="xcs">${WI.cross}<span class="wn">十字グラフ</span><span class="wc">${db.xcharts.length}</span></div>
+      <div class="wrow" data-go="plots">${WI.plot}<span class="wn">プロット</span><span class="wc">${db.plots.length}</span></div>
     </div>`;
     return;
   }
@@ -3651,6 +3721,16 @@ function renderWorld(){
   if(wView==='xc'){
     $('#title').textContent='十字グラフ'; hdrBack();
     renderXc(xcById(xcId));
+    return;
+  }
+  if(wView==='plots'){
+    $('#title').textContent='プロット'; hdrBack(); $('#wAddBtn').hidden=false; $('#wAddBtn').setAttribute('aria-label','プロットを追加');
+    const ps=plotsSorted();
+    main.innerHTML = ps.length
+      ? '<div id="plotList">'+ps.map(p=>`<div class="plotcard" data-plid="${p.id}"><span class="ploth" data-drag="${p.id}">${PLOT_GRIP}</span><div class="plotmain" data-open="${p.id}"><div class="plott">${esc((p.title||'').trim()||'（タイトルなし）')}</div>${(p.date||'').trim()?`<div class="plotd">${esc(p.date.trim())}</div>`:''}${(p.body||'').trim()?`<div class="plotb">${esc(p.body.trim())}</div>`:''}</div></div>`).join('')+'</div><div class="hint">左のつまみをドラッグで並べ替え／カードをタップで編集</div>'
+      : '<div class="empty"><strong>プロットがありません</strong>右上の＋から、本編のアイデアを順番に置いていけます。日付は任意です。</div>';
+    main.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click',()=>{ const p=plotById(el.dataset.open); if(p) plotSheet(p); }));
+    attachPlotDrag();
     return;
   }
   if(wView==='terms'){
@@ -3808,6 +3888,7 @@ $('#wAddBtn').addEventListener('click',()=>{
   if(wView==='tls') return newTimelineSheet();
   if(wView==='terms') return termSheet(null);
   if(wView==='xcs') return newXchart();
+  if(wView==='plots') return plotSheet(null);
   if(wView==='tl') return tlAddChooser();
   if(wView==='rc'||wView==='rg'){ const kind=wView==='rg'?'group':'char'; relDraft={id:uid(),kind,a:kind==='group'?rgId:rcId,b:'',label:'',ab:'',ba:'',nab:'',nba:'',detail:'',createdAt:Date.now()}; wDirty=false; wView='rel'; render(); main.scrollTop=0; }
 });
