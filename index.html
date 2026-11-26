@@ -328,7 +328,7 @@ main{scroll-padding-bottom:24px;flex:1;min-height:0;overflow-y:auto;-webkit-over
 .crow.sel{background:var(--press)}
 .crow.sel .ck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .crow .cn{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.crow .handle,.wrow .handle{flex:none;width:36px;height:28px;margin-right:-8px;display:grid;place-items:center;color:var(--faint);touch-action:none;cursor:grab}
+.crow .handle,.wrow .handle,.folder .handle{flex:none;width:36px;height:28px;margin-right:-8px;display:grid;place-items:center;color:var(--faint);touch-action:none;cursor:grab}
 .crow .handle svg,.wrow .handle svg{width:18px;height:18px}
 .crow.dragging,.wrow.dragging{position:relative;z-index:5;background:var(--surface);box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .av{flex:none;width:28px;height:28px;border-radius:50%;overflow:hidden;display:grid;place-items:center}
@@ -823,7 +823,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.38.3';
+const APP_VERSION='0.39.0';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -1162,7 +1162,7 @@ function buildStoryBible(){
     pls.forEach((p,i)=>{ const tn=(p.chars||[]).map(charById).filter(Boolean).map(c=>c.name); L.push(`${i+1}. ${(p.title||'').trim()||'（タイトルなし）'}${(p.date||'').trim()?`［日付: ${p.date.trim()}］`:''}${tn.length?`［登場: ${tn.join('、')}］`:''}`); if((p.body||'').trim()) L.push(p.body.trim()); });
     L.push('');
   }
-  const foldersWithMemos=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt).filter(f=>memosOf(f.id).length);
+  const foldersWithMemos=foldersSorted().filter(f=>memosOf(f.id).length);
   if(foldersWithMemos.length){
     L.push('## メモ');
     for(const f of foldersWithMemos){
@@ -1275,6 +1275,9 @@ function updateSyncBadge(state, err){
 
 /* ---------- state ---------- */
 let tab='talk', folderId=null;
+let folderReorderMode=false;
+function foldersSorted(){ return [...db.folders].sort((a,b)=>((a.sort??a.createdAt)-(b.sort??b.createdAt))||a.createdAt-b.createdAt); }
+function applyFolderOrder(ids){ const t=Date.now(); let changed=false; ids.forEach((id,i)=>{ const f=folderById(id); if(f&&f.sort!==i){ f.sort=i; f.updatedAt=t; changed=true; } }); if(changed) commit(); }
 let currentSheetKind=null;
 
 function memosOf(id){return db.memos.filter(m=>m.folderId===id).sort((a,b)=>a.createdAt-b.createdAt);}
@@ -1397,7 +1400,7 @@ function renderSelBar(){
 function selDone(msg){ memoSel=null; commit(); const st=main.scrollTop; render(); main.scrollTop=st; if(msg) toast(msg); }
 function moveMemosSheet(list,after){
   const from=list[0]&&list[0].folderId;
-  const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt).filter(f=>f.id!==from);
+  const fs=foldersSorted().filter(f=>f.id!==from);
   if(!fs.length){ toast('ほかのフォルダがありません'); return; }
   openSheet(`<div class="title">${list.length}件の移動先</div>
     ${fs.map(f=>`<button class="act" data-fid="${f.id}">${ICON.folder}${esc(f.name)}<span class="small" style="margin-left:auto">${memosOf(f.id).length}</span></button>`).join('')}`, s=>{
@@ -1461,7 +1464,7 @@ const SEARCH_BOXES={
 function refreshSearch(id){ const d=SEARCH_BOXES[id]; const el=d&&$(d.box); if(el) el.innerHTML=d.html(); }
 function memoResultsHtml(){
   const q=memoQ.trim();
-  const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
+  const fs=foldersSorted();
   let total=0;
   const html=fs.map(f=>{
     const ms=memosOf(f.id).filter(m=>qHit(m.text,q)||memoNoHit(m,q)); total+=ms.length; if(!ms.length) return '';
@@ -1472,11 +1475,12 @@ function memoResultsHtml(){
 function memoHomeHtml(){
   if(memoQ.trim()) return memoResultsHtml();
   if(isWide()) return '<div class="pick-ph">左のリストからフォルダを選んでください</div>';
-  const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
-  return '<ul class="folders">'+fs.map(f=>{
+  const fs=foldersSorted();
+  const bar=folderReorderMode?'<div class="row" style="margin-bottom:10px"><span style="flex:1;font-size:13px;color:var(--sub)">フォルダを並べ替え中</span><button type="button" class="primary" data-a="forderdone">完了</button></div>':'';
+  return bar+'<ul class="folders">'+fs.map(f=>{
     const n=memosOf(f.id).length;
-    return `<li class="folder" data-id="${f.id}" tabindex="0">${ICON.folder}<div class="fmeta"><span class="fname">${esc(f.name)}</span></div><span class="fcount">${n}</span></li>`;
-  }).join('')+'</ul><div class="hint">長押しで名前変更・削除</div>';
+    return `<li class="folder" data-id="${f.id}" tabindex="0">${ICON.folder}<div class="fmeta"><span class="fname">${esc(f.name)}</span></div><span class="fcount">${n}</span>${folderReorderMode?`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`:''}</li>`;
+  }).join('')+'</ul><div class="hint">'+(folderReorderMode?'右のつまみをドラッグして並べ替え':'長押しで名前変更・削除')+'</div>';
 }
 function folderMemosHtml(){
   const f=folderById(folderId); if(!f) return '';
@@ -1637,6 +1641,7 @@ let lp=null;
 for(const root of [main, $('#side')]){
   root.addEventListener('pointerdown',e=>{
     const el=e.target.closest(FOLDER_SEL); if(!el) return;
+    if(folderReorderMode && !el.classList.contains('memo')) return;
     if(memoSel && el.classList.contains('memo')){ lp={el,x:e.clientX,y:e.clientY,fired:false,timer:0,sel:true}; return; }
     const x=e.clientX,y=e.clientY;
     // With a mouse, memo text can be drag-selected; its menu comes from right-click instead of a long press.
@@ -1656,6 +1661,7 @@ for(const root of [main, $('#side')]){
     if(sel){ toggleMemoSel(el.dataset.id); return; }
     if(fired) return;
     if(el.classList.contains('memo')){ if(el.closest('.oneline')) el.classList.toggle('open'); return; }
+    if(folderReorderMode) return;
     openFolder(el.dataset.id);
   });
   root.addEventListener('pointercancel',()=>{cancelLp(); lp=null;});
@@ -1669,6 +1675,7 @@ for(const root of [main, $('#side')]){
   root.addEventListener('keydown',e=>{
     const el=e.target.closest(FOLDER_SEL); if(!el||e.key!=='Enter') return;
     if(el.classList.contains('memo')){ memoSel?toggleMemoSel(el.dataset.id):memoMenu(el.dataset.id); return; }
+    if(folderReorderMode) return;
     openFolder(el.dataset.id);
   });
 }
@@ -1727,7 +1734,7 @@ function memoMenu(id){
   },'memo');
 }
 function moveMemoSheet(m){
-  const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt).filter(f=>f.id!==m.folderId);
+  const fs=foldersSorted().filter(f=>f.id!==m.folderId);
   if(!fs.length){ closeSheet(); toast('ほかのフォルダがありません'); return; }
   openSheet(`<div class="title">移動先のフォルダ</div>
     ${fs.map(f=>`<button class="act" data-fid="${f.id}">${ICON.folder}${esc(f.name)}<span class="small" style="margin-left:auto">${memosOf(f.id).length}</span></button>`).join('')}`, s=>{
@@ -1768,7 +1775,9 @@ function folderMenu(id){
   openSheet(`<div class="title">${esc(f.name)}</div>
     <button class="act" data-a="ren">${ICON.edit}名前を変更</button>
     <button class="act" data-a="tl">${WI.line}時系列を選ぶ<span class="small" style="margin-left:auto">${f.tlId&&tlById(f.tlId)?esc(tlById(f.tlId).name):'使わない'}</span></button>
+    ${db.folders.length>1?`<button class="act" data-a="ord">${SV.reorder}並べ替え</button>`:''}
     <button class="act danger" data-a="del">${ICON.trash}フォルダを削除</button>`, s=>{
+    const ord=s.querySelector('[data-a=ord]'); if(ord) ord.onclick=()=>{ closeSheet(); folderReorderMode=true; if(!isWide()) closeFolder(); render(); };
     s.querySelector('[data-a=tl]').onclick=()=>folderTlSheet(f);
     s.querySelector('[data-a=ren]').onclick=()=>nameSheet('名前を変更',f.name,'変更',name=>{f.name=name;f.updatedAt=Date.now();commit();render();});
     s.querySelector('[data-a=del]').onclick=()=>{
@@ -1805,7 +1814,7 @@ function confirmSheet(title,msg,okLabel,cb){
 function newFolderSheet(){
   nameSheet('新しいフォルダ','','作成',name=>{
     const t=Date.now();
-    db.folders.push({id:uid(),name,view:'full',createdAt:t,updatedAt:t}); commit(); render(); toBottom();
+    db.folders.push({id:uid(),name,view:'full',sort:foldersSorted().reduce((m,f)=>Math.max(m,f.sort??f.createdAt),0)+1,createdAt:t,updatedAt:t}); commit(); render(); toBottom();
   });
 }
 $('#addFolderBtn').addEventListener('click',newFolderSheet);
@@ -3474,18 +3483,22 @@ main.addEventListener('keydown',e=>{
 
 /* ---------- drag to reorder ---------- */
 let drag=null;
-main.addEventListener('pointerdown',e=>{
+function startDrag(e,scroller){
   const charMode = tab==='chara'&&charView==='list'&&reorderMode;
   const grpMode = tab==='chara'&&charView==='list'&&charKind==='group'&&grpReorderMode;
   const qMode = tab==='chara'&&charView==='qtpl';
-  if(!charMode && !grpMode && !qMode) return;
+  const fMode = tab==='talk'&&folderReorderMode;
+  if(!charMode && !grpMode && !qMode && !fMode) return;
   const h=e.target.closest('.handle'); if(!h) return;
+  const row=h.closest(charMode?'.crow':qMode?'.qrow':fMode?(scroller===main?'.folder':'.wrow'):'[data-gdrag]'); if(!row) return;
   e.preventDefault();
-  const row=h.closest(charMode?'.crow':qMode?'.qrow':'[data-gdrag]'), ul=row.parentElement;
+  const ul=row.parentElement;
   try{h.setPointerCapture(e.pointerId);}catch(_){}
   row.classList.add('dragging');
-  drag={row,ul,h,startY:e.clientY,base:row.offsetTop,lastY:e.clientY,pid:e.pointerId,raf:null,kind:charMode?'char':qMode?'q':'group'};
-});
+  drag={row,ul,h,startY:e.clientY,base:row.offsetTop,lastY:e.clientY,pid:e.pointerId,raf:null,kind:charMode?'char':qMode?'q':fMode?'folder':'group',scroller};
+}
+main.addEventListener('pointerdown',e=>startDrag(e,main));
+$('#side').addEventListener('pointerdown',e=>startDrag(e,$('#side .slist')||$('#side')));
 function dragMove(y){
   const {row,ul}=drag;
   const sibs=[...ul.children].filter(c=>c!==row);
@@ -3499,29 +3512,35 @@ function dragMove(y){
   const shift=row.offsetTop-drag.base;
   row.style.transform=`translateY(${y-drag.startY-shift}px)`;
 }
-main.addEventListener('pointermove',e=>{
+function onDragMove(e){
   if(!drag||e.pointerId!==drag.pid) return;
   e.preventDefault();
   drag.lastY=e.clientY; dragMove(e.clientY);
-  const mr=main.getBoundingClientRect();
+  const sc=drag.scroller||main, mr=sc.getBoundingClientRect();
   const edge=40, sp = e.clientY<mr.top+edge ? -8 : e.clientY>mr.bottom-edge ? 8 : 0;
   if(sp && !drag.raf){
-    const step=()=>{ if(!drag) return; const before=main.scrollTop; main.scrollTop+=sp; drag.startY-=(main.scrollTop-before); dragMove(drag.lastY);
-      const mr2=main.getBoundingClientRect(); const still = drag.lastY<mr2.top+edge||drag.lastY>mr2.bottom-edge;
+    const step=()=>{ if(!drag) return; const before=sc.scrollTop; sc.scrollTop+=sp; drag.startY-=(sc.scrollTop-before); dragMove(drag.lastY);
+      const mr2=sc.getBoundingClientRect(); const still = drag.lastY<mr2.top+edge||drag.lastY>mr2.bottom-edge;
       drag.raf= still ? requestAnimationFrame(step) : null; };
     drag.raf=requestAnimationFrame(step);
   }
-},{passive:false});
+}
+function onDragUp(e){ if(drag&&e.pointerId===drag.pid) endDrag(); }
+main.addEventListener('pointermove',onDragMove,{passive:false});
+$('#side').addEventListener('pointermove',onDragMove,{passive:false});
+main.addEventListener('pointerup',onDragUp);
+main.addEventListener('pointercancel',onDragUp);
+$('#side').addEventListener('pointerup',onDragUp);
+$('#side').addEventListener('pointercancel',onDragUp);
 function endDrag(){
   if(!drag) return;
   const {row,ul,kind}=drag; if(drag.raf) cancelAnimationFrame(drag.raf);
   row.classList.remove('dragging'); row.style.transform='';
-  const newIds=[...ul.children].map(li=>kind==='group'?li.dataset.gid:kind==='q'?li.dataset.qid:li.dataset.cid);
+  const newIds=[...ul.children].map(li=>kind==='group'?li.dataset.gid:kind==='q'?li.dataset.qid:kind==='folder'?li.dataset.id:li.dataset.cid);
   drag=null;
-  kind==='group' ? applyGroupOrder(newIds) : kind==='q' ? applyQOrder(newIds) : applyOrder(newIds);
+  kind==='group' ? applyGroupOrder(newIds) : kind==='q' ? applyQOrder(newIds) : kind==='folder' ? applyFolderOrder(newIds) : applyOrder(newIds);
 }
-main.addEventListener('pointerup',e=>{ if(drag&&e.pointerId===drag.pid) endDrag(); });
-main.addEventListener('pointercancel',e=>{ if(drag&&e.pointerId===drag.pid) endDrag(); });
+
 
 function applyOrder(groupIds){
   const all=charsSorted().map(c=>c.id);
@@ -4622,11 +4641,11 @@ function renderSide(){
   const prev=side.querySelector('.slist'), st=prev?prev.scrollTop:0;
   let head='', sub='', body='';
   if(tab==='talk'){
-    head=`<span class="stitle">メモ</span><span class="sbtns"><button class="hbtn" data-sa="addfolder" aria-label="フォルダを追加">${SV.plus}</button></span>`;
-    const fs=[...db.folders].sort((a,b)=>a.createdAt-b.createdAt);
+    head=`<span class="stitle">メモ</span><span class="sbtns">${db.folders.length>1?`<button class="hbtn${folderReorderMode?' on':''}" data-sa="forder" aria-label="フォルダを並べ替え">${SV.reorder}</button>`:''}<button class="hbtn" data-sa="addfolder" aria-label="フォルダを追加">${SV.plus}</button></span>`;
+    const fs=foldersSorted();
     body = fs.length ? fs.map(f=>{
       const n=memosOf(f.id).length;
-      return `<div class="wrow${folderId===f.id?' active':''}" data-id="${f.id}" tabindex="0">${ICON.folder}<span class="wn">${esc(f.name)}</span><span class="wc">${n||''}</span></div>`;
+      return `<div class="wrow${folderId===f.id?' active':''}" data-id="${f.id}" tabindex="0">${ICON.folder}<span class="wn">${esc(f.name)}</span><span class="wc">${n||''}</span>${folderReorderMode?`<span class="handle" aria-label="ドラッグで移動">${CI.grip}</span>`:''}</div>`;
     }).join('') : '<div class="pick-ph">まだフォルダがありません</div>';
   }else if(tab==='chara' && charKind==='group'){
     head=`<span class="stitle">グループ</span><span class="sbtns">${db.groups.length>1?`<button class="hbtn${grpReorderMode?' on':''}" data-sa="greorder" aria-label="並べ替え">${SV.reorder}</button>`:''}<button class="hbtn" data-sa="gadd" aria-label="グループを作る">${SV.plus}</button></span>`;
@@ -4705,6 +4724,7 @@ side.addEventListener('click',e=>{
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
     if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : sec==='xc' ? newXchart() : sec==='plot' ? plotSheet(null) : null; }
     if(a==='addfolder') return newFolderSheet();
+    if(a==='forder'){ folderReorderMode=!folderReorderMode; render(); return; }
     if(a==='greorder') return guardLeave(()=>{ grpReorderMode=!grpReorderMode; charView='list'; render(); });
   }
   if((el=q('.ghead[data-gkey]'))){ toggleGroupCollapse(el.dataset.gkey); render(); return; }
@@ -4784,6 +4804,7 @@ $('#tagFilterBtn').addEventListener('click',()=>{
 main.addEventListener('click',e=>{
   if(tab!=='talk') return;
   if(e.target.closest('[data-a="writtenorder"]')){ setStoryOrder(folderId,false); renderMain(); toBottom(); return; }
+  if(e.target.closest('[data-a="forderdone"]')){ folderReorderMode=false; render(); return; }
   const cl=e.target.closest('[data-a="clearfilter"],[data-a="clearfav"]'); if(cl){ tagFilter=[]; favOnly=false; const st=main.scrollTop; renderMain(); main.scrollTop=st; }
 });
 document.addEventListener('visibilitychange',()=>{
