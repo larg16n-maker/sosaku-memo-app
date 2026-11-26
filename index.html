@@ -823,7 +823,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.38.2';
+const APP_VERSION='0.38.3';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
@@ -4614,7 +4614,7 @@ const SV={
   addp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.8-3.6 3.5-5.5 7-5.5 1.4 0 2.6.3 3.7.8M18 14v6M15 17h6"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
 };
-function worldSec(){ return wView==='terms' ? 'term' : (wView==='xcs'||wView==='xc') ? 'xc' : ['rchars','rc','rg'].includes(wView)||(wView==='rel') ? 'rel' : 'tl'; }
+function worldSec(){ return wView==='plots' ? 'plot' : wView==='terms' ? 'term' : (wView==='xcs'||wView==='xc') ? 'xc' : ['rchars','rc','rg'].includes(wView)||(wView==='rel') ? 'rel' : 'tl'; }
 function renderSide(){
   const on=isWide() && (tab==='chara'||tab==='world'||tab==='talk');
   side.hidden=!on; $('#app').toggleAttribute('data-split',on);
@@ -4652,9 +4652,13 @@ function renderSide(){
       : `<ul class="clist">${list.map(row).join('')}</ul>`;
   }else{
     const sec=worldSec();
-    head=`<div class="seg" role="group"><button type="button" data-ssec="tl" aria-pressed="${sec==='tl'}">時系列</button><button type="button" data-ssec="rel" aria-pressed="${sec==='rel'}">関係性</button><button type="button" data-ssec="term" aria-pressed="${sec==='term'}">単語帳</button><button type="button" data-ssec="xc" aria-pressed="${sec==='xc'}">グラフ</button></div>
-      <span class="sbtns">${(sec==='tl'||sec==='term'||sec==='xc')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':sec==='xc'?'十字グラフを作る':'単語を追加'}">${SV.plus}</button>`:''}</span>`;
-    if(sec==='xc'){
+    head=`<div class="seg" role="group"><button type="button" data-ssec="tl" aria-pressed="${sec==='tl'}">時系列</button><button type="button" data-ssec="rel" aria-pressed="${sec==='rel'}">関係性</button><button type="button" data-ssec="term" aria-pressed="${sec==='term'}">単語帳</button><button type="button" data-ssec="xc" aria-pressed="${sec==='xc'}">グラフ</button><button type="button" data-ssec="plot" aria-pressed="${sec==='plot'}">プロット</button></div>
+      <span class="sbtns">${(sec==='tl'||sec==='term'||sec==='xc'||sec==='plot')?`<button class="hbtn" data-sa="wadd" aria-label="${sec==='tl'?'時系列を作る':sec==='xc'?'十字グラフを作る':sec==='plot'?'プロットを追加':'単語を追加'}">${SV.plus}</button>`:''}</span>`;
+    if(sec==='plot'){
+      const ps=plotsSorted();
+      body = ps.length ? ps.map((p,i)=>`<div class="wrow" data-splid="${p.id}" tabindex="0">${WI.plot}<span class="wn">${esc((p.title||'').trim()||'（タイトルなし）')}${(p.date||'').trim()?`<span class="ws">${esc(p.date.trim())}</span>`:''}</span><span class="wc">${i+1}</span></div>`).join('')
+        : '<div class="pick-ph">まだプロットがありません</div>';
+    }else if(sec==='xc'){
       const xs=xchartsSorted();
       body = xs.length ? xs.map(x=>`<div class="wrow${(wView==='xc'&&xcId===x.id)?' active':''}" data-sxcid="${x.id}" tabindex="0">${WI.cross}<span class="wn">${esc((x.title||'').trim()||'（名前なし）')}</span><span class="wc">${Object.keys(x.pins||{}).filter(id=>charById(id)).length||''}</span></div>`).join('')
         : '<div class="pick-ph">まだグラフがありません</div>';
@@ -4699,7 +4703,7 @@ side.addEventListener('click',e=>{
     if(a==='select') return guardLeave(()=>{ selectMode=true; reorderMode=false; selected.clear(); charView='list'; render(); });
     if(a==='gadd') return guardLeave(()=>{ grpReorderMode=false; openGroupEdit(null,false); });
     if(a==='add') return guardLeave(()=>{ reorderMode=false; selectMode=false; startEdit(null); });
-    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : sec==='xc' ? newXchart() : null; }
+    if(a==='wadd'){ const sec=worldSec(); return sec==='tl' ? newTimelineSheet() : sec==='term' ? termSheet(null) : sec==='xc' ? newXchart() : sec==='plot' ? plotSheet(null) : null; }
     if(a==='addfolder') return newFolderSheet();
     if(a==='greorder') return guardLeave(()=>{ grpReorderMode=!grpReorderMode; charView='list'; render(); });
   }
@@ -4708,7 +4712,8 @@ side.addEventListener('click',e=>{
   if((el=q('[data-sgid]'))) return guardLeave(()=>{ gId=el.dataset.sgid; gdReturn=null; gBackChar=null; charView='gdetail'; render(); main.scrollTop=0; });
   if((el=q('[data-scid]'))) return guardLeave(()=>{ reorderMode=false; selectMode=false; cmpReturn=false; charId=el.dataset.scid; charView='detail'; render(); main.scrollTop=0; });
   if((el=q('[data-sxcid]'))) return guardLeave(()=>openXchart(el.dataset.sxcid));
-  if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='xc' ? (xcById(xcId)?'xc':'xcs') : el.dataset.ssec==='term' ? 'terms' : el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
+  if((el=q('[data-splid]'))){ const p=plotById(el.dataset.splid); if(p) plotSheet(p); return; }
+  if((el=q('[data-ssec]'))) return guardLeave(()=>{ wView = el.dataset.ssec==='plot' ? 'plots' : el.dataset.ssec==='xc' ? (xcById(xcId)?'xc':'xcs') : el.dataset.ssec==='term' ? 'terms' : el.dataset.ssec==='tl' ? (tlById(tlId)?'tl':'tls') : relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-srk]'))) return guardLeave(()=>{ relKind=el.dataset.srk; wView = relKind==='group' ? (groupById(rgId)?'rg':'rchars') : (charById(rcId)?'rc':'rchars'); render(); });
   if((el=q('[data-tl]'))) return guardLeave(()=>{ tlId=el.dataset.tl; wView='tl'; wReturn=null; render(); main.scrollTop=0; });
   if((el=q('[data-src]'))) return guardLeave(()=>{ rcId=el.dataset.src; wView='rc'; wReturn=null; render(); main.scrollTop=0; });
@@ -4716,7 +4721,7 @@ side.addEventListener('click',e=>{
   if((el=q('[data-tmid]'))) return guardLeave(()=>{ const id=el.dataset.tmid; wView='terms'; openTm.add(id);
     if(!termMatches(termById(id)||{},termQ)) termQ=''; render(); flashEl(`.tmrow[data-tmid="${id}"]`); });
 });
-side.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const el=e.target.closest('[data-scid],[data-sxcid],[data-tl],[data-src],[data-gid],[data-tmid],.ghead[data-gkey]'); if(el) el.click(); });
+side.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const el=e.target.closest('[data-scid],[data-sxcid],[data-tl],[data-src],[data-gid],[data-tmid],[data-splid],.ghead[data-gkey]'); if(el) el.click(); });
 const onWideChange=()=>render();
 if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change',onWideChange); else if(WIDE_MQ.addListener) WIDE_MQ.addListener(onWideChange);
 
