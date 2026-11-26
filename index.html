@@ -519,6 +519,7 @@ body.kbopen .cedit{padding-bottom:120px}
 .sheet textarea,.sheet input{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px;line-height:1.6;padding:9px 12px}
 .sheet textarea{min-height:40vh;resize:none}
 .sheet textarea#editArea{min-height:0;height:calc(11 * 1.6em + 20px)}
+.sheet textarea#pl_body{min-height:0;height:calc(4.5 * 1.6em + 20px);resize:vertical}
 .row{display:flex;gap:8px;margin-top:8px}
 .row button{flex:1;height:42px;border-radius:12px;font-size:14px;font-weight:500;background:var(--press)}
 .row button.primary{background:var(--accent);color:var(--on-accent)}
@@ -822,7 +823,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.38.1';
+const APP_VERSION='0.38.2';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
