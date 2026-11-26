@@ -58,7 +58,7 @@ body.kbopen #app{padding-bottom:0}
 .shead{flex:none;min-height:40px;display:flex;align-items:center;gap:6px;padding:4px 4px 4px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .stitle{flex:1;min-width:0;font-size:14px;font-weight:600}
 .sbtns{display:flex;align-items:center;margin-left:auto}
-.shead .seg{flex-wrap:wrap;overflow:visible;border:none;gap:4px}
+.shead .seg{flex:1 1 auto;min-width:0;flex-wrap:wrap;overflow:visible;border:none;gap:4px}
 .shead .seg button{height:28px;font-size:12px;padding-inline:10px;border:1px solid var(--line);border-radius:8px}
 .ssub{flex:none;padding:6px 14px;border-bottom:1px solid var(--line)}
 .ssub .seg button{height:26px;font-size:11px;padding-inline:12px}
@@ -825,7 +825,7 @@ mark{background:color-mix(in srgb,var(--brass) 38%,transparent);color:inherit;bo
 <script>
 (function(){
 "use strict";
-const APP_VERSION='0.39.1';
+const APP_VERSION='0.39.2';
 const KB_KEY='sosaku-kb-extra';
 const KB_OPTS=[{v:0,l:'標準'},{v:24,l:'少し上げる'},{v:48,l:'上げる'},{v:72,l:'もっと上げる'}];
 function kbExtra(){ try{ return Number(localStorage.getItem(KB_KEY))||0; }catch(e){ return 0; } }
